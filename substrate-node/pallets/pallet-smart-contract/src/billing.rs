@@ -362,8 +362,14 @@ impl<T: Config> Pallet<T> {
         has_sufficient_fund: bool,
         current_block: u64,
     ) -> DispatchResultWithPostInfo {
+        // Add a defensive check to prevent a node contract on a rented node from transitioning to 'created' status without considering the state of the associated rent contract
+        let rent_is_suspended = matches!(contract.contract_type, types::ContractData::NodeContract(_))
+        && ActiveRentContractForNode::<T>::get(contract.get_node_id())
+            .and_then(|id| Contracts::<T>::get(&id))
+            .map(|c| matches!(c.state, types::ContractState::GracePeriod(_)))
+            .unwrap_or(false);
         match contract.state {
-            types::ContractState::GracePeriod(_) if has_sufficient_fund => {
+            types::ContractState::GracePeriod(_) if has_sufficient_fund && !rent_is_suspended => {
                 // Manage transition from GracePeriod to Created
                 log::info!("Contract {:?} is in grace period, but balance is recharged, moving to created state at block {:?}", contract.contract_id, current_block);
                 Self::update_contract_state(contract, &types::ContractState::Created)?;
@@ -386,6 +392,26 @@ impl<T: Config> Pallet<T> {
                     diff
                 );
                 if diff >= T::GracePeriod::get() {
+                    // Ensure associated node contracts have no reserved balance.
+                    // If none, proceed to move the contract to the 'deleted' state.
+                    // Otherwise, wait.
+                    let can_be_deleted = match contract.contract_type {
+                        types::ContractData::RentContract(_) => {
+                            let active_node_contracts = ActiveNodeContracts::<T>::get(contract.get_node_id());
+                            !active_node_contracts.iter().any(|id| {
+                                ContractPaymentState::<T>::get(id).map_or(false, |s| s.has_reserve())
+                            })
+                        }
+                        _ => true,
+                    };
+                    if !can_be_deleted {
+                        log::debug!(
+                            "Grace period expired, but one or more associated node contracts have held user funds. \
+                            Rent contract deletion will be delayed until funds are distributed to beneficiaries."
+                        );
+                        return Ok(().into());
+                    }
+
                     log::info!("Contract {:?} state changed to deleted at block {:?} due to an expired grace period.", contract.contract_id, current_block);
                     Self::deposit_event(Event::ContractGracePeriodElapsed {
                         contract_id: contract.contract_id,
@@ -734,6 +760,14 @@ impl<T: Config> Pallet<T> {
                 for ctr_id in active_node_contracts {
                     let mut ctr =
                         Contracts::<T>::get(ctr_id).ok_or(Error::<T>::ContractNotExists)?;
+
+                    // Defensive check to prevent a node contract on a rented node from transitioning to 'created' status if there's an overdraft (unsettled public IP rent).
+                    if ContractPaymentState::<T>::get(ctr_id).map_or_else(|| false, |ps| ps.has_overdraft())
+                        && matches!(state, types::ContractState::Created)
+                    {
+                        continue;
+                    }
+ 
                     Self::update_contract_state(&mut ctr, &state)?;
 
                     match state {
