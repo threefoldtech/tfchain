@@ -1,4 +1,3 @@
-
 # Adding Validators to an Existing TFChain Network
 
 This guide provides a step-by-step process to add a validator to the TFChain network.
@@ -15,12 +14,12 @@ It covers generating keys using `subkey` via Docker, starting the node, insertin
 
 ### Requirements
 
-The most common way for a beginner to run a validator is on a cloud server running Linux. You may choose whatever VPS provider that you prefer, and whatever operating system you are comfortable with.
-For this guide we will be using Ubuntu 22.04, but the instructions should be similar for other platforms.
+The most common way for a beginner to run a validator is on a cloud server running Linux. You may choose any VPS provider you prefer and any operating system you are comfortable with.
+For this guide, we will be using Ubuntu 22.04, but the instructions should be similar for other platforms.
 
-The transactions weights in TFchain were benchmarked on standard hardware.
-It is recommended that validators run at least the standard hardware in order to ensure they are able to process all blocks in time.
-The following are not minimum requirements but if you decide to run with less than this beware that you might have performance issue.
+The transaction weights in TFChain were benchmarked on standard hardware.
+It is recommended that validators run at least the standard hardware to ensure they can process all blocks in time.
+The following are not minimum requirements, but if you decide to run with less than this, be aware that you might have performance issues.
 
 #### Standard Hardware
 
@@ -29,7 +28,7 @@ The following are not minimum requirements but if you decide to run with less th
   - Intel Ice Lake, or newer (Xeon or Core series); AMD Zen3, or newer (EPYC or Ryzen);
   - ~4~ 8 physical cores @ 3.4GHz;
   - Simultaneous multithreading disabled (Hyper-Threading on Intel, SMT on AMD);
-  - Prefer single-threaded performance over higher cores count. A comparison of single-threaded performance can be found here.
+  - Prefer single-threaded performance over higher core count. A comparison of single-threaded performance can be found here.
 - Storage
   - An NVMe SSD. Should be reasonably sized to deal with blockchain growth. Minimum around 80GB but will need to be re-evaluated every six months.
 - Memory
@@ -37,7 +36,7 @@ The following are not minimum requirements but if you decide to run with less th
 - System
   - Linux Kernel 5.16 or newer.
 
-The specs posted above are not a hard requirement to run a validator, but are considered best practice. Running a validator is a responsible task; using professional hardware is a must in any way.
+The specs posted above are not a hard requirement to run a validator but are considered best practice. Running a validator is a responsible task; using professional hardware is a must in any case.
 
 ## 1. Generate Keys
 
@@ -56,7 +55,7 @@ Take note of the following:
 - **Public Key (hex)**
 - **SS58 Address**: This is your validator's account address.
 
-This key will serve as your validator controller account and session key for Aura (validator node/author account). It'll used also to derive the GRANDPA key.
+This key will serve as your validator controller account and session key for AURA (validator node/author account). It will also be used to derive the GRANDPA key.
 
 ### 1.2 Generate the Node (aka Network) Key
 
@@ -66,7 +65,7 @@ Generate the node key file, which identifies your node in the P2P network.
 docker run --rm parity/subkey:latest generate-node-key > "<node_private_key_file>"
 ```
 
-This command outputs a **public key** and write **secret seed** (private key) to `<node_private_key_file>` file. Keep the secret seed secure; you'll use it when starting the node.
+This command outputs a **public key** and writes the **secret seed** (private key) to the `<node_private_key_file>` file. Keep the secret seed secure; you'll use it when starting the node.
 
 ### 1.3 Derive the GRANDPA Key
 
@@ -82,7 +81,7 @@ Note down the **Public Key (hex)** for GRANDPA. This key will serve as your sess
 
 ## 2. Start the Validator Node
 
-You can start the TFChain node either using the binary or via Docker.
+You can start the TFChain node using either Docker, a Kubernetes deployment or the TFChain binary.
 
 ### Option A: Using Docker
 
@@ -98,7 +97,7 @@ mkdir -p /path/to/storage
 
 Since the TFChain Docker container doesn't persist keys between runs by default, we'll run temporary containers to insert the keys into the shared volume.
 
-**Aura Key:**
+**AURA Key:**
 
 ```bash
 docker run --rm \
@@ -147,7 +146,7 @@ docker run -d --name tfchain-validator \
   --sync warp
 ```
 
-- Replace `<NETWORK>` with the network name you want to join (e.g. `test` or `main`).
+- Replace `<NETWORK>` with the name of the network you want to join (e.g., `test` or `main`).
 - Replace `<node_private_key>` with the node's secret seed from step 1.2.
 - Replace `"YourValidatorName"` with your chosen validator name.
 - The `--sync warp` flag enables faster synchronization by skipping state transitions from older blocks.
@@ -191,7 +190,7 @@ Install the Helm chart located at `substrate-node/charts/substrate-node` using y
 helm install tfchain-validator substrate-node/charts/substrate-node -f values.yaml
 ```
 
-This will set up the TFChain validator node on your Kubernetes cluster using the configurations specified.
+This will set up the TFChain validator node on your Kubernetes cluster using the specified configurations.
 
 ### Option C: Using the TFChain Binary
 
@@ -199,13 +198,13 @@ This will set up the TFChain validator node on your Kubernetes cluster using the
 
 If you have never installed Rust, you should do this first.
 
-If you have already installed Rust, run the following command to make sure you are using the latest version.
+If you have already installed Rust, run the following command to make sure you are using the latest version:
 
 ```bash
 rustup update
 ```
 
-If not, this command will fetch the latest version of Rust and install it.
+If not, this command will fetch the latest version of Rust and install it:
 
 ```bash
 curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -225,13 +224,13 @@ Verify your installation.
 rustc --version
 ```
 
-Finally, run this command to install the necessary dependencies for compiling and running the Polkadot node software.
+Finally, run this command to install the necessary dependencies for compiling and running the Polkadot node software:
 
 ```bash
 sudo apt install make clang pkg-config libssl-dev build-essential
 ```
 
-Note - if you are using OSX and you have Homebrew installed, you can issue the following equivalent command INSTEAD of the previous one:
+Note: If you are using macOS and you have Homebrew installed, you can use the following equivalent command INSTEAD of the previous one:
 
 ```bash
 brew install cmake pkg-config openssl git llvm
@@ -240,7 +239,7 @@ brew install cmake pkg-config openssl git llvm
 #### 2.1.2 Install & Configure Network Time Protocol (NTP) Client
 
 NTP is a networking protocol designed to synchronize the clocks of computers over a network. NTP allows you to synchronize the clocks of all the systems within the network.
-Currently it is required that validators' local clocks stay reasonably in sync, so you should be running NTP or a similar service. You can check whether you have the NTP client by running:
+Currently, it is required that validators' local clocks stay reasonably in sync, so you should be running NTP or a similar service. You can check whether you have the NTP client by running:
 
 If you are using Ubuntu 18.04 / 19.04, NTP Client should be installed by default.
 
@@ -248,31 +247,31 @@ If you are using Ubuntu 18.04 / 19.04, NTP Client should be installed by default
 timedatectl
 ```
 
-If NTP is installed and running, you should see System clock synchronized: yes (or a similar message). If you do not see it, you can install it by executing:
+If NTP is installed and running, you should see "System clock synchronized: yes" (or a similar message). If you do not see it, you can install it by executing:
 
 ```bash
 sudo apt-get install ntp
 ```
 
-ntpd will be started automatically after install. You can query ntpd for status information to verify that everything is working:
+ntpd will be started automatically after installation. You can query ntpd for status information to verify that everything is working:
 
 ```bash
 sudo ntpq -p
 ```
 
 - WARNING: Skipping this can result in the validator node missing block authorship opportunities.
-If the clock is out of sync (even by a small amount), the blocks the validator produces may not get accepted by the network.
+If the clock is out of sync (even by a small amount), the blocks the validator produces may not be accepted by the network.
 
-#### 2.1.3 Compile TFchain Binary
+#### 2.1.3 Compile TFChain Binary
 
-Clone tfchain repo
+Clone the tfchain repository:
 
 ```bash
 git clone https://github.com/threefoldtech/tfchain.git
 cd substrate-node
 ```
 
-Now build the binary
+Now build the binary:
 
 ```sh
 cargo build --release
@@ -300,16 +299,16 @@ cd target/release/
   --sync warp
 ```
 
-- Replace `<node_private_key_file>` with the node's secret seed file from step 1.2.
+- Replace `<node_private_key_file>` with the path to the node's secret seed file from step 1.2.
 - Replace `"YourValidatorName"` with a name for your node.
-- Ensure the `--blocks-pruning archive` and `--state-pruning 1000` flag is used for optimal db size.
+- Ensure the `--blocks-pruning archive` and `--state-pruning 1000` flags are used for optimal database size.
 - The `--sync warp` flag enables faster synchronization by skipping intermediate state processing.
 
 #### 2.3 Insert Session Keys
 
-Insert the Aura and GRANDPA keys into your node's keystore.
+Insert the AURA and GRANDPA keys into your node's keystore.
 
-**Aura Key (Sr25519):**
+**AURA Key (Sr25519):**
 
 ```bash
 ./tfchain key insert \
@@ -357,41 +356,43 @@ Example systemd file:
 ```
 
 - Replace `user` by your username.
-- Replace `<...>` by the rest of the tfchain start command args
+- Replace `<...>` with the rest of the tfchain start command arguments.
 
 ```bash
 sudo vim /etc/systemd/system/tfchain.service
 ```
 
-then paste the file content, save and exit vim.
+Then paste the file content, save, and exit vim.
 
-Starting service:
+Starting the service:
 
 ```bash
 sudo systemctl start tfchain
 ```
 
-Stopping service:
+Stopping the service:
 
 ```bash
 sudo systemctl stop tfchain
 ```
 
-Reload config:
+Reloading the configuration:
 
 ```bash
 sudo systemctl stop tfchain
 ```
 
-Edit File:
+Editing the service file:
 
 ```bash
 sudo systemctl start tfchain
 ```
+
+After editing, remember to reload the configuration and restart the service.
 
 ## 3. Synchronize the Node Using Warp Sync
 
-With warp sync enabled, your node will sync much faster by downloading key block headers and skipping state transitions. To monitor the syncing progress, you can view the logs.
+With warp sync enabled, your node will synchronize much faster by downloading key block headers and skipping state transitions. To monitor the synchronization progress, you can view the logs:
 
 ```bash
 # For Docker:
@@ -402,7 +403,7 @@ tail -f /storage/logs.txt
 ```
 
 - Look for log entries indicating the node's **best** and **finalized** block numbers.
-- Warp sync should drastically reduce the time to catch up with the current state of the chain.
+- Warp sync should significantly reduce the time required to catch up with the current state of the chain.
 
 ## 4. Set Session Keys On-Chain
 
@@ -411,7 +412,7 @@ To have your node recognized as a validator, you need to set your session keys o
 ### 4.1 Add Validator Account to Polkadot.js Extension
 
 - Open the Polkadot.js browser extension.
-- Import your validator controler account using the mnemonic from step 1.1.
+- Import your validator controller account using the mnemonic from step 1.1.
 - Ensure you have some TFT tokens in this account (0.1 TFT should suffice for transaction fees).
 
 ### 4.2 Set Session Keys via PolkadotJS Apps
@@ -419,38 +420,37 @@ To have your node recognized as a validator, you need to set your session keys o
 1. Navigate to [PolkadotJS Apps](https://polkadot.js.org/apps/).
 2. Connect to the TFChain network (e.g., wss://tfchain.dev.grid.tf).
 3. Go to **Developer → Extrinsics**.
-4. Select your validator controler account as the signer.
+4. Select your validator controller account as the signer.
 5. Choose `session` → `setKeys(keys, proof)`.
 6. Input your session keys:
 
-   - **keys**: Use previously generated aura and gran hex public keys.
+   - **keys**: Use previously generated aura and gran hex public keys
      - **aura**: Manually enter the hex public key of the sr25519 key
-
      - **gran**: Manually enter the hex public key of the ed25519 key
 
-   - **proof**: Set to `0x00`.
+   - **proof**: Set to `0x00`
 
 7. Submit the transaction. Once the session keys are set on-chain, your validator will be recognized by the network.
 
 ## 5. Submit a Council Motion to Add Validator
 
-TFChain network require a governance proposal to add a validator node.
+The TFChain network requires a governance proposal to add a validator node.
 
 1. Navigate to **Governance → Council**.
 2. Click on **Propose Motion**.
 3. Select `validatorSet` → `addValidator(validatorId)`.
-4. Input your validator controler account's SS58 address (generated in step 1.1).
+4. Input your validator controller account's SS58 address (generated in step 1.1).
 5. Submit the proposal.
 
 After submission, inform other council members and request them to vote on the proposal.
 
 ## 6. Finalize and Start Validating
 
-Once your session keys are set and the council approves your validator, your node will start participating in block production after 2 era.
+Once your session keys are set and the council approves your validator, your node will start participating in block production after 2 eras.
 
 ### Ensure Node Health
 
-- Keep your node online and synced.
+- Keep your node online and synchronized.
 - Monitor logs for any errors or warnings.
 
 ---
