@@ -395,22 +395,24 @@ impl<T: Config> Pallet<T> {
                     // Ensure associated node contracts have no reserved balance.
                     // If none, proceed to move the contract to the 'deleted' state.
                     // Otherwise, wait.
-                    let can_be_deleted = match contract.contract_type {
+                    match contract.contract_type {
                         types::ContractData::RentContract(_) => {
                             let active_node_contracts = ActiveNodeContracts::<T>::get(contract.get_node_id());
-                            !active_node_contracts.iter().any(|id| {
+                            let rent_has_node_contracts_with_reserve = 
+                            active_node_contracts.iter().any(|id| {
                                 ContractPaymentState::<T>::get(id).map_or(false, |s| s.has_reserve())
-                            })
+                            });
+
+                            if rent_has_node_contracts_with_reserve {
+                                log::debug!(
+                                    "Grace period on rented node expired, but one or more associated node contracts hold user funds. \
+                                    Rent contract deletion will be delayed until funds are distributed to beneficiaries."
+                                );
+                                return Ok(().into());
+                            }
                         }
-                        _ => true,
+                        _ => (),
                     };
-                    if !can_be_deleted {
-                        log::debug!(
-                            "Grace period expired, but one or more associated node contracts have held user funds. \
-                            Rent contract deletion will be delayed until funds are distributed to beneficiaries."
-                        );
-                        return Ok(().into());
-                    }
 
                     log::info!("Contract {:?} state changed to deleted at block {:?} due to an expired grace period.", contract.contract_id, current_block);
                     Self::deposit_event(Event::ContractGracePeriodElapsed {

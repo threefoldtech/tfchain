@@ -1,5 +1,5 @@
 use crate::{
-    cost, mock::{RuntimeEvent as MockEvent, *}, test_utils::*, types::{self, RentContract}, Error,
+    cost, mock::{RuntimeEvent as MockEvent, *}, test_utils::*, types, Error,
     Event as SmartContractEvent,
 };
 use frame_support::{
