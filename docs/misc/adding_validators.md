@@ -446,7 +446,7 @@ After submission, inform other council members and request them to vote on the p
 
 ## 6. Finalize and Start Validating
 
-Once your session keys are set and the council approves your validator, your node will start participating in block production after 2 eras.
+Once your session keys are set and the council approves your validator, your node will start participating in block production after 2 sessions.
 
 ### Ensure Node Health
 
