@@ -935,6 +935,45 @@ fn test_create_node_contract_on_dedicated_node_rented_by_other_fails() {
 }
 
 #[test]
+fn test_create_node_contract_when_having_a_rentcontract_in_graceperiod_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_dedicated_farm_and_node();
+        let node_id = 1;
+        let contract_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(charlie()),
+            node_id,
+            None
+        ));
+
+        // Cycle 1
+        // User does not have enough funds to pay
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        let r = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(r.state, types::ContractState::GracePeriod(11));
+
+        // try to create node contract
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                RuntimeOrigin::signed(charlie()),
+                node_id,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                1,
+                None
+            ),
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
+        );
+    })
+}
+
+#[test]
 fn test_cancel_rent_contract_with_active_node_contracts_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
