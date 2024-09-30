@@ -3043,9 +3043,6 @@ fn test_node_contract_on_dedicated_node_shouldnt_be_restored_if_rent_contract_in
 
         let node_id = 1;
 
-        // Set the TFT prices
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
-
         // Create a rent contract
         assert_ok!(SmartContractModule::create_rent_contract(
             RuntimeOrigin::signed(bob()),
@@ -3106,7 +3103,8 @@ fn test_node_contract_on_dedicated_node_shouldnt_be_restored_if_rent_contract_in
         // Transfer some balance to the owner of the contract to settle only the cost of IP rent (node contract)
         // Case 1: See https://github.com/threefoldtech/tfchain/issues/1002
         // Calculate the node contract cost
-        let (amount_due, discount_level) = calculate_tft_cost(node_contract_id, 2, 10);
+        let bob_twin_id = 2;
+        let (amount_due, discount_level) = calculate_tft_cost(node_contract_id, bob_twin_id, 10);
         log::debug!("Amount due: {}, discount level: {:?}", amount_due, discount_level);
         Balances::transfer_allow_death(RuntimeOrigin::signed(charlie()), bob(), amount_due).unwrap();
 
@@ -3118,7 +3116,7 @@ fn test_node_contract_on_dedicated_node_shouldnt_be_restored_if_rent_contract_in
         // Check if last event is Contract billed event
         let events = System::events();
         log::debug!("Events: {:?}", events);
-        let contract_bill_event = types::ContractBill {
+        let contract_bill = types::ContractBill {
             contract_id: node_contract_id,
             timestamp: 1628082132,
             discount_level,
@@ -3129,7 +3127,7 @@ fn test_node_contract_on_dedicated_node_shouldnt_be_restored_if_rent_contract_in
                 .last()
                 .unwrap()
                 .event,
-            MockEvent::SmartContractModule(SmartContractEvent::ContractBilled(contract_bill_event))
+            MockEvent::SmartContractModule(SmartContractEvent::ContractBilled(contract_bill))
         );
 
         // Node contract cost settled (IP address cost), but it should remain in the grace period due to the suspended rent contract
@@ -3148,9 +3146,6 @@ fn test_node_contract_with_overdraft_on_dedicated_node_shouldnt_be_restored_when
         prepare_dedicated_farm_and_node();
 
         let node_id = 1;
-
-        // Set the TFT prices
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         // Create a rent contract
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -3198,7 +3193,8 @@ fn test_node_contract_with_overdraft_on_dedicated_node_shouldnt_be_restored_when
         // Transfer some balance to the owner of the contract to settle only the cost of node resources (rent contract)
         // Case 2: see https://github.com/threefoldtech/tfchain/issues/1002
         // Calculate the rent contract cost
-        let (contract_cost, discount_level) = calculate_tft_cost(rent_contract_id, 3, 20);
+        let charlie_twin_id = 3;
+        let (contract_cost, discount_level) = calculate_tft_cost(rent_contract_id, charlie_twin_id, 20);
         let amount_due = contract_cost - spendable_balance;
         log::debug!("Amount due: {}, discount level: {:?}", amount_due, discount_level);
         Balances::transfer_allow_death(RuntimeOrigin::signed(bob()), charlie(), amount_due).unwrap();
@@ -3227,9 +3223,6 @@ fn test_rent_contract_should_wait_for_proper_distribution_of_rewards_when_grace_
         prepare_dedicated_farm_and_node();
 
         let node_id = 1;
-
-        // Set the TFT prices
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         // Create a rent contract
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -3333,13 +3326,14 @@ fn test_rent_contract_should_wait_for_proper_distribution_of_rewards_when_grace_
         // Check if the last event is NodeContractCanceled event
         assert_eq!(
             events
-                .iter()
-                .filter(|e| matches!(
-                    e.event,
-                    MockEvent::SmartContractModule(SmartContractEvent::NodeContractCanceled { .. })
-                ))
-                .count(),
-            1
+                .last()
+                .unwrap()
+                .event,
+            MockEvent::SmartContractModule(SmartContractEvent::NodeContractCanceled{
+                contract_id: node_contract_id,
+                node_id: node_id,
+                twin_id: 2
+            })
         );
         // The rent contract should be canceled in the next cycle
         let block_number: u64 = 131;
@@ -3354,13 +3348,12 @@ fn test_rent_contract_should_wait_for_proper_distribution_of_rewards_when_grace_
         let events = System::events();
         assert_eq!(
             events
-                .iter()
-                .filter(|e| matches!(
-                    e.event,
-                    MockEvent::SmartContractModule(SmartContractEvent::RentContractCanceled { .. })
-                ))
-                .count(),
-            1
+                .last()
+                .unwrap()
+                .event,
+            MockEvent::SmartContractModule(SmartContractEvent::RentContractCanceled{
+                contract_id: rent_contract_id,
+            })
         );
         // No part of the user's balance should be reserved
         assert_eq!(Balances::reserved_balance(&bob()), 0);
@@ -3376,9 +3369,6 @@ fn test_node_contract_in_grace_period_should_maintain_start_block_number_if_rent
         prepare_dedicated_farm_and_node();
 
         let node_id = 1;
-
-        // Set the TFT prices
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         // Create a rent contract
         assert_ok!(SmartContractModule::create_rent_contract(
