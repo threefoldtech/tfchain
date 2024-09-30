@@ -3115,7 +3115,7 @@ fn test_node_contract_on_dedicated_node_shouldnt_be_restored_if_rent_contract_in
             .should_call_bill_contract(node_contract_id, Ok(Pays::Yes.into()), 22);
         run_to_block(22, Some(&mut pool_state));
         
-        // Check if last event is Contract billed evenet
+        // Check if last event is Contract billed event
         let events = System::events();
         log::debug!("Events: {:?}", events);
         let contract_bill_event = types::ContractBill {
@@ -3195,7 +3195,7 @@ fn test_node_contract_with_overdraft_on_dedicated_node_shouldnt_be_restored_when
             .should_call_bill_contract(rent_contract_id, Ok(Pays::Yes.into()), 21);
         run_to_block(21, Some(&mut pool_state));
 
-        // Check if evenets contains ContractGracePeriodStarted events for both contracts
+        // Check if events contains ContractGracePeriodStarted events for both contracts
         let events = System::events();
         log::debug!("Events: {:?}", events);
         assert_eq!(
@@ -3221,7 +3221,7 @@ fn test_node_contract_with_overdraft_on_dedicated_node_shouldnt_be_restored_when
             .should_call_bill_contract(node_contract_id, Ok(Pays::Yes.into()), 22);
         run_to_block(22, Some(&mut pool_state));
         
-        // Check if last event is Contract billed evenet
+        // Check if last event is Contract billed event
         let events = System::events();
         log::debug!("Events: {:?}", events);
         let contract_bill_event = types::ContractBill {
@@ -3305,7 +3305,7 @@ fn test_rent_contract_should_wait_for_proper_distribution_of_rewards_when_grace_
             .should_call_bill_contract(rent_contract_id, Ok(Pays::Yes.into()), 21);
         run_to_block(21, Some(&mut pool_state));
 
-        // Check if evenets contains ContractGracePeriodStarted events for both contracts
+        // Check if events contains ContractGracePeriodStarted events for both contracts
         let events = System::events();
         log::debug!("Events: {:?}", events);
         assert_eq!(
