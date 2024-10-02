@@ -1,5 +1,5 @@
 use crate::{
-    cost, mock::RuntimeEvent as MockEvent, mock::*, test_utils::*, types, Error,
+    cost, mock::{RuntimeEvent as MockEvent, *}, test_utils::*, types, Error,
     Event as SmartContractEvent,
 };
 use frame_support::{
@@ -3030,6 +3030,399 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
             ))),
             true
         );
+    });
+}
+
+#[test]
+fn test_node_contract_on_dedicated_node_shouldnt_be_restored_if_rent_contract_in_grace_period() {
+    // Test ensuring that a node contract on a dedicated node remains in the grace period if the rent contract is in the grace period.
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, Some(&mut pool_state));
+        prepare_dedicated_farm_and_node();
+
+        let node_id = 1;
+
+        // Create a rent contract
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            None
+        ));
+        let rent_contract_id = 1;
+
+        run_to_block(2, Some(&mut pool_state));
+
+        // Create a node contract with a public IP
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
+        ));
+        let node_contract_id = 2;
+        push_contract_resources_used(node_contract_id);
+
+        pool_state
+            .write()
+            .should_call_bill_contract(rent_contract_id, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        pool_state
+            .write()
+            .should_call_bill_contract(node_contract_id, Ok(Pays::Yes.into()), 12);
+        run_to_block(12, Some(&mut pool_state));
+
+        // Transfer all balance from the owner of the contract to trigger the grace period to start
+        let bob_balance = Balances::usable_balance(bob());
+        Balances::transfer_allow_death(RuntimeOrigin::signed(bob()), charlie(), bob_balance).unwrap();
+
+        // The grace period for the rent contract should start
+        // The node contract should also transition to the grace period
+        pool_state
+            .write()
+            .should_call_bill_contract(rent_contract_id, Ok(Pays::Yes.into()), 21);
+        run_to_block(21, Some(&mut pool_state));
+
+        // Check if the events contain ContractGracePeriodStarted events for both contracts
+        let events = System::events();
+        log::debug!("Events: {:?}", events);
+        assert_eq!(
+            events
+                .iter()
+                .filter(|e| matches!(
+                    e.event,
+                    MockEvent::SmartContractModule(SmartContractEvent::ContractGracePeriodStarted { .. })
+                ))
+                .count(),
+            2
+        );
+
+        // Transfer some balance to the owner of the contract to settle only the cost of IP rent (node contract)
+        // Case 1: See https://github.com/threefoldtech/tfchain/issues/1002
+        // Calculate the node contract cost
+        let bob_twin_id = 2;
+        let (amount_due, discount_level) = calculate_tft_cost(node_contract_id, bob_twin_id, 10);
+        log::debug!("Amount due: {}, discount level: {:?}", amount_due, discount_level);
+        Balances::transfer_allow_death(RuntimeOrigin::signed(charlie()), bob(), amount_due).unwrap();
+
+        pool_state
+            .write()
+            .should_call_bill_contract(node_contract_id, Ok(Pays::Yes.into()), 22);
+        run_to_block(22, Some(&mut pool_state));
+        
+        // Check if last event is Contract billed event
+        let events = System::events();
+        log::debug!("Events: {:?}", events);
+        let contract_bill = types::ContractBill {
+            contract_id: node_contract_id,
+            timestamp: 1628082132,
+            discount_level,
+            amount_billed: amount_due as u128,
+        };
+        assert_eq!(
+            events
+                .last()
+                .unwrap()
+                .event,
+            MockEvent::SmartContractModule(SmartContractEvent::ContractBilled(contract_bill))
+        );
+
+        // Node contract cost settled (IP address cost), but it should remain in the grace period due to the suspended rent contract
+        // The cost of the node resources utilized by this node contract is billed to the rent contract
+        let node_contract = SmartContractModule::contracts(node_contract_id).unwrap();
+        assert_eq!(node_contract.state, types::ContractState::GracePeriod(21));
+    });
+}
+
+#[test]
+fn test_node_contract_with_overdraft_on_dedicated_node_shouldnt_be_restored_when_rent_contract_overdraft_settled() {
+    // Test ensuring that a node contract with overdraft on a dedicated node remains in the grace period when the rent contract overdraft is settled
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, Some(&mut pool_state));
+        prepare_dedicated_farm_and_node();
+
+        let node_id = 1;
+
+        // Create a rent contract
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(charlie()),
+            node_id,
+            None
+        ));
+        let rent_contract_id = 1;
+
+        run_to_block(2, Some(&mut pool_state));
+
+        // Create a node contract with a public IP
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(charlie()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
+        ));
+        let node_contract_id = 2;
+        push_contract_resources_used(node_contract_id);
+
+        // Get spendable balance
+        let spendable_balance = SmartContractModule::get_usable_balance(&charlie());
+
+        // The grace period for the rent contract should start
+        // Node contract should also transition to grace period
+        pool_state
+            .write()
+            .should_call_bill_contract(rent_contract_id, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        pool_state
+            .write()
+            .should_call_bill_contract(node_contract_id, Ok(Pays::Yes.into()), 12);
+        run_to_block(12, Some(&mut pool_state));
+
+        let rent_contract = SmartContractModule::contracts(rent_contract_id).unwrap();
+        assert_eq!(rent_contract.state, types::ContractState::GracePeriod(11));
+
+        let node_contract = SmartContractModule::contracts(node_contract_id).unwrap();
+        assert_eq!(node_contract.state, types::ContractState::GracePeriod(11));
+
+        // Transfer some balance to the owner of the contract to settle only the cost of node resources (rent contract)
+        // Case 2: see https://github.com/threefoldtech/tfchain/issues/1002
+        // Calculate the rent contract cost
+        let charlie_twin_id = 3;
+        let (contract_cost, discount_level) = calculate_tft_cost(rent_contract_id, charlie_twin_id, 20);
+        let amount_due = contract_cost - spendable_balance;
+        log::debug!("Amount due: {}, discount level: {:?}", amount_due, discount_level);
+        Balances::transfer_allow_death(RuntimeOrigin::signed(bob()), charlie(), amount_due).unwrap();
+
+        // The grace period for the rent contract should end,
+        // but the node contract should remain in the grace period due to an outstanding overdraft
+        pool_state
+            .write()
+            .should_call_bill_contract(rent_contract_id, Ok(Pays::Yes.into()), 21);
+        run_to_block(21, Some(&mut pool_state));
+
+        let rent_contract = SmartContractModule::contracts(rent_contract_id).unwrap();
+        assert_eq!(rent_contract.state, types::ContractState::Created);
+
+        let node_contract = SmartContractModule::contracts(node_contract_id).unwrap();
+        assert_eq!(node_contract.state, types::ContractState::GracePeriod(11));
+    });
+}
+
+#[test]
+fn test_rent_contract_should_wait_for_proper_distribution_of_rewards_when_grace_period_elapses() {
+    // Test ensuring that a rent contract is only canceled after associated node contracts have completed billing and rewards distribution, even if the grace period elapses
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, Some(&mut pool_state));
+        prepare_dedicated_farm_and_node();
+
+        let node_id = 1;
+
+        // Create a rent contract
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            None
+        ));
+        let rent_contract_id = 1;
+
+        run_to_block(2, Some(&mut pool_state));
+
+        // Create a node contract with a public IP
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
+        ));
+        let node_contract_id = 2;
+        push_contract_resources_used(node_contract_id);
+
+        // In this cycle the contracts should reserve some amount from the owner
+        pool_state
+            .write()
+            .should_call_bill_contract(rent_contract_id, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        pool_state
+            .write()
+            .should_call_bill_contract(node_contract_id, Ok(Pays::Yes.into()), 12);
+        run_to_block(12, Some(&mut pool_state));
+
+        // Part of the user's balance should be reserved
+        assert_ne!(Balances::reserved_balance(&bob()), 0);
+
+        // Transfer all balance from the owner of the contract to trigger the grace period to start
+        let bob_balance = Balances::usable_balance(bob());
+        Balances::transfer_allow_death(RuntimeOrigin::signed(bob()), charlie(), bob_balance).unwrap();
+
+        // The grace period for the rent contract should start
+        // Node contract should also transition to grace period
+        pool_state
+            .write()
+            .should_call_bill_contract(rent_contract_id, Ok(Pays::Yes.into()), 21);
+        run_to_block(21, Some(&mut pool_state));
+
+        // Check if events contain ContractGracePeriodStarted events for both contracts
+        let events = System::events();
+        log::debug!("Events: {:?}", events);
+        assert_eq!(
+            events
+                .iter()
+                .filter(|e| matches!(
+                    e.event,
+                    MockEvent::SmartContractModule(SmartContractEvent::ContractGracePeriodStarted { .. })
+                ))
+                .count(),
+            2
+        );
+        pool_state
+            .write()
+            .should_call_bill_contract(node_contract_id, Ok(Pays::Yes.into()), 22);
+        run_to_block(22, Some(&mut pool_state));
+
+        // Advance 10 cycles
+        // Typically, the rent contract is canceled immediately after the grace period expires
+        // However, if one of the associated node contracts hasn't yet distributed rewards,
+        // the rent contract should remain active until the node contract completes billing and reward distribution
+        // Once done, the rent contract can then be canceled
+        // Case 3: see https://github.com/threefoldtech/tfchain/issues/1002
+        for i in 1..=10 {
+            let block_number = 21 + i * BillingFrequency::get();
+            pool_state.write().should_call_bill_contract(
+                rent_contract_id,
+                Ok(Pays::Yes.into()),
+                block_number,
+            );
+            run_to_block(block_number, Some(&mut pool_state));
+            pool_state.write().should_call_bill_contract(
+                node_contract_id,
+                Ok(Pays::Yes.into()),
+                block_number+1,
+            );
+            run_to_block(block_number+1, Some(&mut pool_state));
+        }
+        // Check if the events contain RewardDistributed event
+        let events = System::events();
+        log::debug!("Events: {:?}", events);
+        assert_eq!(
+            events
+                .iter()
+                .filter(|e| matches!(
+                    e.event,
+                    MockEvent::SmartContractModule(SmartContractEvent::RewardDistributed { .. })
+                ))
+                .count(),
+            1
+        );
+        // Check if the last event is NodeContractCanceled event
+        assert_eq!(
+            events
+                .last()
+                .unwrap()
+                .event,
+            MockEvent::SmartContractModule(SmartContractEvent::NodeContractCanceled{
+                contract_id: node_contract_id,
+                node_id: node_id,
+                twin_id: 2
+            })
+        );
+        // The rent contract should be canceled in the next cycle
+        let block_number: u64 = 131;
+        pool_state.write().should_call_bill_contract(
+            rent_contract_id,
+            Ok(Pays::Yes.into()),
+            block_number,
+        );
+        run_to_block(block_number, Some(&mut pool_state));
+
+        // Check if the last event is RentContractCanceled event
+        let events = System::events();
+        assert_eq!(
+            events
+                .last()
+                .unwrap()
+                .event,
+            MockEvent::SmartContractModule(SmartContractEvent::RentContractCanceled{
+                contract_id: rent_contract_id,
+            })
+        );
+        // No part of the user's balance should be reserved
+        assert_eq!(Balances::reserved_balance(&bob()), 0);
+    });
+}
+
+#[test]
+fn test_node_contract_in_grace_period_should_maintain_start_block_number_if_rent_contract_transition_to_grace_period() {
+    // Test ensuring that a node contract in the grace period retains its original start block number, even if the associated rent contract transitions to the grace period
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, Some(&mut pool_state));
+        prepare_dedicated_farm_and_node();
+
+        let node_id = 1;
+
+        // Create a rent contract
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            None
+        ));
+        let rent_contract_id = 1;
+
+        run_to_block(2, Some(&mut pool_state));
+
+        // Create a node contract with a public IP
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
+        ));
+        let node_contract_id = 2;
+        push_contract_resources_used(node_contract_id);
+
+        // Bill rent contract
+        pool_state
+            .write()
+            .should_call_bill_contract(rent_contract_id, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        // Transfer all balance from the owner of the contract to trigger the grace period to start
+        let bob_balance = Balances::usable_balance(bob());
+        Balances::transfer_allow_death(RuntimeOrigin::signed(bob()), charlie(), bob_balance).unwrap();
+
+        // The grace period for the node contract should start
+        pool_state
+            .write()
+            .should_call_bill_contract(node_contract_id, Ok(Pays::Yes.into()), 12);
+        run_to_block(12, Some(&mut pool_state));
+
+        let node_contract = SmartContractModule::contracts(node_contract_id).unwrap();
+        assert_eq!(node_contract.state, types::ContractState::GracePeriod(12));
+
+        // The grace period for the rent contract should start
+        // The node contract should remain in the grace period, maintaining the original start block number (12)
+        pool_state
+            .write()
+            .should_call_bill_contract(rent_contract_id, Ok(Pays::Yes.into()), 21);
+        run_to_block(21, Some(&mut pool_state));
+
+        let rent_contract = SmartContractModule::contracts(rent_contract_id).unwrap();
+        assert_eq!(rent_contract.state, types::ContractState::GracePeriod(21));
+
+        let node_contract = SmartContractModule::contracts(node_contract_id).unwrap();
+        assert_eq!(node_contract.state, types::ContractState::GracePeriod(12));
     });
 }
 
