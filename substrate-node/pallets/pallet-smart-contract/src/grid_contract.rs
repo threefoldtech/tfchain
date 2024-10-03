@@ -41,13 +41,15 @@ impl<T: Config> Pallet<T> {
         let node_is_dedicated =
             DedicatedNodesExtraFee::<T>::get(node_id) > 0 || farm.dedicated_farm;
 
-        // In case there is a rent contract make sure only the contract owner can deploy
+        // In case there is a rent contract:
+        // 1. Ensure only the contract owner can deploy, and
+        // 2. The rent contract is in the 'created' state
         // If not, allow to deploy only if node is not dedicated
         match ActiveRentContractForNode::<T>::get(node_id) {
             Some(contract_id) => {
                 let rent_contract =
                     Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-                if rent_contract.twin_id != twin_id {
+                if rent_contract.twin_id != twin_id || !matches!(rent_contract.state, types::ContractState::Created) {
                     return Err(Error::<T>::NodeNotAvailableToDeploy.into());
                 }
             }
@@ -270,9 +272,12 @@ impl<T: Config> Pallet<T> {
         // override values
         contract.contract_type = types::ContractData::NodeContract(node_contract);
 
-        let state = contract.state.clone();
-        Self::update_contract_state(&mut contract, &state)?;
-
+        // Why we call update_contract_state if state can't be changed?
+        // Obviously, we just depened on the update_contract_state for writing the contract to the storage, but we can do it here
+        // let state = contract.state.clone();
+        // Self::update_contract_state(&mut contract, &state)?;
+        Contracts::<T>::insert(&contract.contract_id, contract.clone());
+        
         Self::deposit_event(Event::ContractUpdated(contract));
 
         Ok(().into())
@@ -391,14 +396,14 @@ impl<T: Config> Pallet<T> {
     fn remove_active_node_contract(node_id: u32, contract_id: u64) {
         let mut contracts = ActiveNodeContracts::<T>::get(&node_id);
 
-        match contracts.iter().position(|id| id == &contract_id) {
-            Some(index) => {
-                contracts.remove(index);
-            }
-            None => (),
-        };
+        let initial_len = contracts.len();
 
-        ActiveNodeContracts::<T>::insert(&node_id, &contracts);
+        contracts.retain(|&id| id != contract_id);
+
+        // Only update the storage if the list length has changed, meaning a contract was removed
+        if contracts.len() != initial_len {
+            ActiveNodeContracts::<T>::insert(&node_id, contracts);
+        }
     }
 
     // Helper function that updates the contract state and manages storage accordingly
@@ -406,9 +411,20 @@ impl<T: Config> Pallet<T> {
         contract: &mut types::Contract<T>,
         state: &types::ContractState,
     ) -> DispatchResultWithPostInfo {
-        // update the state and save the contract
-        contract.state = state.clone();
-        Contracts::<T>::insert(&contract.contract_id, contract.clone());
+        // Update the state and save the contract only when necessary.
+        if contract.state != *state {
+            match (&contract.state, state) {
+                // Transition from GracePeriod(x) to GracePeriod(y) is not allowed
+                (types::ContractState::GracePeriod(_), types::ContractState::GracePeriod(_)) => {
+                    log::info!("Contract {:?} already in grace period, not changing to {:?} state", contract.contract_id, state);
+                },
+                // All other transitions are allowed
+                _ => {
+                    contract.state = state.clone();
+                    Contracts::<T>::insert(&contract.contract_id, contract.clone());
+                }
+            }
+         }
 
         // if the contract is a name or rent contract, nothing to do left here
         match contract.contract_type {
@@ -423,6 +439,7 @@ impl<T: Config> Pallet<T> {
 
         let mut contracts = ActiveNodeContracts::<T>::get(&node_contract.node_id);
 
+        let original_len = contracts.len();
         match contracts.iter().position(|id| id == &contract.contract_id) {
             Some(index) => {
                 // if the new contract state is delete, remove the contract id from the map
@@ -437,8 +454,9 @@ impl<T: Config> Pallet<T> {
                 }
             }
         };
-
-        ActiveNodeContracts::<T>::insert(&node_contract.node_id, &contracts);
+        if contracts.len() != original_len {
+            ActiveNodeContracts::<T>::insert(&node_contract.node_id, &contracts);
+        };
 
         Ok(().into())
     }
