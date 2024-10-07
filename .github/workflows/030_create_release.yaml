@@ -28,6 +28,7 @@ jobs:
           workdir: '${{ github.workspace }}/substrate-node'
           package: tfchain-runtime
           runtime_dir: runtime
+          tag: "1.77.0"
 
       - name: Summary
         run: |
