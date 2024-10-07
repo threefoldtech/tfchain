@@ -26,12 +26,12 @@ impl<T: Config> Pallet<T> {
 
         // transfer new amount to target
         let amount_as_balance = BalanceOf::<T>::saturated_from(new_amount);
-        T::Currency::deposit_creating(&tx.target, amount_as_balance);
+        let _ = T::Currency::deposit_creating(&tx.target, amount_as_balance);
         // transfer deposit fee to fee wallet
         let deposit_fee_b = BalanceOf::<T>::saturated_from(deposit_fee);
 
         if let Some(fee_account) = FeeAccount::<T>::get() {
-            T::Currency::deposit_creating(&fee_account, deposit_fee_b);
+            let _ = T::Currency::deposit_creating(&fee_account, deposit_fee_b);
         }
 
         // Remove tx from storage
@@ -78,7 +78,7 @@ impl<T: Config> Pallet<T> {
 
         // transfer withdraw fee to fee wallet
         if let Some(fee_account) = FeeAccount::<T>::get() {
-            T::Currency::deposit_creating(&fee_account, withdraw_fee_b);
+            let _ = T::Currency::deposit_creating(&fee_account, withdraw_fee_b);
         }
 
         // increment burn transaction id
@@ -240,9 +240,11 @@ impl<T: Config> Pallet<T> {
             Error::<T>::BurnTransactionAlreadyExecuted
         );
 
-        let Some(mut burn_tx) = BurnTransactions::<T>::get(tx_id) else {return Err(DispatchErrorWithPostInfo::from(
-            Error::<T>::BurnTransactionNotExists,
-        ));};
+        let Some(mut burn_tx) = BurnTransactions::<T>::get(tx_id) else {
+            return Err(DispatchErrorWithPostInfo::from(
+                Error::<T>::BurnTransactionNotExists,
+            ));
+        };
 
         ensure!(
             BurnTransactions::<T>::contains_key(tx_id),
@@ -286,9 +288,11 @@ impl<T: Config> Pallet<T> {
         stellar_pub_key: Vec<u8>,
         sequence_number: u64,
     ) -> DispatchResultWithPostInfo {
-        let Some(mut tx) = BurnTransactions::<T>::get(&tx_id) else {return Err(DispatchErrorWithPostInfo::from(
-            Error::<T>::BurnTransactionNotExists,
-        ));};
+        let Some(mut tx) = BurnTransactions::<T>::get(&tx_id) else {
+            return Err(DispatchErrorWithPostInfo::from(
+                Error::<T>::BurnTransactionNotExists,
+            ));
+        };
 
         let validators = Validators::<T>::get();
         if tx.signatures.len() == (validators.len() / 2) + 1 {
@@ -346,9 +350,11 @@ impl<T: Config> Pallet<T> {
             Error::<T>::BurnTransactionNotExists
         );
 
-        let Some(tx) = BurnTransactions::<T>::get(tx_id) else {return Err(DispatchErrorWithPostInfo::from(
-            Error::<T>::BurnTransactionNotExists,
-        ));};
+        let Some(tx) = BurnTransactions::<T>::get(tx_id) else {
+            return Err(DispatchErrorWithPostInfo::from(
+                Error::<T>::BurnTransactionNotExists,
+            ));
+        };
 
         BurnTransactions::<T>::remove(tx_id);
         ExecutedBurnTransactions::<T>::insert(tx_id, &tx);
