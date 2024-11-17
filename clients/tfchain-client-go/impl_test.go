@@ -77,7 +77,8 @@ func TestConcurrentAccess(t *testing.T) {
 				return
 			}
 			defer sub.Release()
-			sub.Time()
+			_, err = sub.Time()
+			assert.NoError(t, err)
 			time.Sleep(10 * time.Millisecond)
 		}()
 	}
@@ -111,7 +112,8 @@ func TestHealthChecking(t *testing.T) {
 	old := sub.conn.conn
 	old.Client.Close()
 	// simulate usage of the client
-	sub.Time()
+	_, err = sub.Time()
+	assert.NoError(t, err)
 	assert.NotEqual(t, old, sub.conn.conn)
 }
 
@@ -169,7 +171,8 @@ func TestStressWithFailures(t *testing.T) {
 				retryBackoff = time.Millisecond * 100
 
 				// Simulate work
-				sub.Time()
+				_, err = sub.Time()
+				assert.NoError(t, err)
 				time.Sleep(time.Duration(rand.Intn(250)+50) * time.Millisecond)
 
 				if id%2 == 0 && rand.Float32() < 0.1 {
