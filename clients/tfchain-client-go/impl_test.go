@@ -13,7 +13,7 @@ import (
 )
 
 func TestPoolInitialization(t *testing.T) {
-	urls := []string{"ws://127.0.0.1:9944"}
+	urls := []string{getUrlBasedOnEnv()}
 	mgr := NewManager(urls...)
 	defer mgr.Close()
 
@@ -28,7 +28,8 @@ func TestPoolInitialization(t *testing.T) {
 }
 
 func TestConnectionReuse(t *testing.T) {
-	mgr := NewManager("ws://127.0.0.1:9944")
+	urls := []string{getUrlBasedOnEnv()}
+	mgr := NewManager(urls...)
 	defer mgr.Close()
 
 	// Wait for pool initialization
@@ -59,7 +60,8 @@ func TestConnectionReuse(t *testing.T) {
 }
 
 func TestConcurrentAccess(t *testing.T) {
-	mgr := NewManager("ws://127.0.0.1:9944")
+	urls := []string{getUrlBasedOnEnv()}
+	mgr := NewManager(urls...)
 	defer mgr.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -87,7 +89,8 @@ func TestConcurrentAccess(t *testing.T) {
 }
 
 func TestFailover(t *testing.T) {
-	mgr := NewManager("ws://fail1", "ws://127.0.0.1:9944")
+	urls := []string{"ws://fail1", getUrlBasedOnEnv()}
+	mgr := NewManager(urls...)
 	defer mgr.Close()
 
 	sub1, err := mgr.GetConnection(context.Background())
@@ -96,12 +99,13 @@ func TestFailover(t *testing.T) {
 	sub2, err := mgr.GetConnection(context.Background())
 	require.NoError(t, err)
 	defer sub2.Release()
-	assert.Equal(t, sub1.conn.url, "ws://127.0.0.1:9944")
-	assert.Equal(t, sub2.conn.url, "ws://127.0.0.1:9944")
+	assert.Equal(t, sub1.conn.url, urls[1])
+	assert.Equal(t, sub2.conn.url, urls[1])
 }
 
 func TestHealthChecking(t *testing.T) {
-	mgr := NewManager("ws://127.0.0.1:9944")
+	urls := []string{getUrlBasedOnEnv()}
+	mgr := NewManager(urls...)
 	defer mgr.Close()
 
 	sub, err := mgr.GetConnection(context.Background())
@@ -131,7 +135,8 @@ func TestStressWithFailures(t *testing.T) {
 		ConnectionTimeout: time.Second,
 	}
 
-	mgr := NewManagerWithConfig(config, "ws://127.0.0.1:9944")
+	urls := []string{getUrlBasedOnEnv()}
+	mgr := NewManagerWithConfig(config, urls...)
 	defer mgr.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
