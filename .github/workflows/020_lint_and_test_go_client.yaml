@@ -21,13 +21,13 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.20"
+          go-version: "1.21"
           cache: false
           # cache-dependency-path: clients/tfchain-client-go/go.sum
         id: go
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3.7.0
+        uses: golangci/golangci-lint-action@v6
         with:
           args: --timeout 3m --verbose
           working-directory: clients/tfchain-client-go
