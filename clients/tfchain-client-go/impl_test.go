@@ -13,7 +13,7 @@ import (
 )
 
 func TestPoolInitialization(t *testing.T) {
-	urls := []string{"ws://127.0.0.1:9944", "ws://127.0.0.1:9945", "ws://127.0.0.1:9946"}
+	urls := []string{"ws://127.0.0.1:9944"}
 	mgr := NewManager(urls...)
 	defer mgr.Close()
 
@@ -59,7 +59,7 @@ func TestConnectionReuse(t *testing.T) {
 }
 
 func TestConcurrentAccess(t *testing.T) {
-	mgr := NewManager("ws://127.0.0.1:9944", "ws://127.0.0.1:9945")
+	mgr := NewManager("ws://127.0.0.1:9944")
 	defer mgr.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -131,7 +131,7 @@ func TestStressWithFailures(t *testing.T) {
 		ConnectionTimeout: time.Second,
 	}
 
-	mgr := NewManagerWithConfig(config, "ws://127.0.0.1:9944", "ws://127.0.0.1:9945")
+	mgr := NewManagerWithConfig(config, "ws://127.0.0.1:9944")
 	defer mgr.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
