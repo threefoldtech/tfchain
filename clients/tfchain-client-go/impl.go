@@ -208,6 +208,7 @@ func (m *manager) getHealthyConn() (*poolConn, error) {
 
 	b := backoff.NewExponentialBackOff()
 	b.MaxInterval = 2 * time.Second
+	b.MaxElapsedTime = 4 * time.Second
 	b.InitialInterval = 500 * time.Millisecond
 	b.Multiplier = 2
 
