@@ -33,9 +33,10 @@ jobs:
           working-directory: clients/tfchain-client-go
 
       - name: staticcheck
-        uses: dominikh/staticcheck-action@v1.3.0
+        uses: dominikh/staticcheck-action@v1
         with:
-          version: "2022.1.3"
+          version: "latest"
+          install-go: false
           working-directory: clients/tfchain-client-go
         env:
           GO111MODULE: on
