@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
     apt install -y \
@@ -16,8 +16,8 @@ RUN apt update && \
         zstd \
         wget \
         protobuf-compiler && \
-    wget https://go.dev/dl/go1.20.2.linux-amd64.tar.gz && \
-    tar -xvf go1.20.2.linux-amd64.tar.gz && \
+    wget https://go.dev/dl/go1.21.13.linux-amd64.tar.gz && \
+    tar -xvf go1.21.13.linux-amd64.tar.gz && \
     mv go /usr/local && \
     echo "GOPATH=/usr/local/go" >> ~/.bashrc && \
     echo "PATH=\$PATH:\$GOPATH/bin" >> ~/.bashrc && \
