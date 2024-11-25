@@ -63,6 +63,14 @@ func startLocalConnection(t *testing.T) *Substrate {
 	return cl
 }
 
+func getUrlBasedOnEnv() string {
+	if _, ok := os.LookupEnv("CI"); ok {
+		return "ws://127.0.0.1:9944"
+	} else {
+		return "wss://tfchain.dev.grid.tf"
+	}
+}
+
 func assertCreateTwin(t *testing.T, cl *Substrate, user AccountUser) uint32 {
 	u := Accounts[user]
 
