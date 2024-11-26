@@ -1,8 +1,8 @@
 package substrate
 
 import (
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -86,27 +86,33 @@ func TestFailoverMechanism(t *testing.T) {
 		sub1.cl.Client.Close()
 		sub2.cl.Client.Close()
 
+		// Create WaitGroup to ensure all goroutines complete before test ends
+		var wg sync.WaitGroup
+		wg.Add(2)
+
 		// Try to use both connections concurrently
-		done := make(chan bool)
+		errs := make(chan error, 2)
 		go func() {
+			defer wg.Done()
 			_, err := sub1.Time()
-			assert.NoError(t, err)
-			done <- true
+			errs <- err
 		}()
 
 		go func() {
+			defer wg.Done()
 			_, err := sub2.Time()
-			assert.NoError(t, err)
-			done <- true
+			errs <- err
 		}()
 
 		// Wait for both operations to complete
-		for i := 0; i < 2; i++ {
-			select {
-			case <-done:
-			case <-time.After(5 * time.Second):
-				t.Fatal("timeout waiting for concurrent failover")
-			}
+		go func() {
+			wg.Wait()
+			close(errs)
+		}()
+
+		// Check errors from both goroutines
+		for err := range errs {
+			require.NoError(t, err)
 		}
 	})
 }
