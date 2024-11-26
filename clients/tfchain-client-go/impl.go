@@ -27,6 +27,8 @@ var (
 	ErrUnknownVersion = fmt.Errorf("unknown version")
 	//ErrNotFound is returned if an object is not found
 	ErrNotFound = fmt.Errorf("object not found")
+	//ErrClosed is returned if the client is closed
+	ErrClosed = fmt.Errorf("client closed")
 )
 
 // Versioned base for all types
@@ -145,6 +147,9 @@ func (p *mgrImpl) Raw() (Conn, Meta, error) {
 	return cl, meta, err
 }
 
+// connect connects to the next endpoint in roundrobin fashion
+// and replaces the current connection with the new one.
+// need to be called while lock is acquired.
 func (p *mgrImpl) connect(s *Substrate) error {
 	cl, meta, err := p.Raw()
 	if err != nil {
@@ -176,8 +181,10 @@ func (p *mgrImpl) put(s *Substrate) {
 
 // Substrate client
 type Substrate struct {
-	cl   Conn
-	meta Meta
+	mu     sync.Mutex
+	cl     Conn
+	meta   Meta
+	closed bool
 
 	close   func(s *Substrate)
 	connect func(s *Substrate) error
@@ -189,10 +196,23 @@ func newSubstrate(cl Conn, meta Meta, close func(*Substrate), connect func(s *Su
 }
 
 func (s *Substrate) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return
+	}
 	s.close(s)
+	s.closed = true
 }
 
 func (s *Substrate) GetClient() (Conn, Meta, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed {
+		return nil, nil, ErrClosed
+	}
+
 	// check if connection is healthy
 	if _, err := getTime(s.cl, s.meta); err != nil {
 		log.Info().Str("url", s.cl.Client.URL()).Msg("connection unhealthy, attempting failover")
