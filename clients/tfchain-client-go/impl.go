@@ -27,6 +27,8 @@ var (
 	ErrUnknownVersion = fmt.Errorf("unknown version")
 	//ErrNotFound is returned if an object is not found
 	ErrNotFound = fmt.Errorf("object not found")
+	//ErrClosed is returned if the client is closed
+	ErrClosed = fmt.Errorf("client closed")
 )
 
 // Versioned base for all types
@@ -87,7 +89,7 @@ func (p *mgrImpl) Substrate() (*Substrate, error) {
 		return nil, err
 	}
 
-	return newSubstrate(cl, meta, p.put)
+	return newSubstrate(cl, meta, p.put, p.connect)
 }
 
 // Raw returns a RPC substrate client. plus meta. The returned connection
@@ -105,7 +107,7 @@ func (p *mgrImpl) Raw() (Conn, Meta, error) {
 
 	boff := backoff.WithMaxRetries(
 		backoff.NewConstantBackOff(200*time.Millisecond),
-		2*uint64(len(p.urls)),
+		4*uint64(len(p.urls)),
 	)
 
 	var (
@@ -145,36 +147,80 @@ func (p *mgrImpl) Raw() (Conn, Meta, error) {
 	return cl, meta, err
 }
 
+// connect connects to the next endpoint in roundrobin fashion
+// and replaces the current connection with the new one.
+// need to be called while lock is acquired.
+func (p *mgrImpl) connect(s *Substrate) error {
+	cl, meta, err := p.Raw()
+	if err != nil {
+		return err
+	}
+	// close the old connection if it exists
+	if s.cl != nil {
+		s.cl.Client.Close()
+		log.Info().Str("url", s.cl.Client.URL()).Msg("unhealthy connection closed")
+	}
+	// set the new connection
+	s.cl = cl
+	s.meta = meta
+	log.Info().Str("url", s.cl.Client.URL()).Msg("connection restored")
+	return nil
+}
+
 // TODO: implement reusable connections instead of
 // closing the connection.
-func (p *mgrImpl) put(cl *Substrate) {
+func (p *mgrImpl) put(s *Substrate) {
 	// naive put implementation for now
 	// we just immediately kill the connection
-	if cl.cl != nil {
-		cl.cl.Client.Close()
+	if s.cl != nil {
+		s.cl.Client.Close()
 	}
-	cl.cl = nil
-	cl.meta = nil
+	s.cl = nil
+	s.meta = nil
 }
 
 // Substrate client
 type Substrate struct {
-	cl   Conn
-	meta Meta
+	mu     sync.Mutex
+	cl     Conn
+	meta   Meta
+	closed bool
 
-	close func(s *Substrate)
+	close   func(s *Substrate)
+	connect func(s *Substrate) error
 }
 
 // NewSubstrate creates a substrate client
-func newSubstrate(cl Conn, meta Meta, close func(*Substrate)) (*Substrate, error) {
-	return &Substrate{cl: cl, meta: meta, close: close}, nil
+func newSubstrate(cl Conn, meta Meta, close func(*Substrate), connect func(s *Substrate) error) (*Substrate, error) {
+	return &Substrate{cl: cl, meta: meta, close: close, connect: connect}, nil
 }
 
 func (s *Substrate) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return
+	}
 	s.close(s)
+	s.closed = true
 }
 
 func (s *Substrate) GetClient() (Conn, Meta, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed {
+		return nil, nil, ErrClosed
+	}
+
+	// check if connection is healthy
+	if _, err := getTime(s.cl, s.meta); err != nil {
+		log.Info().Str("url", s.cl.Client.URL()).Msg("connection unhealthy, attempting failover")
+		err := s.connect(s)
+		if err != nil {
+			return nil, nil, err // all attempts failed, no connection available
+		}
+	}
 	return s.cl, s.meta, nil
 }
 

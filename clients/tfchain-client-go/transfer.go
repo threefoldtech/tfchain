@@ -20,9 +20,6 @@ func (s *Substrate) Transfer(identity Identity, amount uint64, destination Accou
 	bal := big.NewInt(int64(amount))
 
 	c, err := types.NewCall(meta, "Balances.transfer", dest, types.NewUCompact(bal))
-	if err != nil {
-		panic(err)
-	}
 
 	if err != nil {
 		return errors.Wrap(err, "failed to create call")
