@@ -134,7 +134,7 @@ the source field set contains all fields which are included in the source object
 | Instance_public_key | string | yes | Instance public key which you can use to filter logs by instance |
 | Bridge_wallet_address | string | yes | The bridge account address which you can use to filter logs by bridge |
 | Stellar_network | string | yes | Stellar network name which you can use to filter logs by environment |
-| Tfchain_url | string | yes | The url of the substrate rpc node which you can use to filter logs by environment |
+| Tfchain_url | []string | yes | The urls of the substrate rpc node which you can use to filter logs by environment |
 
 #### Event-specific fields:
 

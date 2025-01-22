@@ -25,7 +25,7 @@ type SourceCommonLogEntry struct {
 	Instance_public_key   string
 	Bridge_wallet_address string
 	Stellar_network       string
-	Tfchain_url           string
+	Tfchain_url           []string
 }
 
 type refundReasonKey struct{}

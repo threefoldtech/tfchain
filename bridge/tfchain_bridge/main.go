@@ -18,7 +18,7 @@ func main() {
 	var bridgeCfg pkg.BridgeConfig
 
 	var debug bool
-	flag.StringVar(&bridgeCfg.TfchainURL, "tfchainurl", "", "Tfchain websocket url")
+	flag.StringArrayVar(&bridgeCfg.TfchainURL, "tfchainurl", []string{}, "Tfchain websocket url")
 	flag.StringVar(&bridgeCfg.TfchainSeed, "tfchainseed", "", "Tfchain secret seed")
 	flag.StringVar(&bridgeCfg.StellarBridgeAccount, "bridgewallet", "", "stellar bridge wallet")
 	flag.StringVar(&bridgeCfg.StellarSeed, "secret", "", "stellar secret")
