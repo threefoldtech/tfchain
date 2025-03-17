@@ -24,7 +24,7 @@
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "express-pino-logger": "^6.0.0",
-    "http-errors": "^1.8.0",
+    "http-errors": "^1.8.1",
     "jsonschema": "^1.4.0",
     "lodash": "^4.17.21",
     "pino": "^6.11.3",
