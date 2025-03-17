@@ -27,7 +27,7 @@
     "http-errors": "^1.8.0",
     "jsonschema": "^1.4.0",
     "lodash": "^4.17.21",
-    "pino": "^6.11.3",
+    "pino": "^6.14.0",
     "tfgrid-api-client": "^1.29.1"
   },
   "devDependencies": {
