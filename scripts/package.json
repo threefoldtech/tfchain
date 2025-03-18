@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@polkadot/api": "^10.7.2",
+    "@polkadot/api": "^10.13.1",
     "axios": "^0.25.0",
     "bip39": "^3.0.3",
     "blake": "^1.0.1",
