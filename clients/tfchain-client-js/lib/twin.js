@@ -92,6 +92,28 @@ async function deleteTwin (self, id, callback) {
     .signAndSend(self.key, { nonce }, callback)
 }
 
+// setTwinMyceliumPK sets the mycelium public key for a twin
+async function setTwinMyceliumPK (self, twinId, myceliumPk, callback) {
+  const setMyceliumPk = self.api.tx.tfgridModule.setTwinMyceliumPk(twinId, myceliumPk)
+  const nonce = await self.api.rpc.system.accountNextIndex(self.address)
+
+  return setMyceliumPk.signAndSend(self.key, { nonce }, callback)
+}
+
+// getTwinByMyceliumPK gets a twin by mycelium public key
+async function getTwinByMyceliumPK (self, myceliumPk) {
+  // First, get the twin ID from the mycelium PK mapping
+  const twinIdResult = await self.api.query.tfgridModule.twinByMyceliumPk(myceliumPk)
+  const twinId = twinIdResult.toJSON()
+
+  if (!twinId || twinId === 0) {
+    throw Error(`Couldn't find a twin for mycelium pk: ${myceliumPk}`)
+  }
+
+  // Now get the full twin object using the twin ID
+  return getTwin(self, twinId)
+}
+
 module.exports = {
   createTwin,
   updateTwin,
@@ -100,5 +122,7 @@ module.exports = {
   deleteTwin,
   addTwinEntity,
   deleteTwinEntity,
-  listTwins
+  listTwins,
+  setTwinMyceliumPK,
+  getTwinByMyceliumPK
 }

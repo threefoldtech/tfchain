@@ -182,3 +182,53 @@ func (s *Substrate) UpdateTwin(identity Identity, relay string, pk []byte) (uint
 
 	return s.GetTwinByPubKey(identity.PublicKey())
 }
+
+// SetTwinMyceliumPK sets the mycelium PK for a twin
+func (s *Substrate) SetTwinMyceliumPK(identity Identity, twinID uint32, myceliumPK []byte) error {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return err
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.set_twin_mycelium_pk", twinID, myceliumPK)
+	if err != nil {
+		return errors.Wrap(err, "failed to create call")
+	}
+
+	if _, err := s.Call(cl, meta, identity, c); err != nil {
+		return errors.Wrap(err, "failed to set twin mycelium pk")
+	}
+
+	return nil
+}
+
+// GetTwinIdByMyceliumPK gets twin id by mycelium PK
+func (s *Substrate) GetTwinIdByMyceliumPK(myceliumPK []byte) (*Twin, error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return nil, err
+	}
+
+	// must use encode to convert byte slice to encoded format
+	bytes, err := Encode(myceliumPK)
+	if err != nil {
+		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
+	}
+
+	key, err := types.CreateStorageKey(meta, "TfgridModule", "TwinByMyceliumPk", bytes, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	var twinID types.U32
+	ok, err := cl.RPC.State.GetStorageLatest(key, &twinID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to lookup twin by mycelium pk")
+	}
+
+	if !ok || twinID == 0 {
+		return nil, errors.Wrap(ErrNotFound, "twin not found for mycelium pk")
+	}
+
+	return s.GetTwin(uint32(twinID))
+}

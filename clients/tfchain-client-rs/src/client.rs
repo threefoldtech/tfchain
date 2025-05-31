@@ -152,6 +152,26 @@ impl Client {
         current::get_twin_id_by_account(self, account).await
     }
 
+    // Sets mycelium public key for a twin and checks for success, blockhash is returned on success
+    pub async fn set_twin_mycelium_pk(
+        &self,
+        kp: &KeyPair,
+        twin_id: u32,
+        mycelium_pk: Vec<u8>,
+    ) -> Result<Hash, Error> {
+        current::set_twin_mycelium_pk(self, kp, twin_id, mycelium_pk).await
+    }
+
+    // Gets a twin by mycelium public key and returns the full twin object
+    pub async fn get_twin_by_mycelium_pk(
+        &self,
+        mycelium_pk: Vec<u8>,
+    ) -> Result<Option<Twin>, Error> {
+        // We pass a dummy keypair since it's not used in the implementation
+        let dummy_kp = KeyPair::Sr25519(sr25519::Pair::from_seed(&[0u8; 32]));
+        current::get_twin_by_mycelium_pk(self, &dummy_kp, mycelium_pk).await
+    }
+
     pub async fn get_farm_by_id(&self, id: u32) -> Result<Option<Farm>, Error> {
         current::get_farm_by_id(self, id).await
     }

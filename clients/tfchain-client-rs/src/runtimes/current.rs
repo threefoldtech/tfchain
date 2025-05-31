@@ -201,3 +201,48 @@ pub async fn get_balance(
         .fetch(&current::storage().system().account(account))
         .await?)
 }
+
+pub async fn set_twin_mycelium_pk(
+    cl: &Client,
+    kp: &KeyPair,
+    twin_id: u32,
+    mycelium_pk: Vec<u8>,
+) -> Result<H256, Error> {
+    let set_mycelium_pk_tx = current::tx().tfgrid_module().set_twin_mycelium_pk(
+        twin_id,
+        BoundedVec(mycelium_pk),
+    );
+
+    let signer = kp.signer();
+
+    let set_mycelium_pk = cl
+        .api
+        .tx()
+        .sign_and_submit_then_watch_default(&set_mycelium_pk_tx, &signer)
+        .await?
+        .wait_for_finalized_success()
+        .await?;
+
+    Ok(set_mycelium_pk.block_hash())
+}
+
+pub async fn get_twin_by_mycelium_pk(
+    cl: &Client,
+    _kp: &KeyPair,
+    mycelium_pk: Vec<u8>,
+) -> Result<Option<Twin>, Error> {
+    // Query the storage directly using the mycelium pk to get twin ID
+    let twin_id = cl
+        .api
+        .storage()
+        .at_latest()
+        .await?
+        .fetch(&current::storage().tfgrid_module().twin_by_mycelium_pk(BoundedVec(mycelium_pk)))
+        .await?;
+
+    if let Some(id) = twin_id {
+        get_twin_by_id(cl, id).await
+    } else {
+        Ok(None)
+    }
+}

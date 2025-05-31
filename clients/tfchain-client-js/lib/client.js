@@ -10,7 +10,8 @@ const {
 } = require('./entity')
 const {
   createTwin, getTwin, getTwinIdByAccountId, updateTwin,
-  deleteTwin, addTwinEntity, deleteTwinEntity, listTwins
+  deleteTwin, addTwinEntity, deleteTwinEntity, listTwins,
+  setTwinMyceliumPK, getTwinByMyceliumPK
 } = require('./twin')
 const {
   createFarm, getFarm, deleteFarm,
@@ -159,6 +160,14 @@ class Client {
 
   async deleteTwinEntity(twinID, entityID, callback) {
     return deleteTwinEntity(this, twinID, entityID, callback)
+  }
+
+  async setTwinMyceliumPK(twinId, myceliumPk, callback) {
+    return setTwinMyceliumPK(this, twinId, myceliumPk, callback)
+  }
+
+  async getTwinByMyceliumPK(myceliumPk) {
+    return getTwinByMyceliumPK(this, myceliumPk)
   }
 
   async createFarm(name, certificationType, publicIPs, callback) {

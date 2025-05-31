@@ -146,6 +146,8 @@ pub mod pallet {
     // Concrete type for entity
     pub type TfgridEntity<T> = types::Entity<AccountIdOf<T>, CityNameOf<T>, CountryNameOf<T>>;
 
+    pub type MyceliumPkInput = BoundedVec<u8, ConstU32<{ types::MAX_PK_LENGTH }>>;
+
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
     pub type Nodes<T> = StorageMap<_, Blake2_128Concat, u32, TfgridNode<T>, OptionQuery>;
@@ -261,6 +263,16 @@ pub mod pallet {
         u32,
         tfchain_support::types::NodePower<BlockNumberFor<T>>,
         ValueQuery,
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn twin_by_mycelium_pk)]
+    pub type TwinByMyceliumPk<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        MyceliumPkInput, // key is mycelium pk
+        u32, // value is twin id
+        OptionQuery, // returns None if pk not found
     >;
 
     #[pallet::config]
@@ -411,6 +423,7 @@ pub mod pallet {
         TwinEntityRemoved(u32, u32),
         TwinDeleted(u32),
         TwinAccountBounded(u32, T::AccountId),
+        TwinMyceliumPkSet(u32, MyceliumPkInput),
 
         PricingPolicyStored(types::PricingPolicy<T::AccountId>),
         // CertificationCodeStored(types::CertificationCodes),
@@ -1238,5 +1251,27 @@ pub mod pallet {
         // Deprecated! Use index 40 for next extrinsic
         // #[pallet::call_index(39)]
         // #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
+
+        #[pallet::call_index(40)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_twin_mycelium_pk())]
+        pub fn set_twin_mycelium_pk(
+            origin: OriginFor<T>,
+            twin_id: u32,
+            mycelium_pk: MyceliumPkInput,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+
+            // Ensure the caller owns this twin
+            let twin = Twins::<T>::get(twin_id).ok_or(Error::<T>::TwinNotExists)?;
+            ensure!(twin.account_id == account_id, Error::<T>::UnauthorizedToUpdateTwin);
+
+            // Store the mapping
+            TwinByMyceliumPk::<T>::insert(&mycelium_pk, twin_id);
+
+            // Emit event that mycelium-twin mapping is updated
+            Self::deposit_event(Event::TwinMyceliumPkSet(twin_id, mycelium_pk));
+            
+            Ok(().into())
+        }
     }
 }

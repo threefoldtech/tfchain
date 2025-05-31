@@ -737,6 +737,17 @@ benchmarks! {
         assert_last_event::<T>(Event::NodeUptimeReported(node_id, now, uptime).into());
     }
 
+    // set_twin_mycelium_pk
+    set_twin_mycelium_pk {
+        let caller: T::AccountId = whitelisted_caller();
+        _create_twin::<T>(caller.clone());
+        let twin_id = 1;
+        let mycelium_pk = get_mycelium_pk_input(b"some_mycelium_pk");
+    }: _(RawOrigin::Signed(caller), twin_id, mycelium_pk.clone())
+    verify {
+        assert_eq!(TfgridModule::<T>::twin_by_mycelium_pk(&mycelium_pk), Some(twin_id));
+    }
+
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
     impl_benchmark_test_suite!(TfgridModule, crate::mock::new_test_ext(), crate::mock::TestRuntime)
