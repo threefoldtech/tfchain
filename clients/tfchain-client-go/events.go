@@ -100,6 +100,13 @@ type TwinEntityRemoved struct {
 	Topics []types.Hash
 }
 
+type MyceliumTwinUpdated struct {
+	Phase      types.Phase
+	MyceliumPk []byte    `json:"mycelium_pk"`
+	TwinId     types.U32 `json:"twin_id"`
+	Topics     []types.Hash
+}
+
 type TwinAccountBounded struct {
 	Phase   types.Phase
 	Twin    types.U32 `json:"twin_id"`
@@ -414,12 +421,13 @@ type EventRecords struct {
 	TfgridModule_EntityDeleted []EntityDeleted //nolint:stylecheck,golint
 
 	// twin events
-	TfgridModule_TwinStored         []TwinStored         //nolint:stylecheck,golint
-	TfgridModule_TwinUpdated        []TwinStored         //nolint:stylecheck,golint
-	TfgridModule_TwinDeleted        []TwinDeleted        //nolint:stylecheck,golint
-	TfgridModule_TwinEntityStored   []TwinEntityStored   //nolint:stylecheck,golint
-	TfgridModule_TwinEntityRemoved  []TwinEntityRemoved  //nolint:stylecheck,golint
-	TfgridModule_TwinAccountBounded []TwinAccountBounded //nolint:stylecheck,golint
+	TfgridModule_TwinStored          []TwinStored          //nolint:stylecheck,golint
+	TfgridModule_TwinUpdated         []TwinStored          //nolint:stylecheck,golint
+	TfgridModule_TwinDeleted         []TwinDeleted         //nolint:stylecheck,golint
+	TfgridModule_TwinEntityStored    []TwinEntityStored    //nolint:stylecheck,golint
+	TfgridModule_TwinEntityRemoved   []TwinEntityRemoved   //nolint:stylecheck,golint
+	TfgridModule_TwinAccountBounded  []TwinAccountBounded  //nolint:stylecheck,golint
+	TfgridModule_MyceliumTwinUpdated []MyceliumTwinUpdated //nolint:stylecheck,golint
 
 	// policy events
 	TfgridModule_PricingPolicyStored []PricingPolicyStored //nolint:stylecheck,golint

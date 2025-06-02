@@ -92,26 +92,38 @@ async function deleteTwin (self, id, callback) {
     .signAndSend(self.key, { nonce }, callback)
 }
 
-// setTwinMyceliumPK sets the mycelium public key for a twin
-async function setTwinMyceliumPK (self, twinId, myceliumPk, callback) {
-  const setMyceliumPk = self.api.tx.tfgridModule.setTwinMyceliumPk(twinId, myceliumPk)
+/**
+ * Sets the mycelium public key mapping for a twin
+ * @param {Object} self - The client instance
+ * @param {string} myceliumPk - The mycelium public key (hex string)
+ * @param {number} twinId - The twin ID to map to the mycelium public key
+ * @param {Function} callback - Optional callback function
+ * @returns {Promise} Transaction result
+ */
+async function setMyceliumTwin (self, myceliumPk, twinId, callback) {
+  const setMyceliumTx = self.api.tx.tfgridModule.setMyceliumTwin(myceliumPk, twinId)
   const nonce = await self.api.rpc.system.accountNextIndex(self.address)
 
-  return setMyceliumPk.signAndSend(self.key, { nonce }, callback)
+  return setMyceliumTx.signAndSend(self.key, { nonce }, callback)
 }
 
-// getTwinByMyceliumPK gets a twin by mycelium public key
-async function getTwinByMyceliumPK (self, myceliumPk) {
-  // First, get the twin ID from the mycelium PK mapping
-  const twinIdResult = await self.api.query.tfgridModule.twinByMyceliumPk(myceliumPk)
+/**
+ * Gets the twin ID associated with a mycelium public key
+ * @param {Object} self - The client instance
+ * @param {string} myceliumPk - The mycelium public key (hex string)
+ * @returns {Promise<number>} The twin ID associated with the mycelium public key
+ * @throws {Error} If no twin is found for the given mycelium public key
+ */
+async function getMyceliumTwin (self, myceliumPk) {
+  // Get the twin ID from the mycelium PK mapping using the storage getter
+  const twinIdResult = await self.api.query.tfgridModule.myceliumTwin(myceliumPk)
   const twinId = twinIdResult.toJSON()
 
   if (!twinId || twinId === 0) {
     throw Error(`Couldn't find a twin for mycelium pk: ${myceliumPk}`)
   }
 
-  // Now get the full twin object using the twin ID
-  return getTwin(self, twinId)
+  return twinId
 }
 
 module.exports = {
@@ -123,6 +135,6 @@ module.exports = {
   addTwinEntity,
   deleteTwinEntity,
   listTwins,
-  setTwinMyceliumPK,
-  getTwinByMyceliumPK
+  setMyceliumTwin,
+  getMyceliumTwin
 }

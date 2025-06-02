@@ -266,8 +266,8 @@ pub mod pallet {
     >;
 
     #[pallet::storage]
-    #[pallet::getter(fn twin_by_mycelium_pk)]
-    pub type TwinByMyceliumPk<T: Config> = StorageMap<
+    #[pallet::getter(fn get_mycelium_twin)]
+    pub type MyceliumTwin<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
         MyceliumPkInput, // key is mycelium pk
@@ -423,7 +423,7 @@ pub mod pallet {
         TwinEntityRemoved(u32, u32),
         TwinDeleted(u32),
         TwinAccountBounded(u32, T::AccountId),
-        TwinMyceliumPkSet(u32, MyceliumPkInput),
+        MyceliumTwinUpdated(MyceliumPkInput, u32),
 
         PricingPolicyStored(types::PricingPolicy<T::AccountId>),
         // CertificationCodeStored(types::CertificationCodes),
@@ -1253,25 +1253,14 @@ pub mod pallet {
         // #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
 
         #[pallet::call_index(40)]
-        #[pallet::weight(<T as Config>::WeightInfo::set_twin_mycelium_pk())]
-        pub fn set_twin_mycelium_pk(
+        #[pallet::weight(<T as Config>::WeightInfo::set_mycelium_twin())]
+        pub fn set_mycelium_twin(
             origin: OriginFor<T>,
-            twin_id: u32,
             mycelium_pk: MyceliumPkInput,
+            twin_id: u32,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
-            // Ensure the caller owns this twin
-            let twin = Twins::<T>::get(twin_id).ok_or(Error::<T>::TwinNotExists)?;
-            ensure!(twin.account_id == account_id, Error::<T>::UnauthorizedToUpdateTwin);
-
-            // Store the mapping
-            TwinByMyceliumPk::<T>::insert(&mycelium_pk, twin_id);
-
-            // Emit event that mycelium-twin mapping is updated
-            Self::deposit_event(Event::TwinMyceliumPkSet(twin_id, mycelium_pk));
-            
-            Ok(().into())
+            Self::_set_mycelium_twin(account_id, mycelium_pk, twin_id)
         }
     }
 }

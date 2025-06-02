@@ -737,15 +737,15 @@ benchmarks! {
         assert_last_event::<T>(Event::NodeUptimeReported(node_id, now, uptime).into());
     }
 
-    // set_twin_mycelium_pk
-    set_twin_mycelium_pk {
+    // set_mycelium_twin
+    set_mycelium_twin {
         let caller: T::AccountId = whitelisted_caller();
         _create_twin::<T>(caller.clone());
-        let twin_id = 1;
         let mycelium_pk = get_mycelium_pk_input(b"some_mycelium_pk");
-    }: _(RawOrigin::Signed(caller), twin_id, mycelium_pk.clone())
+        let twin_id = 1;
+    }: _(RawOrigin::Signed(caller), mycelium_pk.clone(), twin_id)
     verify {
-        assert_eq!(TfgridModule::<T>::twin_by_mycelium_pk(&mycelium_pk), Some(twin_id));
+        assert_eq!(TfgridModule::<T>::get_mycelium_twin(&mycelium_pk), Some(twin_id));
     }
 
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
@@ -1032,4 +1032,8 @@ pub(crate) fn get_pub_config_gw6_input(gw6_input: &[u8]) -> Gw6Input {
 
 pub(crate) fn get_pub_config_domain_input(domain_input: &[u8]) -> DomainInput {
     BoundedVec::try_from(domain_input.to_vec()).expect("Invalid domain input.")
+}
+
+pub(crate) fn get_mycelium_pk_input(mycelium_pk_input: &[u8]) -> MyceliumPkInput {
+    BoundedVec::try_from(mycelium_pk_input.to_vec()).expect("Invalid mycelium pk input.")
 }

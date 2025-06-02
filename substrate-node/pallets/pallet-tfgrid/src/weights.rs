@@ -65,7 +65,7 @@ pub trait WeightInfo {
 	fn change_power_target() -> Weight;
 	fn bond_twin_account() -> Weight;
 	fn report_uptime_v2() -> Weight;
-	fn set_twin_mycelium_pk() -> Weight;
+	fn set_mycelium_twin() -> Weight;
 }
 
 /// Weights for pallet_tfgrid using the Substrate node and recommended hardware.
@@ -551,9 +551,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	}
 	/// Storage: `TfgridModule::Twins` (r:1 w:0)
 	/// Proof: `TfgridModule::Twins` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	/// Storage: `TfgridModule::TwinByMyceliumPk` (r:0 w:1)
-	/// Proof: `TfgridModule::TwinByMyceliumPk` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	fn set_twin_mycelium_pk() -> Weight {
+	/// Storage: `TfgridModule::MyceliumTwin` (r:0 w:1)
+	/// Proof: `TfgridModule::MyceliumTwin` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	fn set_mycelium_twin() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `387`
 		//  Estimated: `3852`
@@ -1046,9 +1046,9 @@ impl WeightInfo for () {
 	}
 	/// Storage: `TfgridModule::Twins` (r:1 w:0)
 	/// Proof: `TfgridModule::Twins` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	/// Storage: `TfgridModule::TwinByMyceliumPk` (r:0 w:1)
-	/// Proof: `TfgridModule::TwinByMyceliumPk` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	fn set_twin_mycelium_pk() -> Weight {
+	/// Storage: `TfgridModule::MyceliumTwin` (r:0 w:1)
+	/// Proof: `TfgridModule::MyceliumTwin` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	fn set_mycelium_twin() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `387`
 		//  Estimated: `3852`

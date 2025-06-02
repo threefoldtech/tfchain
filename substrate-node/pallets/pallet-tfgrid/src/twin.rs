@@ -408,4 +408,22 @@ impl<T: Config> Pallet<T> {
 
         true
     }
+
+    pub fn _set_mycelium_twin(
+        account_id: T::AccountId,
+        mycelium_pk: MyceliumPkInput,
+        twin_id: u32,
+    ) -> DispatchResultWithPostInfo {
+        // Ensure the caller owns this twin
+        let twin = Twins::<T>::get(twin_id).ok_or(Error::<T>::TwinNotExists)?;
+        ensure!(twin.account_id == account_id, Error::<T>::UnauthorizedToUpdateTwin);
+
+        // Store the mapping
+        MyceliumTwin::<T>::insert(&mycelium_pk, twin_id);
+
+        // Emit event that mycelium-twin mapping is updated
+        Self::deposit_event(Event::MyceliumTwinUpdated(mycelium_pk, twin_id));
+
+        Ok(().into())
+    }
 }

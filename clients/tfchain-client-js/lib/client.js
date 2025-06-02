@@ -11,7 +11,7 @@ const {
 const {
   createTwin, getTwin, getTwinIdByAccountId, updateTwin,
   deleteTwin, addTwinEntity, deleteTwinEntity, listTwins,
-  setTwinMyceliumPK, getTwinByMyceliumPK
+  setMyceliumTwin, getMyceliumTwin
 } = require('./twin')
 const {
   createFarm, getFarm, deleteFarm,
@@ -162,12 +162,24 @@ class Client {
     return deleteTwinEntity(this, twinID, entityID, callback)
   }
 
-  async setTwinMyceliumPK(twinId, myceliumPk, callback) {
-    return setTwinMyceliumPK(this, twinId, myceliumPk, callback)
+  /**
+   * Sets the mycelium public key mapping for a twin
+   * @param {string} myceliumPk - The mycelium public key (hex string)
+   * @param {number} twinId - The twin ID to map to the mycelium public key
+   * @param {Function} callback - Optional callback function
+   * @returns {Promise} Transaction result
+   */
+  async setMyceliumTwin(myceliumPk, twinId, callback) {
+    return setMyceliumTwin(this, myceliumPk, twinId, callback)
   }
 
-  async getTwinByMyceliumPK(myceliumPk) {
-    return getTwinByMyceliumPK(this, myceliumPk)
+  /**
+   * Gets the twin ID associated with a mycelium public key
+   * @param {string} myceliumPk - The mycelium public key (hex string)
+   * @returns {Promise<number>} The twin ID associated with the mycelium public key
+   */
+  async getMyceliumTwin(myceliumPk) {
+    return getMyceliumTwin(this, myceliumPk)
   }
 
   async createFarm(name, certificationType, publicIPs, callback) {
