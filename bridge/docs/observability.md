@@ -59,6 +59,7 @@ For example, if a customer is complaining that their deposit never bridged, you 
 - `event_refund_tx_expired_received`: The bridge instance has received TFChain  `RefundTransactionExpired` event.
 - `refund_skipped`: a refund request skipped by the bridge instance as it has already been refunded.
 - `refund_proposed`: a refund has proposed or signed by the bridge instance.
+- `refund_postponed`: a refund has postponed due to a problem in sending this transaction to the stellar network and will be retried later.
 - `refund_completed`: a refund has completed and received on the target stellar account.
 
 ##### Withdraw related 

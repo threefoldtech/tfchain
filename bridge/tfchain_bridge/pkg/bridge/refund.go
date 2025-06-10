@@ -91,10 +91,10 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 
 	if len(refund.Signatures) == 0 {
 		logger.Info().
-			Str("event_action", "refund_skipped").
+			Str("event_action", "refund_postponed").
 			Str("event_kind", "event").
 			Str("category", "refund").
-			Msg("the refund has been skipped because it has no signatures")
+			Msg("the refund has been postponed due to a problem in sending this transaction to the stellar network. error was no signatures")
 		return nil
 	}
 

@@ -150,10 +150,10 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 
 	if len(burnTx.Signatures) == 0 {
 		logger.Info().
-			Str("event_action", "withdraw_skipped").
+			Str("event_action", "withdraw_postponed").
 			Str("event_kind", "event").
 			Str("category", "withdraw").
-			Msg("the withdraw has been skipped because it has no signatures")
+			Msg("the withdraw has been postponed due to a problem in sending this transaction to the stellar network. error was no signatures")
 		return nil
 	}
 
