@@ -89,6 +89,15 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 		return err
 	}
 
+	if len(refund.Signatures) == 0 {
+		logger.Info().
+			Str("event_action", "refund_skipped").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Msg("the refund has been skipped because it has no signatures")
+		return nil
+	}
+
 	// Todo, retry here?
 	if err = bridge.wallet.CreateRefundPaymentWithSignaturesAndSubmit(ctx, refund.Target, uint64(refund.Amount), refund.TxHash, refund.Signatures, int64(refund.SequenceNumber)); err != nil {
 		return err

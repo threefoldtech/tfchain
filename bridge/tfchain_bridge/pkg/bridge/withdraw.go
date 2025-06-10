@@ -149,7 +149,12 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 	}
 
 	if len(burnTx.Signatures) == 0 {
-		return pkg.ErrNoSignatures
+		logger.Info().
+			Str("event_action", "withdraw_skipped").
+			Str("event_kind", "event").
+			Str("category", "withdraw").
+			Msg("the withdraw has been skipped because it has no signatures")
+		return nil
 	}
 
 	// todo add memo hash
