@@ -184,6 +184,20 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 
 func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.WithdrawCreatedEvent) error {
 	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdraw.ID)).Logger()
+
+	if withdraw.Amount <= uint64(bridge.depositFee) {
+		logger.Info().
+			Str("event_action", "refund_dropped").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Dict("metadata", zerolog.Dict().
+				Uint64("amount", withdraw.Amount).
+				Int64("min_required", bridge.depositFee)).
+			Msg("refund dropped due to amount being less than or equal to deposit fee")
+
+		return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdraw.ID)
+	}
+
 	mintID := fmt.Sprintf("refund-%d", withdraw.ID)
 
 	minted, err := bridge.subClient.IsMintedAlready(mintID)

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -342,11 +343,43 @@ func (w *StellarWallet) getAccountDetails(address string) (account hProtocol.Acc
 	if err != nil {
 		return hProtocol.Account{}, err
 	}
-	ar := horizonclient.AccountRequest{AccountID: address}
-	account, err = client.AccountDetail(ar)
-	if err != nil {
-		return hProtocol.Account{}, errors.Wrapf(err, "failed to get account details for account: %s", address)
+	
+	retryDelay := 2 * time.Second
+	timeout := 15 * time.Second
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	backOff := backoff.NewExponentialBackOff()
+	backOff.InitialInterval = retryDelay
+	backOff.MaxElapsedTime = timeout
+
+	operation := func() error {
+		ar := horizonclient.AccountRequest{AccountID: address}
+		var opError error
+		account, opError = client.AccountDetail(ar)
+        if opError != nil {
+            log.Debug().
+                Err(opError).
+                Str("stellar_address", address).
+                Msg("failed to get account details, retrying...")
+            return opError
+        }
+        return nil
 	}
+
+	notify := func(err error, d time.Duration) {
+		log.Debug().
+			Err(err).
+			Str("stellar_address", address).
+			Msgf("failed to get account details, retrying in %s", d.String())
+	}
+
+	err = backoff.RetryNotify(operation, backoff.WithContext(backOff,ctx), notify)
+	if err != nil {
+		return hProtocol.Account{}, errors.Wrapf(err, "failed to get account details for account: %s after multiple retries", address)
+	}
+
 	return account, nil
 }
 
