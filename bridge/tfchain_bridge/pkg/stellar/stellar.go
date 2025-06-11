@@ -6,11 +6,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -343,43 +344,11 @@ func (w *StellarWallet) getAccountDetails(address string) (account hProtocol.Acc
 	if err != nil {
 		return hProtocol.Account{}, err
 	}
-	
-	retryDelay := 2 * time.Second
-	timeout := 15 * time.Second
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	backOff := backoff.NewExponentialBackOff()
-	backOff.InitialInterval = retryDelay
-	backOff.MaxElapsedTime = timeout
-
-	operation := func() error {
-		ar := horizonclient.AccountRequest{AccountID: address}
-		var opError error
-		account, opError = client.AccountDetail(ar)
-        if opError != nil {
-            log.Debug().
-                Err(opError).
-                Str("stellar_address", address).
-                Msg("failed to get account details, retrying...")
-            return opError
-        }
-        return nil
-	}
-
-	notify := func(err error, d time.Duration) {
-		log.Debug().
-			Err(err).
-			Str("stellar_address", address).
-			Msgf("failed to get account details, retrying in %s", d.String())
-	}
-
-	err = backoff.RetryNotify(operation, backoff.WithContext(backOff,ctx), notify)
+	ar := horizonclient.AccountRequest{AccountID: address}
+	account, err = client.AccountDetail(ar)
 	if err != nil {
-		return hProtocol.Account{}, errors.Wrapf(err, "failed to get account details for account: %s after multiple retries", address)
+		return hProtocol.Account{}, errors.Wrapf(err, "failed to get account details for account: %s", address)
 	}
-
 	return account, nil
 }
 
@@ -564,18 +533,46 @@ func (w *StellarWallet) getOperationEffect(txHash string) (ops operations.Operat
 
 // getHorizonClient gets the horizon client based on the wallet's network
 func (w *StellarWallet) getHorizonClient() (*horizonclient.Client, error) {
+	var client *horizonclient.Client
+
 	if w.config.StellarHorizonUrl != "" {
-		return &horizonclient.Client{HorizonURL: w.config.StellarHorizonUrl}, nil
+		client = &horizonclient.Client{HorizonURL: w.config.StellarHorizonUrl}
 	}
 
 	switch w.config.StellarNetwork {
 	case "testnet":
-		return horizonclient.DefaultTestNetClient, nil
+		client = horizonclient.DefaultTestNetClient
 	case "production":
-		return horizonclient.DefaultPublicNetClient, nil
+		client = horizonclient.DefaultPublicNetClient
 	default:
 		return nil, errors.New("network is not supported")
 	}
+
+	// custom HTTP client with retry logic
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 3
+	retryClient.RetryWaitMin = 2 * time.Second
+	retryClient.RetryWaitMax = 5 * time.Second
+
+	retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+
+		if err != nil {
+			return true, nil
+		}
+
+        if resp.StatusCode == 429 || (resp.StatusCode >= 500 && resp.StatusCode <= 599) {
+            return true, nil
+        }
+
+		return false, nil
+	}
+
+	client.HTTP = retryClient.StandardClient()	
+
+	return client, nil
 }
 
 // getNetworkPassPhrase gets the Stellar network passphrase based on the wallet's network

@@ -14,28 +14,6 @@ import (
 
 // refund handler for stellar
 func (bridge *Bridge) refund(ctx context.Context, destination string, amount int64, tx hProtocol.Transaction) error {
-	if amount <= bridge.depositFee {
-		logger := log.Logger.With().Str("trace_id", tx.ID).Logger()
-
-		logger.Info().
-			Str("event_action", "refund_dropped").
-			Str("event_kind", "event").
-			Str("category", "refund").
-			Dict("metadata", zerolog.Dict().
-				Int64("amount", amount).
-				Int64("min_required", bridge.depositFee)).
-			Msg("refund dropped due to amount being less than or equal to deposit fee")
-
-		// save cursor
-		cursor := tx.PagingToken()
-		err := bridge.blockPersistency.SaveStellarCursor(cursor)
-		if err != nil {
-			return errors.Wrap(err, "an error occurred while saving stellar cursor")
-		}
-
-		return nil
-	}
-
 	err := bridge.handleRefundExpired(ctx, subpkg.RefundTransactionExpiredEvent{
 		Hash:   tx.Hash,
 		Amount: uint64(amount),
@@ -68,23 +46,6 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 			Msg("the transaction has already been refunded")
 		return nil
 	}
-
-    if refundExpiredEvent.Amount <= uint64(bridge.depositFee) {
-        logger.Info().
-            Str("event_action", "refund_dropped").
-            Str("event_kind", "event").
-            Str("category", "refund").
-            Dict("metadata", zerolog.Dict().
-                Uint64("amount", refundExpiredEvent.Amount).
-                Int64("min_required", bridge.depositFee)).
-            Msg("refund dropped due to amount being less than or equal to deposit fee")
-        
-        err = bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, refundExpiredEvent.Hash)
-        if err != nil {
-            return err
-        }
-        return nil
-    }	
 
 	signature, sequenceNumber, err := bridge.wallet.CreateRefundAndReturnSignature(ctx, refundExpiredEvent.Target, refundExpiredEvent.Amount, refundExpiredEvent.Hash)
 	if err != nil {
