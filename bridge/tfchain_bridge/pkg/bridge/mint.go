@@ -19,20 +19,6 @@ import (
 func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx hProtocol.Transaction) error {
 	logger := log.Logger.With().Str("trace_id", tx.ID).Logger()
 
-	bridgeAddress := bridge.wallet.GetKeypair().Address()
-	if _, isBridgeSender := senders[bridgeAddress]; isBridgeSender {
-		logger.Info().
-			Str("event_action", "mint_rejected").
-			Str("event_kind", "event").
-			Str("category", "mint").
-			Dict("metadata", zerolog.Dict().
-				Str("reason", "sender is bridge account").
-				Str("sender", bridgeAddress)).
-			Msg("rejecting mint from bridge account to prevent circular transactions")
-
-		delete(senders, bridgeAddress)
-	}
-
 	minted, err := bridge.subClient.IsMintedAlready(tx.Hash)
 	if err != nil {
 		if !errors.Is(err, substrate.ErrMintTransactionNotFound) {
