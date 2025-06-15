@@ -149,7 +149,12 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 	}
 
 	if len(burnTx.Signatures) == 0 {
-		return pkg.ErrNoSignatures
+		logger.Info().
+			Str("event_action", "withdraw_postponed").
+			Str("event_kind", "event").
+			Str("category", "withdraw").
+			Msg("the withdraw has been postponed due to the transaction signatures being removed on the TFChain side while the bridge was processing the transaction")
+		return nil
 	}
 
 	// todo add memo hash
