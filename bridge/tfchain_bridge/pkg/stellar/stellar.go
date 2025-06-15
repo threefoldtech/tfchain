@@ -456,7 +456,7 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 			}
 
 			PaymentOperation := op.(operations.Payment)
-			if PaymentOperation.To != w.config.StellarBridgeAccount {
+			if PaymentOperation.To != w.config.StellarBridgeAccount || PaymentOperation.From == w.config.StellarBridgeAccount{
 				continue
 			}
 

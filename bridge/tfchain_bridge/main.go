@@ -29,6 +29,37 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "sets debug level log output")
 
 	flag.Parse()
+	if flag.NArg() > 0 {
+		log.Fatal().
+			Strs("unexpected_args", flag.Args()).
+			Str("event_action", "bridge_init_aborted").
+			Str("event_kind", "error").
+			Str("category", "configuration").
+			Msg("unexpected positional arguments provided, did you forget a flag?")
+	}
+
+	missingParams := []string{}
+	if bridgeCfg.TfchainURL == "" {
+		missingParams = append(missingParams, "tfchainurl")
+	}
+	if bridgeCfg.TfchainSeed == "" {
+		missingParams = append(missingParams, "tfchainseed")
+	}
+	if bridgeCfg.StellarBridgeAccount == "" {
+		missingParams = append(missingParams, "bridgewallet")
+	}
+	if bridgeCfg.StellarSeed == "" {
+		missingParams = append(missingParams, "secret")
+	}
+
+	if len(missingParams) > 0 {
+		log.Fatal().
+			Strs("missing_parameters", missingParams).
+			Str("event_action", "bridge_init_aborted").
+			Str("event_kind", "error").
+			Str("category", "configuration").
+			Msg("required parameters are missing")
+	}
 
 	logger.InitLogger(debug)
 
