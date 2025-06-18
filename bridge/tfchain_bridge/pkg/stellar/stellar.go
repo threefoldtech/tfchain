@@ -212,7 +212,7 @@ func (w *StellarWallet) CheckAccount(account string) error {
 		}
 	}
 
-	return fmt.Errorf("addess has no trustline")
+	return fmt.Errorf("address has no trustline")
 }
 
 func (w *StellarWallet) generatePaymentOperation(amount uint64, destination string, sequenceNumber int64) (txnbuild.TransactionParams, error) {
