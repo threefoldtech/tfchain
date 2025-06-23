@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/rs/zerolog"
@@ -43,13 +42,8 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 
 	// check if it can hold tft : TODO check trust line TFT limit if it can receive the amount
 	if err := bridge.wallet.CheckAccount(withdraw.Target); err != nil {
-		if isClientError(err) {
-			ctx = _logger.WithRefundReason(ctx, err.Error())
-			return bridge.handleBadWithdraw(ctx, withdraw)
-		} else {
-			return nil
-		}
-
+		ctx = _logger.WithRefundReason(ctx, err.Error())
+		return bridge.handleBadWithdraw(ctx, withdraw)
 	}
 
 	signature, sequenceNumber, err := bridge.wallet.CreatePaymentAndReturnSignature(ctx, withdraw.Target, withdraw.Amount, withdraw.ID)
@@ -239,25 +233,4 @@ func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.Wit
 			Str("to", withdraw.Source.ToHexString())).
 		Msgf("a mint has proposed with the target substrate address of %s", withdraw.Source.ToHexString())
 	return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdraw.ID)
-}
-
-func isClientError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	errMsg := err.Error()
-
-	clientErrors := []string{
-		"address has no trustline",
-		"account not found",
-	}
-
-	for _, clientErr := range clientErrors {
-		if strings.Contains(strings.ToLower(errMsg), strings.ToLower(clientErr)) {
-			return true
-		}
-	}
-
-	return false
 }
