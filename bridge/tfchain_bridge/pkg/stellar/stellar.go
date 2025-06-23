@@ -6,10 +6,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -210,7 +212,7 @@ func (w *StellarWallet) CheckAccount(account string) error {
 		}
 	}
 
-	return fmt.Errorf("addess has no trustline")
+	return fmt.Errorf("address has no trustline")
 }
 
 func (w *StellarWallet) generatePaymentOperation(amount uint64, destination string, sequenceNumber int64) (txnbuild.TransactionParams, error) {
@@ -531,18 +533,46 @@ func (w *StellarWallet) getOperationEffect(txHash string) (ops operations.Operat
 
 // getHorizonClient gets the horizon client based on the wallet's network
 func (w *StellarWallet) getHorizonClient() (*horizonclient.Client, error) {
+	var client *horizonclient.Client
+
 	if w.config.StellarHorizonUrl != "" {
-		return &horizonclient.Client{HorizonURL: w.config.StellarHorizonUrl}, nil
+		client = &horizonclient.Client{HorizonURL: w.config.StellarHorizonUrl}
 	}
 
 	switch w.config.StellarNetwork {
 	case "testnet":
-		return horizonclient.DefaultTestNetClient, nil
+		client = horizonclient.DefaultTestNetClient
 	case "production":
-		return horizonclient.DefaultPublicNetClient, nil
+		client = horizonclient.DefaultPublicNetClient
 	default:
 		return nil, errors.New("network is not supported")
 	}
+
+	// custom HTTP client with retry logic
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 3
+	retryClient.RetryWaitMin = 2 * time.Second
+	retryClient.RetryWaitMax = 5 * time.Second
+
+	retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+
+		if err != nil {
+			return true, nil
+		}
+
+        if resp.StatusCode == 429 || (resp.StatusCode >= 500 && resp.StatusCode <= 599) {
+            return true, nil
+        }
+
+		return false, nil
+	}
+
+	client.HTTP = retryClient.StandardClient()	
+
+	return client, nil
 }
 
 // getNetworkPassPhrase gets the Stellar network passphrase based on the wallet's network
