@@ -111,8 +111,10 @@ impl<T: Config> Pallet<T> {
                 let bill_nu = ContractBillingInformationByID::<T>::get(contract.contract_id)
                     .amount_unbilled
                     > 0;
+                let has_overdraft = ContractPaymentState::<T>::get(contract.contract_id)
+                    .map_or(false, |state| state.has_overdraft());
 
-                return bill_ip || bill_cu_su || bill_nu;
+                return bill_ip || bill_cu_su || bill_nu || has_overdraft;
             }
             _ => true,
         }
@@ -254,7 +256,9 @@ impl<T: Config> Pallet<T> {
         );
 
         // If the amount due is zero and the contract is not in deleted state, don't bill the contract (mostly node contract on a rented node)
-        if total_amount_due.is_zero() && !matches!(contract.state, types::ContractState::Deleted(_))
+        if total_amount_due.is_zero() &&
+            !contract_payment_state.has_overdraft() &&
+            !matches!(contract.state, types::ContractState::Deleted(_))
         {
             log::info!(
                 "Amount to be billed is 0 and contract state is {:?}, nothing to do with contract_id: {:?}",
