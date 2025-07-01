@@ -114,6 +114,38 @@ func TestGetContractPaymentState(t *testing.T) {
 	})
 }
 
+func TestGetContractBillingInfoByID(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	t.Run("non-existent contract", func(t *testing.T) {
+		_, err := cl.GetContractBillingInfoByID(0)
+		require.Error(t, err)
+	})
+
+	t.Run("existing contract", func(t *testing.T) {
+		res, err := cl.GetContractBillingInfoByID(1)
+		require.NoError(t, err)
+		require.IsType(t, ContractBillingInfo{}, res)
+	})
+}
+
+func TestGetNodeContractResources(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	t.Run("non-existent contract", func(t *testing.T) {
+		_, err := cl.GetNodeContractResources(0)
+		require.Error(t, err)
+	})
+
+	t.Run("existing contract", func(t *testing.T) {
+		res, err := cl.GetNodeContractResources(1)
+		require.NoError(t, err)
+		require.IsType(t, NodeContractResources{}, res)
+	})
+}
+
 func TestCancelBatch(t *testing.T) {
 	var nodeID uint32
 

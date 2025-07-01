@@ -122,6 +122,11 @@ type NodeContract struct {
 	PublicIPs      []PublicIP `json:"public_ips"`
 }
 
+type NodeContractResources struct {
+	ContractID types.U64 `json:"contract_id"`
+	Used       Resources `json:"used"`
+}
+
 type NameContract struct {
 	Name string `json:"name"`
 }
@@ -626,6 +631,36 @@ func (s *Substrate) GetNodeRentContract(node uint32) (uint64, error) {
 	var contract uint64
 	err = Decode(*raw, &contract)
 	return contract, err
+}
+
+// GetNodeContractResources gets the resources used by a node for a given contract id
+func (s *Substrate) GetNodeContractResources(contract uint64) (resources NodeContractResources, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return resources, err
+	}
+
+	bytes, err := Encode(contract)
+	if err != nil {
+		return resources, errors.Wrap(err, "substrate: encoding error building query arguments")
+	}
+
+	key, err := types.CreateStorageKey(meta, "SmartContractModule", "NodeContractResources", bytes)
+	if err != nil {
+		return resources, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	var result NodeContractResources
+	ok, err := cl.RPC.State.GetStorageLatest(key, &result)
+	if err != nil {
+		return resources, errors.Wrap(err, "failed to lookup entity")
+	}
+
+	if !ok {
+		return resources, errors.Wrap(ErrNotFound, "contract resources not found")
+	}
+
+	return result, nil
 }
 
 func (s *Substrate) getContract(cl Conn, key types.StorageKey) (*Contract, error) {
