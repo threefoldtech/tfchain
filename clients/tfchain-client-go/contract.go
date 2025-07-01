@@ -695,6 +695,7 @@ type ContractResources struct {
 	Used       Resources `json:"resources"`
 }
 
+// ContractPaymentState represents the payment state of a contract
 type ContractPaymentState struct {
 	StandardReserve     types.U128 `json:"standard_reserve"`
 	AdditionalReserve   types.U128 `json:"additional_reserve"`
@@ -719,7 +720,7 @@ func (s *Substrate) GetContractPaymentState(id uint64) (paymentState ContractPay
 		return paymentState, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
 
-	key, err := types.CreateStorageKey(meta, "SmartContractModule", "ContractPaymentState", bytes, nil)
+	key, err := types.CreateStorageKey(meta, "SmartContractModule", "ContractPaymentState", bytes)
 	if err != nil {
 		return paymentState, errors.Wrap(err, "failed to create substrate query key")
 	}
@@ -734,5 +735,42 @@ func (s *Substrate) GetContractPaymentState(id uint64) (paymentState ContractPay
 		return paymentState, errors.Wrap(ErrNotFound, "contract payment state not found")
 	}
 
+	return result, nil
+}
+
+// ContractBillingInfo contains the billing information for a given contract.
+type ContractBillingInfo struct {
+	PreviousNuReported types.U64 `json:"previous_nu_reported"`
+	LastUpdated        types.U64 `json:"last_updated"`
+	AmountUnbilled     types.U64 `json:"amount_unbilled"`
+}
+
+// GetContractBillingInfoByID gets the billing info for a given contract id
+func (s *Substrate) GetContractBillingInfoByID(id uint64) (billingInfo ContractBillingInfo, err error) {
+	cl, meta, err := s.GetClient()
+
+	if err != nil {
+		return billingInfo, err
+	}
+
+	bytes, err := Encode(id)
+	if err != nil {
+		return billingInfo, errors.Wrap(err, "substrate: encoding error building query arguments")
+	}
+
+	key, err := types.CreateStorageKey(meta, "SmartContractModule", "ContractBillingInformationByID", bytes)
+
+	if err != nil {
+		return billingInfo, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	var result ContractBillingInfo
+	ok, err := cl.RPC.State.GetStorageLatest(key, &result)
+	if err != nil {
+		return billingInfo, errors.Wrap(err, "failed to lookup entity")
+	}
+	if !ok {
+		return billingInfo, errors.Wrap(ErrNotFound, "contract billing info not found")
+	}
 	return result, nil
 }
