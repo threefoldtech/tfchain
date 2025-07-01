@@ -99,6 +99,21 @@ func TestGetRentContract(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGetContractPaymentState(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	t.Run("non-existent contract", func(t *testing.T) {
+		_, err := cl.GetContractPaymentState(0)
+		require.Error(t, err)
+	})
+
+	t.Run("existing contract", func(t *testing.T) {
+		_, err := cl.GetContractPaymentState(1)
+		require.NoError(t, err)
+	})
+}
+
 func TestCancelBatch(t *testing.T) {
 	var nodeID uint32
 
