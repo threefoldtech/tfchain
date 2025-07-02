@@ -498,7 +498,7 @@ func (s *Substrate) SetContractConsumption(identity Identity, resources ...Contr
 }
 
 // Bill contract for block using contract ID
-func (s *Substrate) BillContractForBlock(identity Identity, contract uint64) error {
+func (s *Substrate) BillContract(identity Identity, contract uint64) error {
 	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
