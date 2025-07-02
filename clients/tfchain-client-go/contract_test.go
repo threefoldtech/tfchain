@@ -100,6 +100,9 @@ func TestGetRentContract(t *testing.T) {
 }
 
 func TestGetContractPaymentState(t *testing.T) {
+	var nodeID uint32
+	var contractID uint64
+
 	cl := startLocalConnection(t)
 	defer cl.Close()
 
@@ -108,23 +111,50 @@ func TestGetContractPaymentState(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+
+	nodeID = assertCreateNode(t, cl, farmID, twinID, identity)
+
+	require.NoError(t, err)
+
+	contractID, err = cl.CreateNodeContract(identity, nodeID, "", "", 0, nil)
+	require.NoError(t, err)
+
 	t.Run("existing contract", func(t *testing.T) {
-		_, err := cl.GetContractPaymentState(1)
+		_, err := cl.GetContractPaymentState(contractID)
 		require.NoError(t, err)
 	})
 }
 
-func TestGetContractBillingInfoByID(t *testing.T) {
+func TestGetContractBillingInfo(t *testing.T) {
+	var nodeID uint32
+	var contractID uint64
+
 	cl := startLocalConnection(t)
 	defer cl.Close()
 
 	t.Run("non-existent contract", func(t *testing.T) {
-		_, err := cl.GetContractBillingInfoByID(0)
+		_, err := cl.GetContractBillingInfo(0)
 		require.Error(t, err)
 	})
 
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+
+	nodeID = assertCreateNode(t, cl, farmID, twinID, identity)
+
+	require.NoError(t, err)
+
+	contractID, err = cl.CreateNodeContract(identity, nodeID, "", "", 0, nil)
+	require.NoError(t, err)
+
 	t.Run("existing contract", func(t *testing.T) {
-		res, err := cl.GetContractBillingInfoByID(1)
+		res, err := cl.GetContractBillingInfo(contractID)
 		require.NoError(t, err)
 		require.IsType(t, ContractBillingInfo{}, res)
 	})
