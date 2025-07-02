@@ -800,8 +800,8 @@ type ContractBillingInfo struct {
 	AmountUnbilled     types.U64 `json:"amount_unbilled"`
 }
 
-// GetContractBillingInfoByID gets the billing info for a given contract id
-func (s *Substrate) GetContractBillingInfoByID(id uint64) (billingInfo ContractBillingInfo, err error) {
+// GetContractBillingInfo gets the billing info for a given contract id
+func (s *Substrate) GetContractBillingInfo(id uint64) (billingInfo ContractBillingInfo, err error) {
 	cl, meta, err := s.GetClient()
 
 	if err != nil {
