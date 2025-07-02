@@ -497,6 +497,26 @@ func (s *Substrate) SetContractConsumption(identity Identity, resources ...Contr
 	return nil
 }
 
+// Bill contract for block using contract ID
+func (s *Substrate) BillContractForBlock(identity Identity, contract uint64) error {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return err
+	}
+
+	c, err := types.NewCall(meta, "SmartContractModule.bill_contract_for_block", contract)
+	if err != nil {
+		return errors.Wrap(err, "failed to call bill contract for block")
+	}
+
+	_, err = s.Call(cl, meta, identity, c)
+	if err != nil {
+		return errors.Wrap(err, "failed to bill contract for block")
+	}
+
+	return nil
+}
+
 // GetContract we should not have calls to create contract, instead only get
 func (s *Substrate) GetContract(id uint64) (*Contract, error) {
 	cl, meta, err := s.GetClient()
@@ -602,7 +622,7 @@ func (s *Substrate) GetNodeContracts(node uint32) ([]types.U64, error) {
 	return contracts, nil
 }
 
-// GetNodeContracts gets all contracts on a node (pk) in given state
+// GetNodeRentContract gets the active rent contract for a node (pk)
 func (s *Substrate) GetNodeRentContract(node uint32) (uint64, error) {
 	cl, meta, err := s.GetClient()
 	if err != nil {
