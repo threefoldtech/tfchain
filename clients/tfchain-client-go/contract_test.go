@@ -3,6 +3,7 @@ package substrate
 import (
 	"testing"
 
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -127,6 +128,8 @@ func TestGetContractPaymentState(t *testing.T) {
 		_, err := cl.GetContractPaymentState(contractID)
 		require.NoError(t, err)
 	})
+	err = cl.CancelContract(identity, contractID)
+	require.NoError(t, err)
 }
 
 func TestGetContractBillingInfo(t *testing.T) {
@@ -158,9 +161,14 @@ func TestGetContractBillingInfo(t *testing.T) {
 		require.NoError(t, err)
 		require.IsType(t, ContractBillingInfo{}, res)
 	})
+	err = cl.CancelContract(identity, contractID)
+	require.NoError(t, err)
 }
 
 func TestGetNodeContractResources(t *testing.T) {
+	var nodeID uint32
+	var contractID uint64
+
 	cl := startLocalConnection(t)
 	defer cl.Close()
 
@@ -169,11 +177,100 @@ func TestGetNodeContractResources(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+	nodeID = assertCreateNode(t, cl, farmID, twinID, identity)
+
+	contractID, err = cl.CreateNodeContract(identity, nodeID, "", "", 0, nil)
+	require.NoError(t, err)
+
 	t.Run("existing contract", func(t *testing.T) {
-		res, err := cl.GetNodeContractResources(1)
+		// First report some resources for the contract
+		resources := []ContractResources{
+			{
+				ContractID: types.U64(contractID),
+				Used: Resources{
+					HRU: types.U64(1024 * 1024 * 1024),      // 1GB
+					SRU: types.U64(10 * 1024 * 1024 * 1024), // 10GB
+					CRU: types.U64(2),
+					MRU: types.U64(4 * 1024 * 1024 * 1024), // 4GB
+				},
+			},
+		}
+
+		err = cl.SetContractConsumption(identity, resources...)
+		require.NoError(t, err, "failed to report contract resources")
+
+		// Now query the resources
+		res, err := cl.GetNodeContractResources(contractID)
 		require.NoError(t, err)
 		require.IsType(t, NodeContractResources{}, res)
+
+		// Verify the resources match what we reported
+		require.Equal(t, types.U64(contractID), res.ContractID)
+		require.Equal(t, resources[0].Used.HRU, res.Used.HRU)
+		require.Equal(t, resources[0].Used.SRU, res.Used.SRU)
+		require.Equal(t, resources[0].Used.CRU, res.Used.CRU)
+		require.Equal(t, resources[0].Used.MRU, res.Used.MRU)
 	})
+
+	// Clean up
+	err = cl.CancelContract(identity, contractID)
+	require.NoError(t, err)
+}
+
+func TestBillContract(t *testing.T) {
+	var nodeID uint32
+	var contractID uint64
+
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+	nodeID = assertCreateNode(t, cl, farmID, twinID, identity)
+
+	contractID, err = cl.CreateNodeContract(identity, nodeID, "", "", 0, nil)
+	require.NoError(t, err, "failed to create test contract")
+
+	t.Run("existing contract", func(t *testing.T) {
+		// First report some resources for the contract
+		resources := []ContractResources{
+			{
+				ContractID: types.U64(contractID),
+				Used: Resources{
+					HRU: types.U64(1024 * 1024 * 1024),      // 1GB
+					SRU: types.U64(10 * 1024 * 1024 * 1024), // 10GB
+					CRU: types.U64(2),
+					MRU: types.U64(4 * 1024 * 1024 * 1024), // 4GB
+				},
+			},
+		}
+
+		err = cl.SetContractConsumption(identity, resources...)
+		require.NoError(t, err, "failed to report contract resources")
+
+		// Bill the contract
+		err = cl.BillContract(identity, contractID)
+		require.NoError(t, err, "failed to bill contract")
+
+		// Verify the contract's payment state was updated
+		paymentState, err := cl.GetContractPaymentState(contractID)
+		require.NoError(t, err, "failed to get contract payment state")
+		require.IsType(t, ContractPaymentState{}, paymentState)
+		require.True(t, paymentState.StandardReserve.Uint64() > 0)
+		require.Greater(t, paymentState.Cycles, types.U16(0))
+
+		t.Logf("Contract payment state after billing: %+v", paymentState)
+	})
+
+	// Clean up
+	err = cl.CancelContract(identity, contractID)
+	require.NoError(t, err)
 }
 
 func TestCancelBatch(t *testing.T) {
