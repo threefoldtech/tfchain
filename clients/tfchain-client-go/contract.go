@@ -122,6 +122,11 @@ type NodeContract struct {
 	PublicIPs      []PublicIP `json:"public_ips"`
 }
 
+type NodeContractResources struct {
+	ContractID types.U64 `json:"contract_id"`
+	Used       Resources `json:"used"`
+}
+
 type NameContract struct {
 	Name string `json:"name"`
 }
@@ -492,6 +497,26 @@ func (s *Substrate) SetContractConsumption(identity Identity, resources ...Contr
 	return nil
 }
 
+// Bill contract for block using contract ID
+func (s *Substrate) BillContract(identity Identity, contract uint64) error {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return err
+	}
+
+	c, err := types.NewCall(meta, "SmartContractModule.bill_contract_for_block", contract)
+	if err != nil {
+		return errors.Wrap(err, "failed to call bill contract for block")
+	}
+
+	_, err = s.Call(cl, meta, identity, c)
+	if err != nil {
+		return errors.Wrap(err, "failed to bill contract for block")
+	}
+
+	return nil
+}
+
 // GetContract we should not have calls to create contract, instead only get
 func (s *Substrate) GetContract(id uint64) (*Contract, error) {
 	cl, meta, err := s.GetClient()
@@ -597,7 +622,7 @@ func (s *Substrate) GetNodeContracts(node uint32) ([]types.U64, error) {
 	return contracts, nil
 }
 
-// GetNodeContracts gets all contracts on a node (pk) in given state
+// GetNodeRentContract gets the active rent contract for a node (pk)
 func (s *Substrate) GetNodeRentContract(node uint32) (uint64, error) {
 	cl, meta, err := s.GetClient()
 	if err != nil {
@@ -626,6 +651,36 @@ func (s *Substrate) GetNodeRentContract(node uint32) (uint64, error) {
 	var contract uint64
 	err = Decode(*raw, &contract)
 	return contract, err
+}
+
+// GetNodeContractResources gets the resources used by a node for a given contract id
+func (s *Substrate) GetNodeContractResources(contract uint64) (resources NodeContractResources, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return resources, err
+	}
+
+	bytes, err := Encode(contract)
+	if err != nil {
+		return resources, errors.Wrap(err, "substrate: encoding error building query arguments")
+	}
+
+	key, err := types.CreateStorageKey(meta, "SmartContractModule", "NodeContractResources", bytes)
+	if err != nil {
+		return resources, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	var result NodeContractResources
+	ok, err := cl.RPC.State.GetStorageLatest(key, &result)
+	if err != nil {
+		return resources, errors.Wrap(err, "failed to lookup entity")
+	}
+
+	if !ok {
+		return resources, errors.Wrap(ErrNotFound, "contract resources not found")
+	}
+
+	return result, nil
 }
 
 func (s *Substrate) getContract(cl Conn, key types.StorageKey) (*Contract, error) {
@@ -693,4 +748,84 @@ func (s *Substrate) Report(identity Identity, consumptions []NruConsumption) (ty
 type ContractResources struct {
 	ContractID types.U64 `json:"contract_id"`
 	Used       Resources `json:"resources"`
+}
+
+// ContractPaymentState represents the payment state of a contract
+type ContractPaymentState struct {
+	StandardReserve     types.U128 `json:"standard_reserve"`
+	AdditionalReserve   types.U128 `json:"additional_reserve"`
+	StandardOverdraft   types.U128 `json:"standard_overdraft"`
+	AdditionalOverdraft types.U128 `json:"additional_overdraft"`
+	LastUpdatedSeconds  types.U64  `json:"last_updated_seconds"`
+	Cycles              types.U16  `json:"cycles"`
+}
+
+// GetContractPaymentState gets the payment state for a given contract id
+//
+// The payment state contains the current standard and additional reserve, standard and additional overdraft,
+// the last updated timestamp in seconds and the number of cycles.
+func (s *Substrate) GetContractPaymentState(id uint64) (paymentState ContractPaymentState, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return paymentState, err
+	}
+
+	bytes, err := Encode(id)
+	if err != nil {
+		return paymentState, errors.Wrap(err, "substrate: encoding error building query arguments")
+	}
+
+	key, err := types.CreateStorageKey(meta, "SmartContractModule", "ContractPaymentState", bytes)
+	if err != nil {
+		return paymentState, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	var result ContractPaymentState
+	ok, err := cl.RPC.State.GetStorageLatest(key, &result)
+	if err != nil {
+		return paymentState, errors.Wrap(err, "failed to lookup entity")
+	}
+
+	if !ok {
+		return paymentState, errors.Wrap(ErrNotFound, "contract payment state not found")
+	}
+
+	return result, nil
+}
+
+// ContractBillingInfo contains the billing information for a given contract.
+type ContractBillingInfo struct {
+	PreviousNuReported types.U64 `json:"previous_nu_reported"`
+	LastUpdated        types.U64 `json:"last_updated"`
+	AmountUnbilled     types.U64 `json:"amount_unbilled"`
+}
+
+// GetContractBillingInfo gets the billing info for a given contract id
+func (s *Substrate) GetContractBillingInfo(id uint64) (billingInfo ContractBillingInfo, err error) {
+	cl, meta, err := s.GetClient()
+
+	if err != nil {
+		return billingInfo, err
+	}
+
+	bytes, err := Encode(id)
+	if err != nil {
+		return billingInfo, errors.Wrap(err, "substrate: encoding error building query arguments")
+	}
+
+	key, err := types.CreateStorageKey(meta, "SmartContractModule", "ContractBillingInformationByID", bytes)
+
+	if err != nil {
+		return billingInfo, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	var result ContractBillingInfo
+	ok, err := cl.RPC.State.GetStorageLatest(key, &result)
+	if err != nil {
+		return billingInfo, errors.Wrap(err, "failed to lookup entity")
+	}
+	if !ok {
+		return billingInfo, errors.Wrap(ErrNotFound, "contract billing info not found")
+	}
+	return result, nil
 }
