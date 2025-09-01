@@ -146,14 +146,7 @@ func (s *Substrate) GetTFTBillingRate() (rate types.U32, err error) {
 		return rate, errors.Wrap(ErrNotFound, "MaxTftPrice not found")
 	}
 
-	// Clamp
-	rate = avg
-	if rate < min {
-		rate = min
-	}
-	if rate > max {
-		rate = max
-	}
+	rate = clampTFTPrice(avg, min, max)
 	return
 }
 
@@ -227,12 +220,19 @@ func (s *Substrate) GetTFTBillingRateAt(block uint64) (rate types.U32, err error
 	}
 
 	// Clamp
-	rate = avg
+	rate = clampTFTPrice(avg, min, max)
+	return
+}
+
+// clampTFTPrice mirrors the on-chain clamping logic used by pallet-smart-contract
+// tft_price = max(AverageTftPrice, MinTftPrice) then min(_, MaxTftPrice)
+func clampTFTPrice(avg, min, max types.U32) types.U32 {
+	rate := avg
 	if rate < min {
 		rate = min
 	}
 	if rate > max {
 		rate = max
 	}
-	return
+	return rate
 }
