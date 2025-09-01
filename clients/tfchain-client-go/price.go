@@ -97,3 +97,142 @@ func (s *Substrate) GetAverageTFTPrice() (price types.U32, err error) {
 
 	return
 }
+
+// GetTFTBillingRate returns the current billing rate (in mUSD) used on-chain,
+// computed as AverageTftPrice clamped between MinTftPrice and MaxTftPrice.
+func (s *Substrate) GetTFTBillingRate() (rate types.U32, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return
+	}
+
+	// Build keys
+	keyAvg, err := types.CreateStorageKey(meta, "TFTPriceModule", "AverageTftPrice")
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to create storage key (AverageTftPrice)")
+	}
+	keyMin, err := types.CreateStorageKey(meta, "TFTPriceModule", "MinTftPrice")
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to create storage key (MinTftPrice)")
+	}
+	keyMax, err := types.CreateStorageKey(meta, "TFTPriceModule", "MaxTftPrice")
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to create storage key (MaxTftPrice)")
+	}
+
+	// Read latest values
+	var avg, min, max types.U32
+	ok, err := cl.RPC.State.GetStorageLatest(keyAvg, &avg)
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to read AverageTftPrice")
+	}
+	if !ok {
+		return rate, errors.Wrap(ErrNotFound, "AverageTftPrice not found")
+	}
+
+	ok, err = cl.RPC.State.GetStorageLatest(keyMin, &min)
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to read MinTftPrice")
+	}
+	if !ok {
+		return rate, errors.Wrap(ErrNotFound, "MinTftPrice not found")
+	}
+
+	ok, err = cl.RPC.State.GetStorageLatest(keyMax, &max)
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to read MaxTftPrice")
+	}
+	if !ok {
+		return rate, errors.Wrap(ErrNotFound, "MaxTftPrice not found")
+	}
+
+	rate = clampTFTPrice(avg, min, max)
+	return
+}
+
+// GetTFTBillingRateAt returns the billing rate (in mUSD) at a specific block number,
+// computed as AverageTftPrice clamped between MinTftPrice and MaxTftPrice at that block.
+func (s *Substrate) GetTFTBillingRateAt(block uint64) (rate types.U32, err error) {
+	cl, _, err := s.GetClient()
+	if err != nil {
+		return
+	}
+
+	// Resolve block hash
+	bh, err := cl.RPC.Chain.GetBlockHash(block)
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to resolve block hash")
+	}
+
+	// Metadata at block
+	metaAtBlock, err := cl.RPC.State.GetMetadata(bh)
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to get metadata at block")
+	}
+
+	// Keys at block
+	keyAvg, err := types.CreateStorageKey(metaAtBlock, "TFTPriceModule", "AverageTftPrice")
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to create storage key (AverageTftPrice)")
+	}
+	keyMin, err := types.CreateStorageKey(metaAtBlock, "TFTPriceModule", "MinTftPrice")
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to create storage key (MinTftPrice)")
+	}
+	keyMax, err := types.CreateStorageKey(metaAtBlock, "TFTPriceModule", "MaxTftPrice")
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to create storage key (MaxTftPrice)")
+	}
+
+	// Read at block
+	var avg, min, max types.U32
+	raw, err := cl.RPC.State.GetStorageRaw(keyAvg, bh)
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to get AverageTftPrice at block")
+	}
+	if len(*raw) == 0 {
+		return rate, errors.Wrap(ErrNotFound, "AverageTftPrice not found at block")
+	}
+	if err := Decode(*raw, &avg); err != nil {
+		return rate, errors.Wrap(err, "failed to decode AverageTftPrice")
+	}
+
+	raw, err = cl.RPC.State.GetStorageRaw(keyMin, bh)
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to get MinTftPrice at block")
+	}
+	if len(*raw) == 0 {
+		return rate, errors.Wrap(ErrNotFound, "MinTftPrice not found at block")
+	}
+	if err := Decode(*raw, &min); err != nil {
+		return rate, errors.Wrap(err, "failed to decode MinTftPrice")
+	}
+
+	raw, err = cl.RPC.State.GetStorageRaw(keyMax, bh)
+	if err != nil {
+		return rate, errors.Wrap(err, "failed to get MaxTftPrice at block")
+	}
+	if len(*raw) == 0 {
+		return rate, errors.Wrap(ErrNotFound, "MaxTftPrice not found at block")
+	}
+	if err := Decode(*raw, &max); err != nil {
+		return rate, errors.Wrap(err, "failed to decode MaxTftPrice")
+	}
+
+	// Clamp
+	rate = clampTFTPrice(avg, min, max)
+	return
+}
+
+// clampTFTPrice mirrors the on-chain clamping logic used by pallet-smart-contract
+// tft_price = max(AverageTftPrice, MinTftPrice) then min(_, MaxTftPrice)
+func clampTFTPrice(avg, min, max types.U32) types.U32 {
+	rate := avg
+	if rate < min {
+		rate = min
+	}
+	if rate > max {
+		rate = max
+	}
+	return rate
+}
