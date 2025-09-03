@@ -12,10 +12,196 @@ use tfchain_support::types::{
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
+use crate::pallet::{
+    PendingTransferByTwin, TwinIdByAccountID, TwinTransferRequestID, TwinTransferRequests, Twins,
+};
+use crate::TransferStatus;
+use pallet_balances::Pallet as BalancesPallet;
+use frame_support::traits::ReservableCurrency;
+
 #[test]
 fn test_create_entity_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
+    });
+}
+
+#[test]
+fn twin_transfer_request_happy_path() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin(); // twin 1 owned by alice
+
+        // new owner candidate (bob) accepts T&C
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+
+        // request must be initiated by new account (bob)
+        assert_ok!(TfgridModule::_request_twin_transfer(
+            RuntimeOrigin::signed(bob()),
+            1,
+            bob(),
+        ));
+
+        // storage checks
+        assert_eq!(TwinTransferRequestID::<TestRuntime>::get(), 1);
+        let req = TwinTransferRequests::<TestRuntime>::get(1).expect("request stored");
+        assert_eq!(req.twin_id, 1);
+        assert_eq!(req.old_account, alice());
+        assert_eq!(req.new_account, bob());
+        assert!(req.status == TransferStatus::Pending);
+        assert_eq!(PendingTransferByTwin::<TestRuntime>::get(1), Some(1));
+    });
+}
+
+#[test]
+fn twin_transfer_request_wrong_initiator_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+
+        // alice cannot initiate a request for bob
+        assert_noop!(
+            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(alice()), 1, bob()),
+            Error::<TestRuntime>::TwinTransferRequestMustBeFromNewAccount
+        );
+    });
+}
+
+#[test]
+fn twin_transfer_request_new_account_has_twin_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_twin_bob(); // bob already has a twin
+
+        assert_noop!(
+            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(bob()), 1, bob()),
+            Error::<TestRuntime>::TwinTransferNewAccountHasTwin
+        );
+    });
+}
+
+#[test]
+fn twin_transfer_request_duplicate_pending_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+        assert_ok!(TfgridModule::_request_twin_transfer(
+            RuntimeOrigin::signed(bob()),
+            1,
+            bob(),
+        ));
+
+        // second request while pending should fail
+        assert_noop!(
+            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(bob()), 1, bob()),
+            Error::<TestRuntime>::TwinTransferPendingExists
+        );
+    });
+}
+
+#[test]
+fn twin_transfer_accept_happy_path_moves_reserved_and_updates_owner() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+
+        // create request id 1
+        assert_ok!(TfgridModule::_request_twin_transfer(
+            RuntimeOrigin::signed(bob()),
+            1,
+            bob(),
+        ));
+
+        // reserve some balance on alice
+        assert_ok!(<TestRuntime as crate::pallet::Config>::Currency::reserve(&alice(), 100));
+        assert_eq!(<TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&alice()), 100);
+
+        // accept by current owner (alice)
+        assert_ok!(TfgridModule::_accept_twin_transfer(
+            RuntimeOrigin::signed(alice()),
+            1,
+        ));
+
+        // twin owner updated
+        let twin = Twins::<TestRuntime>::get(&1).expect("twin exists");
+        assert_eq!(twin.account_id, bob());
+
+        // account->twin mapping updated
+        assert_eq!(TwinIdByAccountID::<TestRuntime>::get(&alice()), None);
+        assert_eq!(TwinIdByAccountID::<TestRuntime>::get(&bob()), Some(1));
+
+        // request completed and pending cleared
+        let req = TwinTransferRequests::<TestRuntime>::get(1).expect("request stored");
+        assert!(req.status == TransferStatus::Completed);
+        assert_eq!(PendingTransferByTwin::<TestRuntime>::get(1), None);
+
+        // reserved moved to bob
+        assert_eq!(<TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&alice()), 0);
+        assert_eq!(<TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&bob()), 100);
+    });
+}
+
+#[test]
+fn twin_transfer_accept_expired_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+        assert_ok!(TfgridModule::_request_twin_transfer(
+            RuntimeOrigin::signed(bob()),
+            1,
+            bob(),
+        ));
+
+        // move block number beyond expiry
+        let req = TwinTransferRequests::<TestRuntime>::get(1).unwrap();
+        System::set_block_number(req.expiry_block + 1);
+
+        assert_noop!(
+            TfgridModule::_accept_twin_transfer(RuntimeOrigin::signed(alice()), 1),
+            Error::<TestRuntime>::TwinTransferRequestExpired
+        );
+    });
+}
+
+#[test]
+fn twin_transfer_accept_wrong_signer_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+        assert_ok!(TfgridModule::_request_twin_transfer(
+            RuntimeOrigin::signed(bob()),
+            1,
+            bob(),
+        ));
+
+        // bob (new account) cannot accept; must be current owner (alice)
+        assert_noop!(
+            TfgridModule::_accept_twin_transfer(RuntimeOrigin::signed(bob()), 1),
+            Error::<TestRuntime>::UnauthorizedToUpdateTwin
+        );
     });
 }
 

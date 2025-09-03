@@ -129,6 +129,7 @@ impl Config for TestRuntime {
     type PublicIpModifier = PublicIpModifierType;
     type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = TestTermsAndConditions;
+    type Currency = Balances;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
@@ -213,9 +214,16 @@ impl ExternalityBuilder {
     pub fn build() -> TestExternalities {
         let _ = env_logger::try_init();
 
-        let storage = frame_system::GenesisConfig::<TestRuntime>::default()
+        let mut storage = frame_system::GenesisConfig::<TestRuntime>::default()
             .build_storage()
             .unwrap();
+
+        // Provide balances for accounts used in tests
+        let balances_genesis = pallet_balances::GenesisConfig::<TestRuntime> {
+            balances: vec![(alice(), 1_000_000_000_000), (bob(), 1_000_000_000_000)],
+        };
+        balances_genesis.assimilate_storage(&mut storage).unwrap();
+
         let mut ext = TestExternalities::from(storage);
         ext.execute_with(|| System::set_block_number(1));
         ext
