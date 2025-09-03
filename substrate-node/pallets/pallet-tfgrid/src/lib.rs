@@ -9,6 +9,7 @@ pub mod node;
 pub mod pricing;
 pub mod terms_cond;
 pub mod twin;
+pub mod twin_transfer;
 pub mod types;
 pub mod weights;
 
@@ -32,13 +33,15 @@ pub mod pallet {
     use super::*;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*,
-        storage::bounded_vec::BoundedVec, traits::ConstU32, traits::EnsureOrigin, Blake2_128Concat,
+        storage::bounded_vec::BoundedVec, traits::ConstU32, traits::EnsureOrigin,
+        Blake2_128Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::*};
     use parity_scale_codec::FullCodec;
     use sp_core::Get;
     use sp_runtime::SaturatedConversion;
     use sp_std::{convert::TryInto, fmt::Debug, vec, vec::Vec};
+    use frame_support::traits::ReservableCurrency;
     use tfchain_support::{
         resources::Resources,
         traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
@@ -263,6 +266,39 @@ pub mod pallet {
         ValueQuery,
     >;
 
+    // Twin ownership transfer storage types
+    #[derive(Encode, Decode, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+    pub enum TransferStatus {
+        Pending,
+        Completed,
+        Cancelled,
+    }
+
+    #[derive(Encode, Decode, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+    #[scale_info(skip_type_params(T))]
+    pub struct TwinTransferRequest<T: Config> {
+        pub twin_id: u32,
+        pub old_account: T::AccountId,
+        pub new_account: T::AccountId,
+        pub expiry_block: BlockNumberFor<T>,
+        pub status: TransferStatus,
+    }
+
+    #[pallet::storage]
+    #[pallet::getter(fn twin_transfer_request_id)]
+    pub type TwinTransferRequestID<T> = StorageValue<_, u64, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn twin_transfer_requests)]
+    pub type TwinTransferRequests<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, TwinTransferRequest<T>, OptionQuery>;
+
+    // Index to ensure at most one pending transfer per twin
+    #[pallet::storage]
+    #[pallet::getter(fn pending_transfer_by_twin)]
+    pub type PendingTransferByTwin<T: Config> =
+        StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
+
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -386,6 +422,9 @@ pub mod pallet {
 
         #[pallet::constant]
         type TimestampHintDrift: Get<u64>;
+
+        /// Currency used for reserving/repatriating balances during twin ownership transfer
+        type Currency: ReservableCurrency<Self::AccountId>;
     }
 
     #[pallet::event]
@@ -438,6 +477,10 @@ pub mod pallet {
             node_id: u32,
             power_state: PowerState<BlockNumberFor<T>>,
         },
+
+        // Twin ownership transfer lifecycle
+        TwinTransferRequested { twin_id: u32, old_account: T::AccountId, new_account: T::AccountId },
+        TwinOwnershipTransferred { twin_id: u32, old_account: T::AccountId, new_account: T::AccountId },
     }
 
     #[pallet::error]
@@ -574,6 +617,14 @@ pub mod pallet {
         InvalidTimestampHint,
 
         InvalidStorageInput,
+
+        // Twin transfer specific errors
+        TwinTransferRequestNotFound,
+        TwinTransferRequestExpired,
+        TwinTransferRequestAlreadyCompleted,
+        TwinTransferNewAccountHasTwin,
+        TwinTransferPendingExists,
+        TwinTransferRequestMustBeFromNewAccount,
     }
 
     #[pallet::genesis_config]
@@ -1238,5 +1289,27 @@ pub mod pallet {
         // Deprecated! Use index 40 for next extrinsic
         // #[pallet::call_index(39)]
         // #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
+
+        // Twin ownership transfer: request by new account
+        #[pallet::call_index(40)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4).ref_time() + T::DbWeight::get().reads(5).ref_time())]
+        pub fn request_twin_transfer(
+            origin: OriginFor<T>,
+            twin_id: u32,
+            new_account: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            Self::_request_twin_transfer(origin, twin_id, new_account)
+        }
+
+        // Twin ownership transfer: accept by current owner
+        #[pallet::call_index(41)]
+        #[pallet::weight(150_000_000 + T::DbWeight::get().writes(6).ref_time() + T::DbWeight::get().reads(7).ref_time())]
+        pub fn accept_twin_transfer(
+            origin: OriginFor<T>,
+            request_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            Self::_accept_twin_transfer(origin, request_id)
+        }
     }
 }
+

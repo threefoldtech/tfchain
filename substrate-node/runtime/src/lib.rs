@@ -383,6 +383,7 @@ impl pallet_tfgrid::Config for Runtime {
     type Location = pallet_tfgrid::node::Location<Runtime>;
     type SerialNumber = pallet_tfgrid::node::SerialNumber<Runtime>;
     type TimestampHintDrift = TimestampHintDrift;
+    type Currency = Balances;
 }
 
 parameter_types! {
