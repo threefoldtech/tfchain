@@ -75,6 +75,21 @@ fn twin_transfer_request_wrong_initiator_fails() {
 }
 
 #[test]
+fn twin_transfer_request_without_tc_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        // Given: an existing twin owned by alice
+        create_twin();
+
+        // When: bob (new prospective owner) did NOT accept T&C and tries to request transfer
+        // Then: it should fail with UserDidNotSignTermsAndConditions
+        assert_noop!(
+            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(bob()), 1, bob()),
+            Error::<TestRuntime>::UserDidNotSignTermsAndConditions
+        );
+    });
+}
+
+#[test]
 fn twin_transfer_request_new_account_has_twin_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
