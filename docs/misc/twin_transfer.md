@@ -4,14 +4,14 @@ This document explains the twin ownership transfer flow in the `pallet-tfgrid` p
 
 ## Overview
 
-- The new owner initiates the transfer via `request_twin_transfer(twin_id, new_account)`.
+- The new owner initiates the transfer via `request_twin_transfer(twin_id)`.
 - The current owner accepts via `accept_twin_transfer(request_id)`.
 - On success, ownership of the twin moves to the new account, reserved balances are repatriated, and indices are updated.
 
 ## Dispatchables
 
-- request_twin_transfer(origin, twin_id, new_account)
-  - Origin must be the new account.
+- request_twin_transfer(origin, twin_id)
+  - Origin (signer) is the new account.
   - Emits `TwinTransferRequested { twin_id, old_account, new_account }`.
 - accept_twin_transfer(origin, request_id)
   - Origin must be the current (old) owner of the twin.
@@ -28,7 +28,6 @@ This document explains the twin ownership transfer flow in the `pallet-tfgrid` p
 ## Common Errors
 
 - UserDidNotSignTermsAndConditions: new account did not accept T&C.
-- TwinTransferRequestMustBeFromNewAccount: request must be signed by the new account.
 - TwinTransferNewAccountHasTwin: new account already has a twin.
 - TwinTransferPendingExists: a pending transfer already exists for this twin.
 - TwinTransferRequestNotFound: request ID does not exist.

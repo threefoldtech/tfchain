@@ -42,7 +42,6 @@ fn twin_transfer_request_happy_path() {
         assert_ok!(TfgridModule::_request_twin_transfer(
             RuntimeOrigin::signed(bob()),
             1,
-            bob(),
         ));
 
         // storage checks
@@ -56,23 +55,7 @@ fn twin_transfer_request_happy_path() {
     });
 }
 
-#[test]
-fn twin_transfer_request_wrong_initiator_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_twin();
-        assert_ok!(TfgridModule::user_accept_tc(
-            RuntimeOrigin::signed(bob()),
-            get_document_link_input(b"some_link"),
-            get_document_hash_input(b"some_hash"),
-        ));
-
-        // alice cannot initiate a request for bob
-        assert_noop!(
-            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(alice()), 1, bob()),
-            Error::<TestRuntime>::TwinTransferRequestMustBeFromNewAccount
-        );
-    });
-}
+// Note: request must be initiated by the new account (signer). No test needed for mismatched initiator.
 
 #[test]
 fn twin_transfer_request_without_tc_fails() {
@@ -83,7 +66,7 @@ fn twin_transfer_request_without_tc_fails() {
         // When: bob (new prospective owner) did NOT accept T&C and tries to request transfer
         // Then: it should fail with UserDidNotSignTermsAndConditions
         assert_noop!(
-            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(bob()), 1, bob()),
+            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(bob()), 1),
             Error::<TestRuntime>::UserDidNotSignTermsAndConditions
         );
     });
@@ -96,7 +79,7 @@ fn twin_transfer_request_new_account_has_twin_fails() {
         create_twin_bob(); // bob already has a twin
 
         assert_noop!(
-            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(bob()), 1, bob()),
+            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(bob()), 1),
             Error::<TestRuntime>::TwinTransferNewAccountHasTwin
         );
     });
@@ -114,12 +97,11 @@ fn twin_transfer_request_duplicate_pending_fails() {
         assert_ok!(TfgridModule::_request_twin_transfer(
             RuntimeOrigin::signed(bob()),
             1,
-            bob(),
         ));
 
         // second request while pending should fail
         assert_noop!(
-            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(bob()), 1, bob()),
+            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(bob()), 1),
             Error::<TestRuntime>::TwinTransferPendingExists
         );
     });
@@ -139,7 +121,6 @@ fn twin_transfer_accept_happy_path_moves_reserved_and_updates_owner() {
         assert_ok!(TfgridModule::_request_twin_transfer(
             RuntimeOrigin::signed(bob()),
             1,
-            bob(),
         ));
 
         // reserve some balance on alice
@@ -183,7 +164,6 @@ fn twin_transfer_accept_expired_fails() {
         assert_ok!(TfgridModule::_request_twin_transfer(
             RuntimeOrigin::signed(bob()),
             1,
-            bob(),
         ));
 
         // move block number beyond expiry
@@ -209,7 +189,6 @@ fn twin_transfer_accept_wrong_signer_fails() {
         assert_ok!(TfgridModule::_request_twin_transfer(
             RuntimeOrigin::signed(bob()),
             1,
-            bob(),
         ));
 
         // bob (new account) cannot accept; must be current owner (alice)

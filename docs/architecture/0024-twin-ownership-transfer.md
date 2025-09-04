@@ -21,8 +21,8 @@ Introduce a two-step, time-bound transfer protocol implemented in `pallet-tfgrid
 
 ### Dispatchables
 
-- `request_twin_transfer(origin=new_account, twin_id, new_account)`
-  - Origin must match `new_account`.
+- `request_twin_transfer(origin=new_account, twin_id)`
+  - Origin is the prospective new account.
   - Validates preconditions and creates a pending transfer with expiry.
   - Emits `TwinTransferRequested { twin_id, old_account, new_account }`.
 

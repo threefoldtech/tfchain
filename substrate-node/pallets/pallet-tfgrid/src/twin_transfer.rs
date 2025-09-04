@@ -10,14 +10,9 @@ impl<T: Config> Pallet<T> {
     pub fn _request_twin_transfer(
         origin: T::RuntimeOrigin,
         twin_id: u32,
-        new_account: T::AccountId,
     ) -> DispatchResultWithPostInfo {
-        let requester = ensure_signed(origin)?;
-        // Request must be initiated by the new account
-        ensure!(
-            requester == new_account,
-            Error::<T>::TwinTransferRequestMustBeFromNewAccount
-        );
+        // Derive the new account directly from the signer
+        let new_account = ensure_signed(origin)?;
 
         // Twin must exist
         let twin = Twins::<T>::get(&twin_id).ok_or(Error::<T>::TwinNotExists)?;

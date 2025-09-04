@@ -624,7 +624,6 @@ pub mod pallet {
         TwinTransferRequestAlreadyCompleted,
         TwinTransferNewAccountHasTwin,
         TwinTransferPendingExists,
-        TwinTransferRequestMustBeFromNewAccount,
     }
 
     #[pallet::genesis_config]
@@ -1296,9 +1295,8 @@ pub mod pallet {
         pub fn request_twin_transfer(
             origin: OriginFor<T>,
             twin_id: u32,
-            new_account: T::AccountId,
         ) -> DispatchResultWithPostInfo {
-            Self::_request_twin_transfer(origin, twin_id, new_account)
+            Self::_request_twin_transfer(origin, twin_id)
         }
 
         // Twin ownership transfer: accept by current owner
