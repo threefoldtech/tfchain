@@ -12,45 +12,46 @@ Operators occasionally need to transfer ownership of an existing Twin to a diffe
 
 ## Decision
 
-Introduce a two-step, time-bound transfer protocol implemented in `pallet-tfgrid` that:
+Introduce a simple two-step transfer protocol implemented in `pallet-tfgrid` that:
 
-- Requires the prospective new owner to initiate the request (prevents unsolicited hijacks).
-- Enforces that the new owner has accepted Terms & Conditions and does not already own a Twin.
-- Requires explicit acceptance by the current owner before expiry.
+- Requires the current (old) owner to initiate and specify the intended new account.
+- Enforces that the new account has accepted Terms & Conditions and does not already own a Twin.
+- Requires explicit acceptance by the new account.
+- Allows the current owner to cancel a pending request at any time.
 - Repatriates all reserved balance from old owner to new owner on acceptance.
 
 ### Dispatchables
 
-- `request_twin_transfer(origin=new_account, twin_id)`
-  - Origin is the prospective new account.
-  - Validates preconditions and creates a pending transfer with expiry.
+- `request_twin_transfer(origin=old_account, new_account)`
+  - Origin is the current (old) owner.
+  - Validates preconditions and creates a pending transfer.
   - Emits `TwinTransferRequested { twin_id, old_account, new_account }`.
 
-- `accept_twin_transfer(origin=old_account, request_id)`
-  - Origin must be the current (old) owner of the Twin.
-  - Requires the request to be pending and unexpired.
-  - Moves reserved balance from old to new as reserved, updates Twin owner and indexes, completes the request.
+- `accept_twin_transfer(origin=new_account, request_id)`
+  - Origin must be the intended new owner.
+  - Moves reserved balance from old to new as reserved, updates Twin owner and indexes, and completes the request.
   - Emits `TwinOwnershipTransferred { twin_id, old_account, new_account }` and `TwinUpdated(Twin)`.
+
+- `cancel_twin_transfer(origin=old_account, request_id)`
+  - Origin must be the current (old) owner.
+  - Cancels and removes the pending request.
+  - Emits `TwinTransferCanceled { twin_id, old_account, new_account }`.
 
 ### Storage
 
-- `TwinTransferRequests: RequestId -> TwinTransferRequest` (status, twin_id, old_account, new_account, expiry)
+- `TwinTransferRequests: RequestId -> TwinTransferRequest` (twin_id, old_account, new_account)
 - `PendingTransferByTwin: TwinId -> RequestId` (enforces one pending request per Twin)
 - `TwinTransferRequestID: u64` (monotonic counter)
 
 ### Types
 
-- `TransferStatus` enum: `Pending | Completed`
-
-### Expiry
-
-- Requests expire after a fixed window (using HOURS from `tfchain_support::constants::time`). Acceptance after expiry fails.
+- None specific to lifecycle state; a request exists while pending and is removed on accept/cancel.
 
 ## Security Considerations
 
-- New owner must initiate request (prevents current owner from pushing ownership without consent of new owner).
-- New owner must have signed T&C and must not own another Twin (prevents multi-ownership and aligns with usage rules).
-- Current owner must accept while request is pending and before expiry.
+- Current owner cannot push a transfer without new account cooperation (accept step by new account is required).
+- New account must have signed T&C and must not own another Twin (prevents multi-ownership and aligns with usage rules).
+- Owner can cancel any time to unblock.
 - On acceptance, reserved balance is repatriated using `repatriate_reserved(..., BalanceStatus::Reserved)`; failures are tolerated but the pallet attempts best-effort transfer before ownership move.
 
 ## Consequences

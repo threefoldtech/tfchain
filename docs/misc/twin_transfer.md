@@ -4,18 +4,22 @@ This document explains the twin ownership transfer flow in the `pallet-tfgrid` p
 
 ## Overview
 
-- The new owner initiates the transfer via `request_twin_transfer(twin_id)`.
-- The current owner accepts via `accept_twin_transfer(request_id)`.
+- The current (old) owner initiates the transfer via `request_twin_transfer(new_account)`.
+- The prospective new owner accepts via `accept_twin_transfer(request_id)`.
+- The current owner may cancel via `cancel_twin_transfer(request_id)`.
 - On success, ownership of the twin moves to the new account, reserved balances are repatriated, and indices are updated.
 
 ## Dispatchables
 
-- request_twin_transfer(origin, twin_id)
-  - Origin (signer) is the new account.
+- request_twin_transfer(origin=old_owner, new_account)
+  - Origin (signer) is the current (old) owner; `twin_id` is derived from the signer.
   - Emits `TwinTransferRequested { twin_id, old_account, new_account }`.
-- accept_twin_transfer(origin, request_id)
-  - Origin must be the current (old) owner of the twin.
+- accept_twin_transfer(origin=new_account, request_id)
+  - Origin must be the intended new owner of the twin.
   - Emits `TwinOwnershipTransferred { twin_id, old_account, new_account }` and `TwinUpdated(Twin)`.
+- cancel_twin_transfer(origin=old_owner, request_id)
+  - Origin must be the current (old) owner of the twin.
+  - Emits `TwinTransferCanceled { twin_id, old_account, new_account }`.
 
 ## Preconditions
 
@@ -23,7 +27,6 @@ This document explains the twin ownership transfer flow in the `pallet-tfgrid` p
 - New account must have accepted Terms & Conditions (`user_accept_tc`).
 - New account must not already own a twin.
 - Only one pending transfer per twin.
-- Acceptance must happen before expiry (request has an expiry block window).
 
 ## Common Errors
 
@@ -31,14 +34,13 @@ This document explains the twin ownership transfer flow in the `pallet-tfgrid` p
 - TwinTransferNewAccountHasTwin: new account already has a twin.
 - TwinTransferPendingExists: a pending transfer already exists for this twin.
 - TwinTransferRequestNotFound: request ID does not exist.
-- TwinTransferRequestAlreadyCompleted: request already completed/cannot be accepted again.
-- TwinTransferRequestExpired: acceptance after expiry is rejected.
-- UnauthorizedToUpdateTwin: accept extrinsic not signed by current owner.
+- UnauthorizedToUpdateTwin: signer is not authorized for this action.
 
 ## Events
 
 - TwinTransferRequested
 - TwinOwnershipTransferred
+- TwinTransferCanceled
 - TwinUpdated
 
 ## Notes
