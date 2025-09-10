@@ -47,8 +47,8 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number();
         let request = TwinTransferRequest::<T> {
             twin_id,
-            old_account: old_account.clone(),
-            new_account: new_account.clone(),
+            from: old_account.clone(),
+            to: new_account.clone(),
             created_at: now,
         };
 
@@ -56,9 +56,10 @@ impl<T: Config> Pallet<T> {
         PendingTransferByTwin::<T>::insert(twin_id, req_id);
 
         Self::deposit_event(Event::TwinTransferRequested {
+            request_id: req_id,
             twin_id,
-            old_account,
-            new_account,
+            from: old_account,
+            to: new_account,
         });
 
         Ok(().into())
@@ -74,42 +75,39 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::TwinTransferRequestNotFound)?;
 
         // Only the intended new account can accept
-        ensure!(
-            req.new_account == signer,
-            Error::<T>::UnauthorizedToUpdateTwin
-        );
+        ensure!(req.to == signer, Error::<T>::UnauthorizedToUpdateTwin);
 
         // Twin must exist and still be owned by old_account
         let mut twin = Twins::<T>::get(req.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         ensure!(
-            twin.account_id == req.old_account,
+            twin.account_id == req.from,
             Error::<T>::UnauthorizedToUpdateTwin
         );
 
         // New account must still not have a twin
         ensure!(
-            !TwinIdByAccountID::<T>::contains_key(&req.new_account),
+            !TwinIdByAccountID::<T>::contains_key(&req.to),
             Error::<T>::TwinTransferNewAccountHasTwin
         );
 
         // Move all reserved from old -> new as reserved
-        let reserved = T::Currency::reserved_balance(&req.old_account);
+        let reserved = T::Currency::reserved_balance(&req.from);
         if !reserved.is_zero() {
             let _ = T::Currency::repatriate_reserved(
-                &req.old_account,
-                &req.new_account,
+                &req.from,
+                &req.to,
                 reserved,
                 BalanceStatus::Reserved,
             );
         }
 
         // Update twin ownership and indexes
-        twin.account_id = req.new_account.clone();
+        twin.account_id = req.to.clone();
         Twins::<T>::insert(req.twin_id, &twin);
 
         // Update account->twin mapping
-        TwinIdByAccountID::<T>::remove(&req.old_account);
-        TwinIdByAccountID::<T>::insert(&req.new_account, req.twin_id);
+        TwinIdByAccountID::<T>::remove(&req.from);
+        TwinIdByAccountID::<T>::insert(&req.to, req.twin_id);
 
         // Clear pending index and delete request
         PendingTransferByTwin::<T>::remove(req.twin_id);
@@ -117,9 +115,10 @@ impl<T: Config> Pallet<T> {
 
         // Emit events
         Self::deposit_event(Event::TwinOwnershipTransferred {
+            request_id,
             twin_id: req.twin_id,
-            old_account: req.old_account.clone(),
-            new_account: req.new_account.clone(),
+            from: req.from.clone(),
+            to: req.to.clone(),
         });
         Self::deposit_event(Event::TwinUpdated(twin));
 
@@ -136,10 +135,7 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::TwinTransferRequestNotFound)?;
 
         // Only current owner (old_account) can cancel
-        ensure!(
-            req.old_account == signer,
-            Error::<T>::UnauthorizedToUpdateTwin
-        );
+        ensure!(req.from == signer, Error::<T>::UnauthorizedToUpdateTwin);
 
         // Remove request and index
         PendingTransferByTwin::<T>::remove(req.twin_id);
@@ -147,9 +143,10 @@ impl<T: Config> Pallet<T> {
 
         // Emit cancel event
         Self::deposit_event(Event::TwinTransferCanceled {
+            request_id,
             twin_id: req.twin_id,
-            old_account: req.old_account,
-            new_account: req.new_account,
+            from: req.from,
+            to: req.to,
         });
 
         Ok(().into())

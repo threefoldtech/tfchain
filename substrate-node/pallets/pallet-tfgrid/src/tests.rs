@@ -46,8 +46,8 @@ fn twin_transfer_request_happy_path() {
         assert_eq!(TwinTransferRequestID::<TestRuntime>::get(), 1);
         let req = TwinTransferRequests::<TestRuntime>::get(1).expect("request stored");
         assert_eq!(req.twin_id, 1);
-        assert_eq!(req.old_account, alice());
-        assert_eq!(req.new_account, bob());
+        assert_eq!(req.from, alice());
+        assert_eq!(req.to, bob());
         assert_eq!(PendingTransferByTwin::<TestRuntime>::get(1), Some(1));
     });
 }
@@ -121,8 +121,14 @@ fn twin_transfer_accept_happy_path_moves_reserved_and_updates_owner() {
         ));
 
         // reserve some balance on alice
-        assert_ok!(<TestRuntime as crate::pallet::Config>::Currency::reserve(&alice(), 100));
-        assert_eq!(<TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&alice()), 100);
+        assert_ok!(<TestRuntime as crate::pallet::Config>::Currency::reserve(
+            &alice(),
+            100
+        ));
+        assert_eq!(
+            <TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&alice()),
+            100
+        );
 
         // accept by new account (bob)
         assert_ok!(TfgridModule::_accept_twin_transfer(
@@ -144,8 +150,14 @@ fn twin_transfer_accept_happy_path_moves_reserved_and_updates_owner() {
         assert_eq!(PendingTransferByTwin::<TestRuntime>::get(1), None);
 
         // reserved moved to bob
-        assert_eq!(<TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&alice()), 0);
-        assert_eq!(<TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&bob()), 100);
+        assert_eq!(
+            <TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&alice()),
+            0
+        );
+        assert_eq!(
+            <TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&bob()),
+            100
+        );
     });
 }
 
@@ -186,7 +198,10 @@ fn twin_transfer_cancel_by_owner_clears_request() {
         ));
 
         // cancel by owner (alice)
-        assert_ok!(TfgridModule::_cancel_twin_transfer(RuntimeOrigin::signed(alice()), 1));
+        assert_ok!(TfgridModule::_cancel_twin_transfer(
+            RuntimeOrigin::signed(alice()),
+            1
+        ));
 
         // request removed and pending cleared
         assert!(TwinTransferRequests::<TestRuntime>::get(1).is_none());

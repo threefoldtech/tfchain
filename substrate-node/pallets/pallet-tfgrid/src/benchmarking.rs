@@ -559,7 +559,12 @@ benchmarks! {
     }: _(RawOrigin::Signed(old_owner.clone()), new_owner.clone())
     verify {
         assert!(TfgridModule::<T>::pending_transfer_by_twin(1).is_some());
-        assert_has_event::<T>(Event::TwinTransferRequested { twin_id: 1, old_account: old_owner, new_account: new_owner }.into());
+        assert_has_event::<T>(Event::TwinTransferRequested {
+            request_id: 1,
+            twin_id: 1,
+            from: old_owner,
+            to: new_owner,
+        }.into());
     }
 
     // accept_twin_transfer(request_id)
@@ -591,7 +596,12 @@ benchmarks! {
     }: _(RawOrigin::Signed(new_owner.clone()), request_id)
     verify {
         assert!(TfgridModule::<T>::pending_transfer_by_twin(1).is_none());
-        assert_has_event::<T>(Event::TwinOwnershipTransferred { twin_id: 1, old_account: old_owner, new_account: new_owner }.into());
+        assert_has_event::<T>(Event::TwinOwnershipTransferred {
+            request_id,
+            twin_id: 1,
+            from: old_owner,
+            to: new_owner,
+        }.into());
     }
 
     // cancel_twin_transfer(request_id)
@@ -623,7 +633,12 @@ benchmarks! {
     }: _(RawOrigin::Signed(old_owner.clone()), request_id)
     verify {
         assert!(TfgridModule::<T>::pending_transfer_by_twin(1).is_none());
-        assert_has_event::<T>(Event::TwinTransferCanceled { twin_id: 1, old_account: old_owner, new_account: account("new", 0, 0) }.into());
+        assert_has_event::<T>(Event::TwinTransferCanceled {
+            request_id,
+            twin_id: 1,
+            from: old_owner,
+            to: account("new", 0, 0),
+        }.into());
     }
 
     // delete_node_farm()

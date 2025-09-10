@@ -109,27 +109,30 @@ type TwinAccountBounded struct {
 
 // Twin transfer events
 type TwinTransferRequested struct {
-	Phase      types.Phase
-	TwinID     types.U32 `json:"twin_id"`
-	OldAccount AccountID `json:"old_account"`
-	NewAccount AccountID `json:"new_account"`
-	Topics     []types.Hash
+	Phase     types.Phase
+	RequestID types.U64 `json:"request_id"`
+	TwinID    types.U32 `json:"twin_id"`
+	From      AccountID `json:"from"`
+	To        AccountID `json:"to"`
+	Topics    []types.Hash
 }
 
 type TwinOwnershipTransferred struct {
-	Phase      types.Phase
-	TwinID     types.U32 `json:"twin_id"`
-	OldAccount AccountID `json:"old_account"`
-	NewAccount AccountID `json:"new_account"`
-	Topics     []types.Hash
+	Phase     types.Phase
+	RequestID types.U64 `json:"request_id"`
+	TwinID    types.U32 `json:"twin_id"`
+	From      AccountID `json:"from"`
+	To        AccountID `json:"to"`
+	Topics    []types.Hash
 }
 
 type TwinTransferCanceled struct {
-	Phase      types.Phase
-	TwinID     types.U32 `json:"twin_id"`
-	OldAccount AccountID `json:"old_account"`
-	NewAccount AccountID `json:"new_account"`
-	Topics     []types.Hash
+	Phase     types.Phase
+	RequestID types.U64 `json:"request_id"`
+	TwinID    types.U32 `json:"twin_id"`
+	From      AccountID `json:"from"`
+	To        AccountID `json:"to"`
+	Topics    []types.Hash
 }
 
 // numeric enum for unit

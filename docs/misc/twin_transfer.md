@@ -13,13 +13,13 @@ This document explains the twin ownership transfer flow in the `pallet-tfgrid` p
 
 - request_twin_transfer(origin=old_owner, new_account)
   - Origin (signer) is the current (old) owner; `twin_id` is derived from the signer.
-  - Emits `TwinTransferRequested { twin_id, old_account, new_account }`.
+  - Emits `TwinTransferRequested { request_id, twin_id, from, to }`.
 - accept_twin_transfer(origin=new_account, request_id)
   - Origin must be the intended new owner of the twin.
-  - Emits `TwinOwnershipTransferred { twin_id, old_account, new_account }` and `TwinUpdated(Twin)`.
+  - Emits `TwinOwnershipTransferred { request_id, twin_id, from, to }` and `TwinUpdated(Twin)`.
 - cancel_twin_transfer(origin=old_owner, request_id)
   - Origin must be the current (old) owner of the twin.
-  - Emits `TwinTransferCanceled { twin_id, old_account, new_account }`.
+  - Emits `TwinTransferCanceled { request_id, twin_id, from, to }`.
 
 ## Preconditions
 
@@ -38,12 +38,16 @@ This document explains the twin ownership transfer flow in the `pallet-tfgrid` p
 
 ## Events
 
-- TwinTransferRequested
-- TwinOwnershipTransferred
-- TwinTransferCanceled
-- TwinUpdated
+- TwinTransferRequested { request_id, twin_id, from, to }
+- TwinOwnershipTransferred { request_id, twin_id, from, to }
+- TwinTransferCanceled { request_id, twin_id, from, to }
+- TwinUpdated(Twin)
+
+## Storage
+
+- `TwinTransferRequests: RequestId -> TwinTransferRequest` where `TwinTransferRequest { twin_id, from, to, created_at }`.
+- `PendingTransferByTwin: TwinId -> RequestId` enforces at most one pending transfer per twin.
 
 ## Notes
 
 - Reserved balance of the old owner is repatriated to the new owner as reserved during acceptance.
-- A simple integration test is available under `substrate-node/tests/integration_tests.robot` ("Test Twin Transfer Flow").

@@ -26,27 +26,27 @@ Introduce a simple two-step transfer protocol implemented in `pallet-tfgrid` tha
 - `request_twin_transfer(origin=old_account, new_account)`
   - Origin is the current (old) owner.
   - Validates preconditions and creates a pending transfer.
-  - Emits `TwinTransferRequested { twin_id, old_account, new_account }`.
+  - Emits `TwinTransferRequested { request_id, twin_id, from, to }`.
 
 - `accept_twin_transfer(origin=new_account, request_id)`
   - Origin must be the intended new owner.
   - Moves reserved balance from old to new as reserved, updates Twin owner and indexes, and completes the request.
-  - Emits `TwinOwnershipTransferred { twin_id, old_account, new_account }` and `TwinUpdated(Twin)`.
+  - Emits `TwinOwnershipTransferred { request_id, twin_id, from, to }` and `TwinUpdated(Twin)`.
 
 - `cancel_twin_transfer(origin=old_account, request_id)`
   - Origin must be the current (old) owner.
   - Cancels and removes the pending request.
-  - Emits `TwinTransferCanceled { twin_id, old_account, new_account }`.
+  - Emits `TwinTransferCanceled { request_id, twin_id, from, to }`.
 
 ### Storage
 
-- `TwinTransferRequests: RequestId -> TwinTransferRequest` (twin_id, old_account, new_account, created_at)
+- `TwinTransferRequests: RequestId -> TwinTransferRequest` (twin_id, from, to, created_at)
 - `PendingTransferByTwin: TwinId -> RequestId` (enforces one pending request per Twin)
 - `TwinTransferRequestID: u64` (monotonic counter)
 
 ### Types
 
-- `TwinTransferRequest` includes `created_at: BlockNumber` to record when the request was created.
+- `TwinTransferRequest` includes `from: AccountId`, `to: AccountId`, and `created_at: BlockNumber` to record when the request was created.
   - There is no expiry logic in v1.
   - Future cleaners (on_finalize/offchain) can use `created_at` to remove stale items if desired.
 

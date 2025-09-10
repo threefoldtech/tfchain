@@ -31,17 +31,16 @@ pub use pallet::*;
 pub mod pallet {
     use super::weights::WeightInfo;
     use super::*;
+    use frame_support::traits::ReservableCurrency;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*,
-        storage::bounded_vec::BoundedVec, traits::ConstU32, traits::EnsureOrigin,
-        Blake2_128Concat,
+        storage::bounded_vec::BoundedVec, traits::ConstU32, traits::EnsureOrigin, Blake2_128Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::*};
     use parity_scale_codec::FullCodec;
     use sp_core::Get;
     use sp_runtime::SaturatedConversion;
     use sp_std::{convert::TryInto, fmt::Debug, vec, vec::Vec};
-    use frame_support::traits::ReservableCurrency;
     use tfchain_support::{
         resources::Resources,
         traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
@@ -266,13 +265,13 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    // Twin ownership transfer storage types with creation timestamp 
+    // Twin ownership transfer storage types with creation timestamp
     #[derive(Encode, Decode, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
     #[scale_info(skip_type_params(T))]
     pub struct TwinTransferRequest<T: Config> {
         pub twin_id: u32,
-        pub old_account: T::AccountId,
-        pub new_account: T::AccountId,
+        pub from: T::AccountId,
+        pub to: T::AccountId,
         pub created_at: BlockNumberFor<T>,
     }
 
@@ -471,9 +470,24 @@ pub mod pallet {
         },
 
         // Twin ownership transfer lifecycle
-        TwinTransferRequested { twin_id: u32, old_account: T::AccountId, new_account: T::AccountId },
-        TwinOwnershipTransferred { twin_id: u32, old_account: T::AccountId, new_account: T::AccountId },
-        TwinTransferCanceled { twin_id: u32, old_account: T::AccountId, new_account: T::AccountId },
+        TwinTransferRequested {
+            request_id: u64,
+            twin_id: u32,
+            from: T::AccountId,
+            to: T::AccountId,
+        },
+        TwinOwnershipTransferred {
+            request_id: u64,
+            twin_id: u32,
+            from: T::AccountId,
+            to: T::AccountId,
+        },
+        TwinTransferCanceled {
+            request_id: u64,
+            twin_id: u32,
+            from: T::AccountId,
+            to: T::AccountId,
+        },
     }
 
     #[pallet::error]
@@ -1311,4 +1325,3 @@ pub mod pallet {
         }
     }
 }
-
