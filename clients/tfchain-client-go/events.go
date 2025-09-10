@@ -107,6 +107,31 @@ type TwinAccountBounded struct {
 	Topics  []types.Hash
 }
 
+// Twin transfer events
+type TwinTransferRequested struct {
+	Phase      types.Phase
+	TwinID     types.U32 `json:"twin_id"`
+	OldAccount AccountID `json:"old_account"`
+	NewAccount AccountID `json:"new_account"`
+	Topics     []types.Hash
+}
+
+type TwinOwnershipTransferred struct {
+	Phase      types.Phase
+	TwinID     types.U32 `json:"twin_id"`
+	OldAccount AccountID `json:"old_account"`
+	NewAccount AccountID `json:"new_account"`
+	Topics     []types.Hash
+}
+
+type TwinTransferCanceled struct {
+	Phase      types.Phase
+	TwinID     types.U32 `json:"twin_id"`
+	OldAccount AccountID `json:"old_account"`
+	NewAccount AccountID `json:"new_account"`
+	Topics     []types.Hash
+}
+
 // numeric enum for unit
 type Unit byte
 
@@ -414,12 +439,15 @@ type EventRecords struct {
 	TfgridModule_EntityDeleted []EntityDeleted //nolint:stylecheck,golint
 
 	// twin events
-	TfgridModule_TwinStored         []TwinStored         //nolint:stylecheck,golint
-	TfgridModule_TwinUpdated        []TwinStored         //nolint:stylecheck,golint
-	TfgridModule_TwinDeleted        []TwinDeleted        //nolint:stylecheck,golint
-	TfgridModule_TwinEntityStored   []TwinEntityStored   //nolint:stylecheck,golint
-	TfgridModule_TwinEntityRemoved  []TwinEntityRemoved  //nolint:stylecheck,golint
-	TfgridModule_TwinAccountBounded []TwinAccountBounded //nolint:stylecheck,golint
+	TfgridModule_TwinStored               []TwinStored               //nolint:stylecheck,golint
+	TfgridModule_TwinUpdated              []TwinStored               //nolint:stylecheck,golint
+	TfgridModule_TwinDeleted              []TwinDeleted              //nolint:stylecheck,golint
+	TfgridModule_TwinEntityStored         []TwinEntityStored         //nolint:stylecheck,golint
+	TfgridModule_TwinEntityRemoved        []TwinEntityRemoved        //nolint:stylecheck,golint
+	TfgridModule_TwinAccountBounded       []TwinAccountBounded       //nolint:stylecheck,golint
+	TfgridModule_TwinTransferRequested    []TwinTransferRequested    //nolint:stylecheck,golint
+	TfgridModule_TwinOwnershipTransferred []TwinOwnershipTransferred //nolint:stylecheck,golint
+	TfgridModule_TwinTransferCanceled     []TwinTransferCanceled     //nolint:stylecheck,golint
 
 	// policy events
 	TfgridModule_PricingPolicyStored []PricingPolicyStored //nolint:stylecheck,golint
