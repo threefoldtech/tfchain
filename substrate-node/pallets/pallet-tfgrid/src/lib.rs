@@ -1281,7 +1281,7 @@ pub mod pallet {
 
         // Twin ownership transfer: request by current owner (specify new_account)
         #[pallet::call_index(40)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4).ref_time() + T::DbWeight::get().reads(5).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::request_twin_transfer())]
         pub fn request_twin_transfer(
             origin: OriginFor<T>,
             new_account: T::AccountId,
@@ -1291,7 +1291,7 @@ pub mod pallet {
 
         // Twin ownership transfer: accept by new account
         #[pallet::call_index(41)]
-        #[pallet::weight(150_000_000 + T::DbWeight::get().writes(6).ref_time() + T::DbWeight::get().reads(7).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::accept_twin_transfer())]
         pub fn accept_twin_transfer(
             origin: OriginFor<T>,
             request_id: u64,
@@ -1301,7 +1301,7 @@ pub mod pallet {
 
         // Twin ownership transfer: cancel by current owner
         #[pallet::call_index(42)]
-        #[pallet::weight(80_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_twin_transfer())]
         pub fn cancel_twin_transfer(
             origin: OriginFor<T>,
             request_id: u64,

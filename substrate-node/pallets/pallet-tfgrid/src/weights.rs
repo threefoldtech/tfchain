@@ -65,6 +65,9 @@ pub trait WeightInfo {
 	fn change_power_target() -> Weight;
 	fn bond_twin_account() -> Weight;
 	fn report_uptime_v2() -> Weight;
+	fn request_twin_transfer() -> Weight;
+	fn accept_twin_transfer() -> Weight;
+	fn cancel_twin_transfer() -> Weight;
 }
 
 /// Weights for pallet_tfgrid using the Substrate node and recommended hardware.
@@ -548,6 +551,24 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 		Weight::from_parts(18_465_000, 3919)
 			.saturating_add(T::DbWeight::get().reads(4_u64))
 	}
+
+	fn request_twin_transfer() -> Weight {
+		Weight::from_parts(100_000_000, 0)
+			.saturating_add(T::DbWeight::get().reads(5_u64))
+			.saturating_add(T::DbWeight::get().writes(4_u64))
+	}
+
+	fn accept_twin_transfer() -> Weight {
+		Weight::from_parts(150_000_000, 0)
+			.saturating_add(T::DbWeight::get().reads(7_u64))
+			.saturating_add(T::DbWeight::get().writes(6_u64))
+	}
+
+	fn cancel_twin_transfer() -> Weight {
+		Weight::from_parts(100_000_000, 0)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(2_u64))
+	}
 }
 
 // For backwards compatibility and tests
@@ -1029,5 +1050,23 @@ impl WeightInfo for () {
 		// Minimum execution time: 18_084_000 picoseconds.
 		Weight::from_parts(18_465_000, 3919)
 			.saturating_add(RocksDbWeight::get().reads(4_u64))
+	}
+
+	fn request_twin_transfer() -> Weight {
+		Weight::from_parts(100_000_000, 0)
+			.saturating_add(RocksDbWeight::get().reads(5_u64))
+			.saturating_add(RocksDbWeight::get().writes(4_u64))
+	}
+
+	fn accept_twin_transfer() -> Weight {
+		Weight::from_parts(150_000_000, 0)
+			.saturating_add(RocksDbWeight::get().reads(7_u64))
+			.saturating_add(RocksDbWeight::get().writes(6_u64))
+	}
+
+	fn cancel_twin_transfer() -> Weight {
+		Weight::from_parts(100_000_000, 0)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(2_u64))
 	}
 }
