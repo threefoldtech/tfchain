@@ -40,13 +40,23 @@ Introduce a simple two-step transfer protocol implemented in `pallet-tfgrid` tha
 
 ### Storage
 
-- `TwinTransferRequests: RequestId -> TwinTransferRequest` (twin_id, old_account, new_account)
+- `TwinTransferRequests: RequestId -> TwinTransferRequest` (twin_id, old_account, new_account, created_at)
 - `PendingTransferByTwin: TwinId -> RequestId` (enforces one pending request per Twin)
 - `TwinTransferRequestID: u64` (monotonic counter)
 
 ### Types
 
-- None specific to lifecycle state; a request exists while pending and is removed on accept/cancel.
+- `TwinTransferRequest` includes `created_at: BlockNumber` to record when the request was created.
+  - There is no expiry logic in v1.
+  - Future cleaners (on_finalize/offchain) can use `created_at` to remove stale items if desired.
+
+### Errors and Semantics
+
+- Request flow is capped at one request per twin. If a request already exists, `request_twin_transfer` returns a single error:
+  - `TwinTransferPendingExists` ("cancel the existing request first")
+- Accept flow has no expiry checks; presence of a matching request and correct signer are sufficient.
+- Cancel flow always succeeds for the old owner:
+  - Removes the request and emits `TwinTransferCanceled`.
 
 ## Security Considerations
 
@@ -68,4 +78,4 @@ Introduce a simple two-step transfer protocol implemented in `pallet-tfgrid` tha
 ## References
 
 - Implementation: `substrate-node/pallets/pallet-tfgrid/src/twin_transfer.rs`
-- Extrinsics wiring: `substrate-node/pallets/pallet-tfgrid/src/lib.rs` (call_index 40, 41)
+- Extrinsics wiring: `substrate-node/pallets/pallet-tfgrid/src/lib.rs` (call_index 40, 41, 42)

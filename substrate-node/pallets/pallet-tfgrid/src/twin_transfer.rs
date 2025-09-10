@@ -44,10 +44,12 @@ impl<T: Config> Pallet<T> {
         req_id = req_id.saturating_add(1);
         TwinTransferRequestID::<T>::put(req_id);
 
+        let now = <frame_system::Pallet<T>>::block_number();
         let request = TwinTransferRequest::<T> {
             twin_id,
             old_account: old_account.clone(),
             new_account: new_account.clone(),
+            created_at: now,
         };
 
         TwinTransferRequests::<T>::insert(req_id, &request);

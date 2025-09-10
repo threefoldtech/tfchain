@@ -266,13 +266,14 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    // Twin ownership transfer storage types (no status/expiry; pending exists while entry exists)
+    // Twin ownership transfer storage types with creation timestamp 
     #[derive(Encode, Decode, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
     #[scale_info(skip_type_params(T))]
     pub struct TwinTransferRequest<T: Config> {
         pub twin_id: u32,
         pub old_account: T::AccountId,
         pub new_account: T::AccountId,
+        pub created_at: BlockNumberFor<T>,
     }
 
     #[pallet::storage]

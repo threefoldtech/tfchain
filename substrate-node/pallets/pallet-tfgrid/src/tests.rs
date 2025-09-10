@@ -15,7 +15,6 @@ const GIGABYTE: u64 = 1024 * 1024 * 1024;
 use crate::pallet::{
     PendingTransferByTwin, TwinIdByAccountID, TwinTransferRequestID, TwinTransferRequests, Twins,
 };
-use pallet_balances::Pallet as BalancesPallet;
 use frame_support::traits::ReservableCurrency;
 
 #[test]
