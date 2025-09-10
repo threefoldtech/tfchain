@@ -1,8 +1,8 @@
 use crate::*;
+use frame_support::traits::{BalanceStatus, ReservableCurrency};
 use frame_support::{dispatch::DispatchResultWithPostInfo, ensure};
 use frame_system::ensure_signed;
 use sp_runtime::traits::Zero;
-use frame_support::traits::{BalanceStatus, ReservableCurrency};
 
 impl<T: Config> Pallet<T> {
     pub fn _request_twin_transfer(
@@ -14,8 +14,12 @@ impl<T: Config> Pallet<T> {
 
         // Derive twin_id from old owner
         let twin_id = TwinIdByAccountID::<T>::get(&old_account).ok_or(Error::<T>::TwinNotExists)?;
-        let twin = Twins::<T>::get(&twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        ensure!(twin.account_id == old_account, Error::<T>::UnauthorizedToUpdateTwin);
+        let twin = Twins::<T>::get(twin_id).ok_or(Error::<T>::TwinNotExists)?;
+        // pure defensive check for Stale/corrupted index
+        ensure!(
+            twin.account_id == old_account,
+            Error::<T>::UnauthorizedToUpdateTwin
+        );
 
         // New account must have signed T&C
         ensure!(
@@ -31,7 +35,7 @@ impl<T: Config> Pallet<T> {
 
         // Only one pending transfer per twin
         ensure!(
-            PendingTransferByTwin::<T>::get(&twin_id).is_none(),
+            PendingTransferByTwin::<T>::get(twin_id).is_none(),
             Error::<T>::TwinTransferPendingExists
         );
 
@@ -68,11 +72,17 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::TwinTransferRequestNotFound)?;
 
         // Only the intended new account can accept
-        ensure!(req.new_account == signer, Error::<T>::UnauthorizedToUpdateTwin);
+        ensure!(
+            req.new_account == signer,
+            Error::<T>::UnauthorizedToUpdateTwin
+        );
 
         // Twin must exist and still be owned by old_account
-        let mut twin = Twins::<T>::get(&req.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        ensure!(twin.account_id == req.old_account, Error::<T>::UnauthorizedToUpdateTwin);
+        let mut twin = Twins::<T>::get(req.twin_id).ok_or(Error::<T>::TwinNotExists)?;
+        ensure!(
+            twin.account_id == req.old_account,
+            Error::<T>::UnauthorizedToUpdateTwin
+        );
 
         // New account must still not have a twin
         ensure!(
@@ -93,7 +103,7 @@ impl<T: Config> Pallet<T> {
 
         // Update twin ownership and indexes
         twin.account_id = req.new_account.clone();
-        Twins::<T>::insert(&req.twin_id, &twin);
+        Twins::<T>::insert(req.twin_id, &twin);
 
         // Update account->twin mapping
         TwinIdByAccountID::<T>::remove(&req.old_account);
@@ -124,7 +134,10 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::TwinTransferRequestNotFound)?;
 
         // Only current owner (old_account) can cancel
-        ensure!(req.old_account == signer, Error::<T>::UnauthorizedToUpdateTwin);
+        ensure!(
+            req.old_account == signer,
+            Error::<T>::UnauthorizedToUpdateTwin
+        );
 
         // Remove request and index
         PendingTransferByTwin::<T>::remove(req.twin_id);
