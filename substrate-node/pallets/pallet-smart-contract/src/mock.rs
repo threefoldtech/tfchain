@@ -244,6 +244,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
     type TimestampHintDrift = TimestampHintDrift;
+    type Currency = Balances;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
