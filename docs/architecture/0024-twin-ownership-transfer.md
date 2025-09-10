@@ -8,7 +8,8 @@ Accepted
 
 ## Context
 
-Operators occasionally need to transfer ownership of an existing Twin to a different account (e.g., organization handover, compromised keys, or account restructuring). Previously there was no safe, on-chain mediated process to move Twin ownership while preserving accounting invariants and preventing hijacks.
+Operators occasionally need to transfer ownership of an existing Twin to a different account (e.g., organization handover, compromised keys, or account restructuring).
+Previously there was no safe, on-chain mediated process to move Twin ownership while preserving accounting invariants and preventing hijacks.
 
 ## Decision
 
