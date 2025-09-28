@@ -534,6 +534,113 @@ benchmarks! {
         assert!(TfgridModule::<T>::users_terms_and_condition(caller).is_some());
     }
 
+    // request_twin_transfer(new_account)
+    request_twin_transfer {
+        let old_owner: T::AccountId = whitelisted_caller();
+        // old owner must have signed T&C and have a twin
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+        assert_ok!(TfgridModule::<T>::create_twin(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_relay_input(b"relay"),
+            get_public_key_input(b"0x0102030405060708090001020304050607080900010203040506070809000102"),
+        ));
+
+        // new account: T&C accepted, no twin
+        let new_owner: T::AccountId = account("new", 0, 0);
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(new_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+    }: _(RawOrigin::Signed(old_owner.clone()), new_owner.clone())
+    verify {
+        assert!(TfgridModule::<T>::pending_transfer_by_twin(1).is_some());
+        assert_has_event::<T>(Event::TwinTransferRequested {
+            request_id: 1,
+            twin_id: 1,
+            from: old_owner,
+            to: new_owner,
+        }.into());
+    }
+
+    // accept_twin_transfer(request_id)
+    accept_twin_transfer {
+        let old_owner: T::AccountId = whitelisted_caller();
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+        assert_ok!(TfgridModule::<T>::create_twin(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_relay_input(b"relay"),
+            get_public_key_input(b"0x0102030405060708090001020304050607080900010203040506070809000103"),
+        ));
+
+        let new_owner: T::AccountId = account("new", 0, 0);
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(new_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+
+        assert_ok!(TfgridModule::<T>::request_twin_transfer(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            new_owner.clone(),
+        ));
+        let request_id: u64 = 1;
+    }: _(RawOrigin::Signed(new_owner.clone()), request_id)
+    verify {
+        assert!(TfgridModule::<T>::pending_transfer_by_twin(1).is_none());
+        assert_has_event::<T>(Event::TwinOwnershipTransferred {
+            request_id,
+            twin_id: 1,
+            from: old_owner,
+            to: new_owner,
+        }.into());
+    }
+
+    // cancel_twin_transfer(request_id)
+    cancel_twin_transfer {
+        let old_owner: T::AccountId = whitelisted_caller();
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+        assert_ok!(TfgridModule::<T>::create_twin(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_relay_input(b"relay"),
+            get_public_key_input(b"0x0102030405060708090001020304050607080900010203040506070809000104"),
+        ));
+
+        let new_owner: T::AccountId = account("new", 0, 0);
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(new_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+
+        assert_ok!(TfgridModule::<T>::request_twin_transfer(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            new_owner.clone(),
+        ));
+        let request_id: u64 = 1;
+    }: _(RawOrigin::Signed(old_owner.clone()), request_id)
+    verify {
+        assert!(TfgridModule::<T>::pending_transfer_by_twin(1).is_none());
+        assert_has_event::<T>(Event::TwinTransferCanceled {
+            request_id,
+            twin_id: 1,
+            from: old_owner,
+            to: account("new", 0, 0),
+        }.into());
+    }
+
     // delete_node_farm()
     delete_node_farm {
         let caller: T::AccountId = whitelisted_caller();
@@ -747,6 +854,13 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
     let EventRecord { event, .. } = &events[events.len() - 1];
     assert_eq!(event, &system_event);
+}
+
+fn assert_has_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
+    let events = System::<T>::events();
+    let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
+    let found = events.iter().any(|ev| ev.event == system_event);
+    assert!(found, "Expected event not found in events list");
 }
 
 pub fn _prepare_farm_with_node<T: Config>(source: T::AccountId) {

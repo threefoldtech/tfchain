@@ -4632,6 +4632,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "pallet-balances",
  "pallet-collective",
  "pallet-membership",
  "pallet-tfgrid",
