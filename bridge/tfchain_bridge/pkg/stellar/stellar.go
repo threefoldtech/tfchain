@@ -442,7 +442,7 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 		}
 
 		creditedEffect := effect.(horizoneffects.AccountCredited)
-		if creditedEffect.Asset.Code != asset[0] && creditedEffect.Asset.Issuer != asset[1] {
+		if creditedEffect.Code != asset[0] && creditedEffect.Issuer != asset[1] {
 			continue
 		}
 
@@ -458,7 +458,7 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 			}
 
 			PaymentOperation := op.(operations.Payment)
-			if PaymentOperation.To != w.config.StellarBridgeAccount || PaymentOperation.From == w.config.StellarBridgeAccount{
+			if PaymentOperation.To != w.config.StellarBridgeAccount || PaymentOperation.From == w.config.StellarBridgeAccount {
 				continue
 			}
 
@@ -563,14 +563,14 @@ func (w *StellarWallet) getHorizonClient() (*horizonclient.Client, error) {
 			return true, nil
 		}
 
-        if resp.StatusCode == 429 || (resp.StatusCode >= 500 && resp.StatusCode <= 599) {
-            return true, nil
-        }
+		if resp.StatusCode == 429 || (resp.StatusCode >= 500 && resp.StatusCode <= 599) {
+			return true, nil
+		}
 
 		return false, nil
 	}
 
-	client.HTTP = retryClient.StandardClient()	
+	client.HTTP = retryClient.StandardClient()
 
 	return client, nil
 }
