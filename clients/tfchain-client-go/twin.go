@@ -182,3 +182,57 @@ func (s *Substrate) UpdateTwin(identity Identity, relay string, pk []byte) (uint
 
 	return s.GetTwinByPubKey(identity.PublicKey())
 }
+
+// BondTwinAccount bonds a twin with a stash/savings account
+// The stash account should initiate the bond between the twin and the account address
+func (s *Substrate) BondTwinAccount(identity Identity, twinID uint32) error {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return err
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.bond_twin_account", twinID)
+	if err != nil {
+		return errors.Wrap(err, "failed to create call")
+	}
+
+	if _, err := s.Call(cl, meta, identity, c); err != nil {
+		return errors.Wrap(err, "failed to bond twin account")
+	}
+
+	return nil
+}
+
+// GetTwinBondedAccount gets the bonded/stash account for a twin
+func (s *Substrate) GetTwinBondedAccount(twinID uint32) (*AccountID, error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := Encode(twinID)
+	if err != nil {
+		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
+	}
+
+	key, err := types.CreateStorageKey(meta, "TfgridModule", "TwinBoundedAccountID", bytes, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	raw, err := cl.RPC.State.GetStorageRawLatest(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to lookup twin bonded account")
+	}
+
+	if len(*raw) == 0 {
+		return nil, nil // No bonded account found
+	}
+
+	var accountID AccountID
+	if err := Decode(*raw, &accountID); err != nil {
+		return nil, errors.Wrap(err, "failed to decode account")
+	}
+
+	return &accountID, nil
+}
