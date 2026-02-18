@@ -331,6 +331,25 @@ type ZosVersionUpdated struct {
 	Topics  []types.Hash
 }
 
+type NodeV3BillingOptedOut struct {
+	Phase      types.Phase
+	NodeID     types.U32 `json:"node_id"`
+	OptedOutAt types.U64 `json:"opted_out_at"`
+	Topics     []types.Hash
+}
+
+type TwinAdminAdded struct {
+	Phase   types.Phase
+	Account AccountID `json:"account_id"`
+	Topics  []types.Hash
+}
+
+type TwinAdminRemoved struct {
+	Phase   types.Phase
+	Account AccountID `json:"account_id"`
+	Topics  []types.Hash
+}
+
 type EventSchedulerCallUnavailable struct {
 	Phase  types.Phase
 	Task   types.TaskAddress
@@ -467,6 +486,9 @@ type EventRecords struct {
 	TfgridModule_FarmingPolicySet              []FarmingPolicySet              //nolint:stylecheck,golint
 	TfgridModule_FarmCertificationSet          []FarmCertificationSet          //nolint:stylecheck,golint
 	TfgridModule_ZosVersionUpdated             []ZosVersionUpdated             //nolint:stylecheck,golint
+	TfgridModule_NodeV3BillingOptedOut         []NodeV3BillingOptedOut         //nolint:stylecheck,golint
+	TfgridModule_TwinAdminAdded                []TwinAdminAdded                //nolint:stylecheck,golint
+	TfgridModule_TwinAdminRemoved              []TwinAdminRemoved              //nolint:stylecheck,golint
 
 	// burn module events
 	BurningModule_BurnTransactionCreated []BurnTransactionCreated //nolint:stylecheck,golint
