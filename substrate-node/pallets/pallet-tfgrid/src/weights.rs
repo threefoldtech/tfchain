@@ -68,6 +68,9 @@ pub trait WeightInfo {
 	fn change_power_target() -> Weight;
 	fn bond_twin_account() -> Weight;
 	fn report_uptime_v2() -> Weight;
+	fn opt_out_of_v3_billing() -> Weight;
+	fn add_twin_admin() -> Weight;
+	fn remove_twin_admin() -> Weight;
 }
 
 /// Weights for pallet_tfgrid using the Substrate node and recommended hardware.
@@ -418,6 +421,21 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 		Weight::from_parts(13_095_000, 3868)
 			.saturating_add(T::DbWeight::get().reads(1_u64))
 			.saturating_add(T::DbWeight::get().writes(2_u64))
+	}
+	fn opt_out_of_v3_billing() -> Weight {
+		Weight::from_parts(20_000_000, 0)
+			.saturating_add(T::DbWeight::get().reads(4_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
+	fn add_twin_admin() -> Weight {
+		Weight::from_parts(10_000_000, 0)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
+	fn remove_twin_admin() -> Weight {
+		Weight::from_parts(10_000_000, 0)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 	/// Storage: `TfgridModule::TwinIdByAccountID` (r:1 w:0)
 	/// Proof: `TfgridModule::TwinIdByAccountID` (`max_values`: None, `max_size`: None, mode: `Measured`)
@@ -951,6 +969,21 @@ impl WeightInfo for () {
 		Weight::from_parts(13_095_000, 3868)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(2_u64))
+	}
+	fn opt_out_of_v3_billing() -> Weight {
+		Weight::from_parts(20_000_000, 0)
+			.saturating_add(RocksDbWeight::get().reads(4_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+	fn add_twin_admin() -> Weight {
+		Weight::from_parts(10_000_000, 0)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+	fn remove_twin_admin() -> Weight {
+		Weight::from_parts(10_000_000, 0)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	/// Storage: `TfgridModule::TwinIdByAccountID` (r:1 w:0)
 	/// Proof: `TfgridModule::TwinIdByAccountID` (`max_values`: None, `max_size`: None, mode: `Measured`)

@@ -5312,6 +5312,275 @@ fn prepare_solution_provider(origin: AccountId) {
     ));
 }
 
+// ------------------------------------------ //
+//  V3 BILLING OPT-OUT TESTS                   //
+// ------------------------------------------ //
+
+#[test]
+fn test_create_node_contract_on_opted_out_node_non_admin_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                RuntimeOrigin::signed(bob()),
+                node_id,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                0,
+                None,
+            ),
+            Error::<TestRuntime>::OnlyTwinAdminCanDeployOnThisNode
+        );
+    });
+}
+
+#[test]
+fn test_create_node_contract_on_opted_out_node_admin_succeeds() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_ok!(TfgridModule::add_twin_admin(
+            RawOrigin::Root.into(),
+            bob(),
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None,
+        ));
+    });
+}
+
+#[test]
+fn test_create_node_contract_on_normal_node_unaffected() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None,
+        ));
+    });
+}
+
+#[test]
+fn test_create_node_contract_opted_out_empty_admin_list_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                RuntimeOrigin::signed(alice()),
+                node_id,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                0,
+                None,
+            ),
+            Error::<TestRuntime>::OnlyTwinAdminCanDeployOnThisNode
+        );
+    });
+}
+
+#[test]
+fn test_admin_removed_cannot_deploy_on_opted_out_node() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_ok!(TfgridModule::add_twin_admin(RawOrigin::Root.into(), bob()));
+        assert_ok!(TfgridModule::remove_twin_admin(RawOrigin::Root.into(), bob()));
+
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                RuntimeOrigin::signed(bob()),
+                node_id,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                0,
+                None,
+            ),
+            Error::<TestRuntime>::OnlyTwinAdminCanDeployOnThisNode
+        );
+    });
+}
+
+#[test]
+fn test_create_rent_contract_on_opted_out_node_non_admin_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_dedicated_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_noop!(
+            SmartContractModule::create_rent_contract(
+                RuntimeOrigin::signed(charlie()),
+                node_id,
+                None,
+            ),
+            Error::<TestRuntime>::OnlyTwinAdminCanDeployOnThisNode
+        );
+    });
+}
+
+#[test]
+fn test_create_rent_contract_on_opted_out_node_admin_succeeds() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_dedicated_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_ok!(TfgridModule::add_twin_admin(
+            RawOrigin::Root.into(),
+            charlie(),
+        ));
+
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(charlie()),
+            node_id,
+            None,
+        ));
+    });
+}
+
+#[test]
+fn test_billing_suppressed_for_opted_out_node_contract() {
+    // Note: should_bill_contract returns false for a node contract with no resources/IPs/NU/overdraft,
+    // so the OCW never submits bill_contract_for_block. We verify billing suppression by directly
+    // calling bill_contract and checking that balance is unchanged and state stays Created.
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::add_twin_admin(RawOrigin::Root.into(), bob()));
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None,
+        ));
+        let contract_id = 1;
+
+        let balance_before = Balances::free_balance(&bob());
+
+        // Directly invoke bill_contract (the on-chain extrinsic path)
+        assert_ok!(SmartContractModule::bill_contract_for_block(
+            RuntimeOrigin::signed(alice()),
+            contract_id,
+        ));
+
+        let balance_after = Balances::free_balance(&bob());
+
+        // No charge — billing suppressed for opted-out node
+        assert_eq!(balance_before, balance_after);
+
+        // Contract remains in Created state (not pushed to GracePeriod)
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        assert_eq!(contract.state, types::ContractState::Created);
+    });
+}
+
+#[test]
+fn test_cancel_contract_on_opted_out_node_zero_final_bill() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::add_twin_admin(RawOrigin::Root.into(), bob()));
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None,
+        ));
+        let contract_id = 1;
+
+        let balance_before = Balances::free_balance(&bob());
+
+        // Cancel the contract — triggers a final bill_contract call
+        assert_ok!(SmartContractModule::cancel_contract(
+            RuntimeOrigin::signed(bob()),
+            contract_id,
+        ));
+
+        let balance_after = Balances::free_balance(&bob());
+
+        // No charge at cancellation either
+        assert_eq!(balance_before, balance_after);
+
+        // Contract is cleaned up
+        assert!(SmartContractModule::contracts(contract_id).is_none());
+        let _ = pool_state;
+    });
+}
+
 fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {
     EventRecord {
         phase: Phase::Initialization,

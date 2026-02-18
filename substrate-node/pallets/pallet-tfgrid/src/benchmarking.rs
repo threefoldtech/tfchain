@@ -844,6 +844,44 @@ benchmarks! {
         assert_last_event::<T>(Event::NodeUptimeReported(node_id, now, uptime).into());
     }
 
+    // opt_out_of_v3_billing()
+    opt_out_of_v3_billing {
+        let caller: T::AccountId = whitelisted_caller();
+        _prepare_farm_with_node::<T>(caller.clone());
+        let node_id = 1;
+    }: _(RawOrigin::Signed(caller), node_id)
+    verify {
+        assert!(TfgridModule::<T>::node_v3_billing_opt_out(node_id).is_some());
+        assert_last_event::<T>(Event::NodeV3BillingOptedOut {
+            node_id,
+            opted_out_at: TfgridModule::<T>::node_v3_billing_opt_out(node_id).unwrap(),
+        }.into());
+    }
+
+    // add_twin_admin()
+    add_twin_admin {
+        let caller: T::AccountId = account("Alice", 0, 0);
+    }: _(RawOrigin::Root, caller.clone())
+    verify {
+        let admins = TfgridModule::<T>::allowed_twin_admins().unwrap_or_default();
+        assert!(admins.contains(&caller));
+        assert_last_event::<T>(Event::TwinAdminAdded(caller).into());
+    }
+
+    // remove_twin_admin()
+    remove_twin_admin {
+        let caller: T::AccountId = account("Alice", 0, 0);
+        assert_ok!(TfgridModule::<T>::add_twin_admin(
+            RawOrigin::Root.into(),
+            caller.clone(),
+        ));
+    }: _(RawOrigin::Root, caller.clone())
+    verify {
+        let admins = TfgridModule::<T>::allowed_twin_admins().unwrap_or_default();
+        assert!(!admins.contains(&caller));
+        assert_last_event::<T>(Event::TwinAdminRemoved(caller).into());
+    }
+
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
     impl_benchmark_test_suite!(TfgridModule, crate::mock::new_test_ext(), crate::mock::TestRuntime)

@@ -34,6 +34,14 @@ impl<T: Config> Pallet<T> {
             Error::<T>::NodeNotAvailableToDeploy
         );
 
+        // V3 billing opt-out guard: only twin admins can deploy on opted-out nodes
+        if pallet_tfgrid::NodeV3BillingOptOut::<T>::contains_key(node_id) {
+            let caller_is_admin = pallet_tfgrid::AllowedTwinAdmins::<T>::get()
+                .unwrap_or_default()
+                .contains(&account_id);
+            ensure!(caller_is_admin, Error::<T>::OnlyTwinAdminCanDeployOnThisNode);
+        }
+
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         // A node is dedicated (can only be used under a rent contract)
@@ -128,6 +136,14 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
         );
+
+        // V3 billing opt-out guard: only twin admins can deploy on opted-out nodes
+        if pallet_tfgrid::NodeV3BillingOptOut::<T>::contains_key(node_id) {
+            let caller_is_admin = pallet_tfgrid::AllowedTwinAdmins::<T>::get()
+                .unwrap_or_default()
+                .contains(&account_id);
+            ensure!(caller_is_admin, Error::<T>::OnlyTwinAdminCanDeployOnThisNode);
+        }
 
         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
