@@ -5371,25 +5371,10 @@ fn test_create_node_contract_on_opted_out_node_admin_succeeds() {
 }
 
 #[test]
-fn test_create_node_contract_on_normal_node_unaffected() {
-    new_test_ext().execute_with(|| {
-        run_to_block(1, None);
-        prepare_farm_and_node();
-        let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(bob()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None,
-        ));
-    });
-}
-
-#[test]
-fn test_create_node_contract_opted_out_empty_admin_list_fails() {
+fn test_create_node_contract_opted_out_farmer_cannot_self_deploy() {
+    // The farmer who opted out is NOT automatically an admin — they must be explicitly added.
+    // This is a distinct case from test_create_node_contract_on_opted_out_node_non_admin_fails
+    // which uses an unrelated account (bob). Here the farmer (alice) tries to deploy on their own node.
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
@@ -5493,52 +5478,6 @@ fn test_create_rent_contract_on_opted_out_node_admin_succeeds() {
 
 #[test]
 fn test_billing_suppressed_for_opted_out_node_contract() {
-    // Note: should_bill_contract returns false for a node contract with no resources/IPs/NU/overdraft,
-    // so the OCW never submits bill_contract_for_block. We verify billing suppression by directly
-    // calling bill_contract and checking that balance is unchanged and state stays Created.
-    new_test_ext().execute_with(|| {
-        run_to_block(1, None);
-        prepare_farm_and_node();
-        let node_id = 1;
-
-        assert_ok!(TfgridModule::add_twin_admin(RawOrigin::Root.into(), bob()));
-
-        assert_ok!(TfgridModule::opt_out_of_v3_billing(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-        ));
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(bob()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None,
-        ));
-        let contract_id = 1;
-
-        let balance_before = Balances::free_balance(&bob());
-
-        // Directly invoke bill_contract (the on-chain extrinsic path)
-        assert_ok!(SmartContractModule::bill_contract_for_block(
-            RuntimeOrigin::signed(alice()),
-            contract_id,
-        ));
-
-        let balance_after = Balances::free_balance(&bob());
-
-        // No charge — billing suppressed for opted-out node
-        assert_eq!(balance_before, balance_after);
-
-        // Contract remains in Created state (not pushed to GracePeriod)
-        let contract = SmartContractModule::contracts(contract_id).unwrap();
-        assert_eq!(contract.state, types::ContractState::Created);
-    });
-}
-
-#[test]
-fn test_cancel_contract_on_opted_out_node_zero_final_bill() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         run_to_block(1, None);
@@ -5562,9 +5501,56 @@ fn test_cancel_contract_on_opted_out_node_zero_final_bill() {
         ));
         let contract_id = 1;
 
+        push_contract_resources_used(contract_id);
+
         let balance_before = Balances::free_balance(&bob());
 
-        // Cancel the contract — triggers a final bill_contract call
+        // OCW fires at block 11 (billing cycle), but cost is zeroed by should_waive_migration_billing
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        let balance_after = Balances::free_balance(&bob());
+
+        // No charge despite real resource usage — billing suppressed for opted-out node
+        assert_eq!(balance_before, balance_after);
+
+        // Contract remains in Created state (not pushed to GracePeriod)
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        assert_eq!(contract.state, types::ContractState::Created);
+    });
+}
+
+#[test]
+fn test_cancel_contract_on_opted_out_node_zero_final_bill() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::add_twin_admin(RawOrigin::Root.into(), bob()));
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None,
+        ));
+        let contract_id = 1;
+
+        push_contract_resources_used(contract_id);
+
+        let balance_before = Balances::free_balance(&bob());
+
+        // Cancel triggers bill_contract inline (no OCW) with state=Deleted
         assert_ok!(SmartContractModule::cancel_contract(
             RuntimeOrigin::signed(bob()),
             contract_id,
@@ -5572,12 +5558,100 @@ fn test_cancel_contract_on_opted_out_node_zero_final_bill() {
 
         let balance_after = Balances::free_balance(&bob());
 
-        // No charge at cancellation either
+        // No charge despite real resource usage — migration billing suppressed at cancellation too
         assert_eq!(balance_before, balance_after);
 
         // Contract is cleaned up
         assert!(SmartContractModule::contracts(contract_id).is_none());
-        let _ = pool_state;
+    });
+}
+
+#[test]
+fn test_grace_period_contract_restored_and_billing_free_after_opt_out() {
+    // Scenario:
+    // 1. charlie deploys on a normal node, runs out of funds → GracePeriod
+    // 2. Farmer opts out of v3 billing while contract is in GracePeriod
+    // 3. charlie tops up → next billing cycle restores contract to Created
+    // 4. Subsequent billing cycle: resources are present but cost is zero (migration window)
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
+
+        // charlie (low balance) deploys — node is NOT yet opted out
+        assert_ok!(TfgridModule::add_twin_admin(RawOrigin::Root.into(), charlie()));
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(charlie()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None,
+        ));
+        let contract_id = 1;
+
+        push_contract_resources_used(contract_id);
+
+        // Cycle 1: charlie can pay
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        // Cycle 2: charlie runs out of funds → GracePeriod
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 21);
+        run_to_block(21, Some(&mut pool_state));
+
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        assert_eq!(contract.state, types::ContractState::GracePeriod(21));
+
+        // Farmer opts out while contract is in GracePeriod
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        // Cycle 3: charlie still can't pay, stays in GracePeriod
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 31);
+        run_to_block(31, Some(&mut pool_state));
+
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        assert_eq!(contract.state, types::ContractState::GracePeriod(21));
+
+        // charlie tops up to cover the pre-opt-out overdraft
+        Balances::transfer(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
+
+        // Cycle 4: sufficient funds → contract restored to Created
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 41);
+        run_to_block(41, Some(&mut pool_state));
+
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        assert_eq!(contract.state, types::ContractState::Created);
+
+        // Cycle 5: contract is Created on opted-out node with resources — billing must be free
+        let balance_before = Balances::free_balance(&charlie());
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 51);
+        run_to_block(51, Some(&mut pool_state));
+
+        let balance_after = Balances::free_balance(&charlie());
+
+        // No charge — migration window active
+        assert_eq!(balance_before, balance_after);
+
+        // Contract stays Created (not pushed back to GracePeriod despite no payment)
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        assert_eq!(contract.state, types::ContractState::Created);
     });
 }
 
