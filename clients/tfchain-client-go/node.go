@@ -805,6 +805,124 @@ func (s *Substrate) GetDedicatedNodePrice(nodeID uint32) (uint64, error) {
 	return uint64(price), nil
 }
 
+// OptOutOfV3Billing opts a node out of the v3 billing system, opening a free migration window.
+// Only the farmer who owns the node can call this.
+func (s *Substrate) OptOutOfV3Billing(identity Identity, nodeID uint32) (hash types.Hash, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return hash, err
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.opt_out_of_v3_billing", nodeID)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to create call")
+	}
+
+	callResponse, err := s.Call(cl, meta, identity, c)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to opt out of v3 billing")
+	}
+
+	return callResponse.Hash, nil
+}
+
+// AddTwinAdmin adds an account to the list of twin admins allowed to deploy on opted-out nodes.
+// Requires council (restricted) origin.
+func (s *Substrate) AddTwinAdmin(identity Identity, account AccountID) (hash types.Hash, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return hash, err
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.add_twin_admin", account)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to create call")
+	}
+
+	callResponse, err := s.Call(cl, meta, identity, c)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to add twin admin")
+	}
+
+	return callResponse.Hash, nil
+}
+
+// RemoveTwinAdmin removes an account from the list of twin admins allowed to deploy on opted-out nodes.
+// Requires council (restricted) origin.
+func (s *Substrate) RemoveTwinAdmin(identity Identity, account AccountID) (hash types.Hash, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return hash, err
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.remove_twin_admin", account)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to create call")
+	}
+
+	callResponse, err := s.Call(cl, meta, identity, c)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to remove twin admin")
+	}
+
+	return callResponse.Hash, nil
+}
+
+// GetAllowedTwinAdmins returns the list of accounts allowed to deploy on opted-out nodes.
+// Returns an empty slice if no admins have been configured.
+func (s *Substrate) GetAllowedTwinAdmins() ([]AccountID, error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := types.CreateStorageKey(meta, "TfgridModule", "AllowedTwinAdmins")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	raw, err := cl.RPC.State.GetStorageRawLatest(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to lookup allowed twin admins")
+	}
+
+	if len(*raw) == 0 {
+		return []AccountID{}, nil
+	}
+
+	var admins []AccountID
+	if err := Decode(*raw, &admins); err != nil {
+		return nil, errors.Wrap(err, "failed to decode allowed twin admins")
+	}
+
+	return admins, nil
+}
+
+// IsNodeOptedOutOfV3Billing returns true if the node has opted out of v3 billing.
+func (s *Substrate) IsNodeOptedOutOfV3Billing(nodeID uint32) (bool, error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return false, err
+	}
+
+	bytes, err := Encode(nodeID)
+	if err != nil {
+		return false, errors.Wrap(err, "substrate: encoding error building query arguments")
+	}
+
+	key, err := types.CreateStorageKey(meta, "TfgridModule", "NodeV3BillingOptOut", bytes)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	raw, err := cl.RPC.State.GetStorageRawLatest(key)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to lookup node v3 billing opt-out")
+	}
+
+	return len(*raw) > 0, nil
+}
+
 // SetNodeCertificate sets the node certificate type
 func (s *Substrate) SetNodeCertificate(identity Identity, id uint32, cert NodeCertification) error {
 	cl, meta, err := s.GetClient()

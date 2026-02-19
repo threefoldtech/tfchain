@@ -67,6 +67,54 @@ func TestSetDedicatedNodePrice(t *testing.T) {
 	require.Equal(t, uint64(price), priceSet)
 }
 
+func TestOptOutOfV3Billing(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	// Bob is the farmer
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+	nodeID := assertCreateNode(t, cl, farmID, twinID, identity)
+
+	_, err = cl.OptOutOfV3Billing(identity, nodeID)
+	// NodeV3BillingOptOutAlreadyEnabled is acceptable on re-runs (opt-out is permanent)
+	if err != nil {
+		require.EqualError(t, err, "NodeV3BillingOptOutAlreadyEnabled")
+	}
+
+	optedOut, err := cl.IsNodeOptedOutOfV3Billing(nodeID)
+	require.NoError(t, err)
+	require.True(t, optedOut)
+}
+
+func TestGetAllowedTwinAdmins(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	rootIdentity, err := NewIdentityFromSr25519Phrase(AliceMnemonics)
+	require.NoError(t, err)
+
+	bobAccount, err := FromAddress(BobAddress)
+	require.NoError(t, err)
+
+	// Ensure Bob is in the list
+	_, err = cl.AddTwinAdmin(rootIdentity, bobAccount)
+	require.NoError(t, err)
+	admins, err := cl.GetAllowedTwinAdmins()
+	require.NoError(t, err)
+	require.Contains(t, admins, bobAccount)
+
+	// Clean up
+	_, err = cl.RemoveTwinAdmin(rootIdentity, bobAccount)
+	require.NoError(t, err)
+
+	admins, err = cl.GetAllowedTwinAdmins()
+	require.NoError(t, err)
+	require.NotContains(t, admins, bobAccount)
+}
+
 func TestUptimeReport(t *testing.T) {
 	cl := startLocalConnection(t)
 	defer cl.Close()

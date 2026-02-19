@@ -359,6 +359,7 @@ parameter_types! {
     pub const MaxInterfaceIpsLength: u32 = 10;
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
+    pub const MaxTwinAdmins: u32 = 100;
     pub const TimestampHintDrift: u64 = 60;
 }
 
@@ -372,6 +373,7 @@ impl pallet_tfgrid::Config for Runtime {
     type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
+    type MaxTwinAdmins = MaxTwinAdmins;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = pallet_tfgrid::interface::InterfaceName<Runtime>;

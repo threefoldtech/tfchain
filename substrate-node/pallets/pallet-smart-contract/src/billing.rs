@@ -198,7 +198,7 @@ impl<T: Config> Pallet<T> {
         let seconds_elapsed =
             now.defensive_saturating_sub(contract_payment_state.last_updated_seconds);
 
-        let should_waive_payment = match &contract.contract_type {
+        let should_waive_standby_rent = match &contract.contract_type {
             types::ContractData::RentContract(rc) => {
                 let node_power = pallet_tfgrid::NodePower::<T>::get(rc.node_id);
                 node_power.is_standby()
@@ -206,7 +206,24 @@ impl<T: Config> Pallet<T> {
             _ => false,
         };
 
-        if should_waive_payment {
+        let should_waive_migration_billing = match &contract.contract_type {
+            types::ContractData::NodeContract(nc) => {
+                pallet_tfgrid::NodeV3BillingOptOut::<T>::contains_key(nc.node_id)
+            }
+            types::ContractData::RentContract(rc) => {
+                pallet_tfgrid::NodeV3BillingOptOut::<T>::contains_key(rc.node_id)
+            }
+            _ => false,
+        };
+
+        // For Created contracts on opted-out nodes: early return (mirrors should_waive_standby_rent).
+        // early return is cleaner and consistent with the should_waive_standby_rent pattern.
+        // GracePeriod and Deleted fall through: zero new cost + manage_contract_state runs naturally.
+        if should_waive_migration_billing && matches!(contract.state, types::ContractState::Created) {
+            return Ok(().into());
+        }
+
+        if should_waive_standby_rent {
             log::info!("Waiving rent for contract_id: {:?}", contract.contract_id);
             Self::deposit_event(Event::RentWaived {
                 contract_id: contract.contract_id,
@@ -219,7 +236,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // Calculate the due amount
-        let (standard_amount_due, discount_received) = if should_waive_payment {
+        let (standard_amount_due, discount_received) = if should_waive_standby_rent || should_waive_migration_billing {
             (BalanceOf::<T>::zero(), types::DiscountLevel::None)
         } else {
             contract
@@ -236,7 +253,7 @@ impl<T: Config> Pallet<T> {
 
         let additional_amount_due =
             if let types::ContractData::RentContract(rc) = &contract.contract_type {
-                if should_waive_payment {
+                if should_waive_standby_rent || should_waive_migration_billing {
                     BalanceOf::<T>::zero()
                 } else {
                     contract.calculate_extra_fee_cost_tft(rc.node_id, seconds_elapsed)

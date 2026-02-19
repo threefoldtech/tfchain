@@ -3,7 +3,7 @@
 use super::*;
 use crate::Pallet as TfgridModule;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
-use frame_support::{assert_ok, BoundedVec};
+use frame_support::{assert_ok, traits::Get, BoundedVec};
 use frame_system::{pallet_prelude::BlockNumberFor, EventRecord, Pallet as System, RawOrigin};
 // use hex;
 // use scale_info::prelude::format;
@@ -842,6 +842,64 @@ benchmarks! {
     verify {
         let now = Timestamp::<T>::get().saturated_into::<u64>() / 1000;
         assert_last_event::<T>(Event::NodeUptimeReported(node_id, now, uptime).into());
+    }
+
+    // opt_out_of_v3_billing()
+    opt_out_of_v3_billing {
+        let caller: T::AccountId = whitelisted_caller();
+        _prepare_farm_with_node::<T>(caller.clone());
+        let node_id = 1;
+    }: _(RawOrigin::Signed(caller), node_id)
+    verify {
+        assert!(TfgridModule::<T>::node_v3_billing_opt_out(node_id).is_some());
+        assert_last_event::<T>(Event::NodeV3BillingOptedOut {
+            node_id,
+            opted_out_at: TfgridModule::<T>::node_v3_billing_opt_out(node_id).unwrap(),
+        }.into());
+    }
+
+    // add_twin_admin()
+    // Worst case: list is at MaxTwinAdmins - 1 before the final insert.
+    // n ranges from 0 to MaxTwinAdmins - 1; the extrinsic itself adds the (n+1)-th entry.
+    add_twin_admin {
+        let n in 0 .. (T::MaxTwinAdmins::get() - 1);
+        for i in 0..n {
+            let existing: T::AccountId = account("existing", i, 0);
+            assert_ok!(TfgridModule::<T>::add_twin_admin(
+                RawOrigin::Root.into(),
+                existing,
+            ));
+        }
+        let caller: T::AccountId = account("Alice", 0, 0);
+    }: _(RawOrigin::Root, caller.clone())
+    verify {
+        let admins = TfgridModule::<T>::allowed_twin_admins().unwrap_or_default();
+        assert!(admins.contains(&caller));
+        assert_last_event::<T>(Event::TwinAdminAdded(caller).into());
+    }
+
+    // remove_twin_admin()
+    // Worst case: list is at MaxTwinAdmins before the remove.
+    // n ranges from 1 to MaxTwinAdmins; the extrinsic removes one entry from an n-element list.
+    remove_twin_admin {
+        let n in 1 .. T::MaxTwinAdmins::get();
+        let caller: T::AccountId = account("Alice", 0, 0);
+        assert_ok!(TfgridModule::<T>::add_twin_admin(
+            RawOrigin::Root.into(),
+            caller.clone(),
+        ));
+        for i in 1..n {
+            let existing: T::AccountId = account("existing", i, 0);
+            assert_ok!(TfgridModule::<T>::add_twin_admin(
+                RawOrigin::Root.into(),
+                existing,
+            ));
+        }
+    }: _(RawOrigin::Root, caller.clone())
+    verify {
+        let admins = TfgridModule::<T>::allowed_twin_admins().unwrap_or_default();
+        assert!(!admins.contains(&caller));
+        assert_last_event::<T>(Event::TwinAdminRemoved(caller).into());
     }
 
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`

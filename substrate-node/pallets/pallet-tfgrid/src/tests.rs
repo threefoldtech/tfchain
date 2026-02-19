@@ -2843,6 +2843,217 @@ fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {
 }
 
 // Attach given farming policy to farm 1 that contains node 1
+// ------------------------------------ //
+//  V3 BILLING OPT-OUT TESTS            //
+// ------------------------------------ //
+
+#[test]
+fn test_opt_out_of_v3_billing_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert!(TfgridModule::node_v3_billing_opt_out(node_id).is_some());
+
+        let our_events = System::events();
+        assert!(our_events.iter().any(|e| matches!(
+            &e.event,
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::NodeV3BillingOptedOut {
+                node_id: 1,
+                ..
+            })
+        )));
+    });
+}
+
+#[test]
+fn test_opt_out_of_v3_billing_not_farmer_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_twin_bob();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_noop!(
+            TfgridModule::opt_out_of_v3_billing(RuntimeOrigin::signed(bob()), node_id),
+            Error::<TestRuntime>::NodeUpdateNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_opt_out_of_v3_billing_node_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        assert_noop!(
+            TfgridModule::opt_out_of_v3_billing(RuntimeOrigin::signed(alice()), 999),
+            Error::<TestRuntime>::NodeNotExists
+        );
+    });
+}
+
+#[test]
+fn test_opt_out_of_v3_billing_already_opted_out_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_noop!(
+            TfgridModule::opt_out_of_v3_billing(RuntimeOrigin::signed(alice()), node_id),
+            Error::<TestRuntime>::NodeV3BillingOptOutAlreadyEnabled
+        );
+    });
+}
+
+#[test]
+fn test_add_twin_admin_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_ok!(TfgridModule::add_twin_admin(
+            RawOrigin::Root.into(),
+            alice(),
+        ));
+
+        let admins = TfgridModule::allowed_twin_admins().unwrap_or_default();
+        assert!(admins.contains(&alice()));
+
+        let our_events = System::events();
+        assert!(our_events.iter().any(|e| matches!(
+            &e.event,
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::TwinAdminAdded(_))
+        )));
+    });
+}
+
+#[test]
+fn test_add_twin_admin_not_council_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_noop!(
+            TfgridModule::add_twin_admin(RuntimeOrigin::signed(alice()), alice()),
+            sp_runtime::DispatchError::BadOrigin
+        );
+    });
+}
+
+#[test]
+fn test_add_twin_admin_duplicate_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_ok!(TfgridModule::add_twin_admin(
+            RawOrigin::Root.into(),
+            alice(),
+        ));
+
+        assert_noop!(
+            TfgridModule::add_twin_admin(RawOrigin::Root.into(), alice()),
+            Error::<TestRuntime>::AlreadyTwinAdmin
+        );
+    });
+}
+
+#[test]
+fn test_remove_twin_admin_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_ok!(TfgridModule::add_twin_admin(
+            RawOrigin::Root.into(),
+            alice(),
+        ));
+
+        assert_ok!(TfgridModule::remove_twin_admin(
+            RawOrigin::Root.into(),
+            alice(),
+        ));
+
+        let admins = TfgridModule::allowed_twin_admins().unwrap_or_default();
+        assert!(!admins.contains(&alice()));
+
+        let our_events = System::events();
+        assert!(our_events.iter().any(|e| matches!(
+            &e.event,
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::TwinAdminRemoved(_))
+        )));
+    });
+}
+
+#[test]
+fn test_remove_twin_admin_not_council_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_noop!(
+            TfgridModule::remove_twin_admin(RuntimeOrigin::signed(alice()), alice()),
+            sp_runtime::DispatchError::BadOrigin
+        );
+    });
+}
+
+#[test]
+fn test_remove_twin_admin_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_noop!(
+            TfgridModule::remove_twin_admin(RawOrigin::Root.into(), alice()),
+            Error::<TestRuntime>::NotTwinAdmin
+        );
+    });
+}
+
+#[test]
+fn test_add_twin_admin_list_full() {
+    ExternalityBuilder::build().execute_with(|| {
+        // Fill the list up to MaxTwinAdmins (= 10 in test config)
+        for i in 0..10u64 {
+            let account = AccountId::from([i as u8; 32]);
+            assert_ok!(TfgridModule::add_twin_admin(
+                RawOrigin::Root.into(),
+                account,
+            ));
+        }
+
+        // The 11th add must fail with TwinAdminListFull
+        let overflow = AccountId::from([99u8; 32]);
+        assert_noop!(
+            TfgridModule::add_twin_admin(RawOrigin::Root.into(), overflow),
+            Error::<TestRuntime>::TwinAdminListFull
+        );
+    });
+}
+
+#[test]
+fn test_delete_opted_out_node_cleans_up_storage() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+        assert!(TfgridModule::node_v3_billing_opt_out(node_id).is_some());
+
+        assert_ok!(TfgridModule::delete_node(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert!(TfgridModule::node_v3_billing_opt_out(node_id).is_none());
+    });
+}
+
 fn test_attach_farming_policy_flow(farming_policy_id: u32) {
     create_twin();
     create_farm();

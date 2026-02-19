@@ -129,6 +129,7 @@ var smartContractModuleErrors = []string{
 	"UnauthorizedToSetExtraFee",
 	"RewardDistributionError",
 	"ContractPaymentStateNotExists",
+	"OnlyTwinAdminCanDeployOnThisNode",
 }
 
 // https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-tfgrid/src/lib.rs#L442
@@ -249,6 +250,13 @@ var tfgridModuleErrors = []string{
 	"InvalidRelayAddress",
 	"InvalidTimestampHint",
 	"InvalidStorageInput",
+	"TwinTransferRequestNotFound",
+	"TwinTransferNewAccountHasTwin",
+	"TwinTransferPendingExists",
+	"NodeV3BillingOptOutAlreadyEnabled",
+	"AlreadyTwinAdmin",
+	"NotTwinAdmin",
+	"TwinAdminListFull",
 }
 
 // https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-tft-bridge/src/lib.rs#L152

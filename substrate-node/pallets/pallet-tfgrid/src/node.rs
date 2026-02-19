@@ -275,6 +275,7 @@ impl<T: Config> Pallet<T> {
         T::NodeChanged::node_deleted(&node);
 
         Nodes::<T>::remove(node_id);
+        NodeV3BillingOptOut::<T>::remove(node_id);
 
         Self::deposit_event(Event::NodeDeleted(node_id));
 

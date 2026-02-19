@@ -105,6 +105,7 @@ parameter_types! {
     pub const MaxInterfaceIpsLength: u32 = 5;
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
+    pub const MaxTwinAdmins: u32 = 10;
     pub const TimestampHintDrift: u64 = 60;
 }
 
@@ -133,6 +134,7 @@ impl Config for TestRuntime {
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
+    type MaxTwinAdmins = MaxTwinAdmins;
     type InterfaceName = TestInterfaceName;
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
