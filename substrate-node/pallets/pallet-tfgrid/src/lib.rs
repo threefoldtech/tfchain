@@ -11,6 +11,7 @@ pub mod terms_cond;
 pub mod twin;
 pub mod twin_transfer;
 pub mod types;
+pub mod v3_billing_opt_out;
 pub mod weights;
 
 #[cfg(test)]
@@ -253,6 +254,20 @@ pub mod pallet {
     #[pallet::getter(fn zos_version)]
     pub type ZosVersion<T> = StorageValue<_, Vec<u8>, ValueQuery>;
 
+    // Keyed by node_id. Present = node has opted out of v3 billing.
+    #[pallet::storage]
+    #[pallet::getter(fn node_v3_billing_opt_out)]
+    pub type NodeV3BillingOptOut<T> =
+        StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
+
+    // Global list of accounts authorized to deploy on opted-out nodes.
+    // None = list not initialized (treat as empty = no one allowed).
+    // Bounded to prevent unbounded storage growth.
+    #[pallet::storage]
+    #[pallet::getter(fn allowed_twin_admins)]
+    pub type AllowedTwinAdmins<T: Config> =
+        StorageValue<_, BoundedVec<T::AccountId, T::MaxTwinAdmins>, OptionQuery>;
+
     // This storage map maps a node ID to a power state, they node can modify this state
     // to indicate that it has shut down or came back alive
     #[pallet::storage]
@@ -406,6 +421,9 @@ pub mod pallet {
         type MaxFarmPublicIps: Get<u32>;
 
         #[pallet::constant]
+        type MaxTwinAdmins: Get<u32>;
+
+        #[pallet::constant]
         type MaxInterfacesLength: Get<u32>;
 
         #[pallet::constant]
@@ -468,6 +486,11 @@ pub mod pallet {
             node_id: u32,
             power_state: PowerState<BlockNumberFor<T>>,
         },
+
+        // V3 billing opt-out
+        NodeV3BillingOptedOut { node_id: u32, opted_out_at: u64 },
+        TwinAdminAdded(T::AccountId),
+        TwinAdminRemoved(T::AccountId),
 
         // Twin ownership transfer lifecycle
         TwinTransferRequested {
@@ -629,6 +652,12 @@ pub mod pallet {
         TwinTransferRequestNotFound,
         TwinTransferNewAccountHasTwin,
         TwinTransferPendingExists,
+
+        // V3 billing opt-out errors
+        NodeV3BillingOptOutAlreadyEnabled,
+        AlreadyTwinAdmin,
+        NotTwinAdmin,
+        TwinAdminListFull,
     }
 
     #[pallet::genesis_config]
@@ -1322,6 +1351,39 @@ pub mod pallet {
             request_id: u64,
         ) -> DispatchResultWithPostInfo {
             Self::_cancel_twin_transfer(origin, request_id)
+        }
+
+        // Farmer opts their node out of v3 billing
+        #[pallet::call_index(43)]
+        #[pallet::weight(<T as Config>::WeightInfo::opt_out_of_v3_billing())]
+        pub fn opt_out_of_v3_billing(
+            origin: OriginFor<T>,
+            node_id: u32,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_opt_out_of_v3_billing(account_id, node_id)
+        }
+
+        // Council adds an account to the twin admin list (allowed to deploy on opted-out nodes)
+        #[pallet::call_index(44)]
+        #[pallet::weight(<T as Config>::WeightInfo::add_twin_admin())]
+        pub fn add_twin_admin(
+            origin: OriginFor<T>,
+            account: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_add_twin_admin(account)
+        }
+
+        // Council removes an account from the twin admin list
+        #[pallet::call_index(45)]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_twin_admin())]
+        pub fn remove_twin_admin(
+            origin: OriginFor<T>,
+            account: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_remove_twin_admin(account)
         }
     }
 }
