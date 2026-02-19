@@ -3011,6 +3011,27 @@ fn test_remove_twin_admin_not_exists_fails() {
 }
 
 #[test]
+fn test_add_twin_admin_list_full() {
+    ExternalityBuilder::build().execute_with(|| {
+        // Fill the list up to MaxTwinAdmins (= 10 in test config)
+        for i in 0..10u64 {
+            let account = AccountId::from([i as u8; 32]);
+            assert_ok!(TfgridModule::add_twin_admin(
+                RawOrigin::Root.into(),
+                account,
+            ));
+        }
+
+        // The 11th add must fail with TwinAdminListFull
+        let overflow = AccountId::from([99u8; 32]);
+        assert_noop!(
+            TfgridModule::add_twin_admin(RawOrigin::Root.into(), overflow),
+            Error::<TestRuntime>::TwinAdminListFull
+        );
+    });
+}
+
+#[test]
 fn test_delete_opted_out_node_cleans_up_storage() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();

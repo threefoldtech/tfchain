@@ -256,6 +256,7 @@ var tfgridModuleErrors = []string{
 	"NodeV3BillingOptOutAlreadyEnabled",
 	"AlreadyTwinAdmin",
 	"NotTwinAdmin",
+	"TwinAdminListFull",
 }
 
 // https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-tft-bridge/src/lib.rs#L152

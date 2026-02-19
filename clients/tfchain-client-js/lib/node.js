@@ -126,6 +126,42 @@ async function deleteNode (self, id, callback) {
     .signAndSend(self.key, { nonce }, callback)
 }
 
+// optOutOfV3Billing opts a node out of v3 billing (farmer only, one-way)
+async function optOutOfV3Billing (self, nodeID, callback) {
+  const nonce = await self.api.rpc.system.accountNextIndex(self.address)
+  return self.api.tx.tfgridModule
+    .optOutOfV3Billing(nodeID)
+    .signAndSend(self.key, { nonce }, callback)
+}
+
+// addTwinAdmin adds an account to the list of twin admins (council origin)
+async function addTwinAdmin (self, account, callback) {
+  const nonce = await self.api.rpc.system.accountNextIndex(self.address)
+  return self.api.tx.tfgridModule
+    .addTwinAdmin(account)
+    .signAndSend(self.key, { nonce }, callback)
+}
+
+// removeTwinAdmin removes an account from the list of twin admins (council origin)
+async function removeTwinAdmin (self, account, callback) {
+  const nonce = await self.api.rpc.system.accountNextIndex(self.address)
+  return self.api.tx.tfgridModule
+    .removeTwinAdmin(account)
+    .signAndSend(self.key, { nonce }, callback)
+}
+
+// getAllowedTwinAdmins returns the list of accounts allowed to deploy on opted-out nodes
+async function getAllowedTwinAdmins (self) {
+  const result = await self.api.query.tfgridModule.allowedTwinAdmins()
+  return result.toJSON() || []
+}
+
+// isNodeOptedOutOfV3Billing returns true if the node has opted out of v3 billing
+async function isNodeOptedOutOfV3Billing (self, nodeID) {
+  const result = await self.api.query.tfgridModule.nodeV3BillingOptOut(nodeID)
+  return !result.isNone
+}
+
 async function validateNode (self, farmID) {
   const farm = await getFarm(self, farmID)
   if (farm.id !== farmID) {
@@ -139,5 +175,10 @@ module.exports = {
   getNode,
   getNodeIDByPubkey,
   deleteNode,
-  listNodes
+  listNodes,
+  optOutOfV3Billing,
+  addTwinAdmin,
+  removeTwinAdmin,
+  getAllowedTwinAdmins,
+  isNodeOptedOutOfV3Billing
 }

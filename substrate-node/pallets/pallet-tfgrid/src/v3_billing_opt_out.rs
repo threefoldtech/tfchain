@@ -2,7 +2,7 @@ use crate::pallet::{
     AllowedTwinAdmins, Error, Event, Farms, NodeV3BillingOptOut, Nodes, TwinIdByAccountID,
 };
 use crate::Config;
-use frame_support::{dispatch::DispatchResultWithPostInfo, ensure};
+use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, BoundedVec};
 use sp_runtime::SaturatedConversion;
 use sp_std::vec;
 
@@ -42,19 +42,19 @@ impl<T: Config> crate::Pallet<T> {
     }
 
     pub fn _add_twin_admin(account: T::AccountId) -> DispatchResultWithPostInfo {
-        match AllowedTwinAdmins::<T>::get() {
-            Some(mut admins) => {
-                let location = admins
-                    .binary_search(&account)
-                    .err()
-                    .ok_or(Error::<T>::AlreadyTwinAdmin)?;
-                admins.insert(location, account.clone());
-                AllowedTwinAdmins::<T>::put(admins);
-            }
-            None => {
-                AllowedTwinAdmins::<T>::put(vec![account.clone()]);
-            }
-        }
+        let mut admins = AllowedTwinAdmins::<T>::get()
+            .unwrap_or_else(|| BoundedVec::new());
+
+        let location = admins
+            .binary_search(&account)
+            .err()
+            .ok_or(Error::<T>::AlreadyTwinAdmin)?;
+
+        admins
+            .try_insert(location, account.clone())
+            .map_err(|_| Error::<T>::TwinAdminListFull)?;
+
+        AllowedTwinAdmins::<T>::put(admins);
 
         Self::deposit_event(Event::TwinAdminAdded(account));
 

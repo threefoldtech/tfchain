@@ -15,12 +15,12 @@ During the migration from v3 to Mycelium, farmers need a way to signal that thei
 ### New Storage Items (pallet-tfgrid)
 
 - **`NodeV3BillingOptOut`**: A `StorageMap<node_id → opted_out_at (Unix seconds)>` tracking which nodes have opted out. Presence in this map is the sole indicator of opt-out status. No storage migration is required as this is an additive change.
-- **`AllowedTwinAdmins`**: A `StorageValue<Vec<AccountId>>` listing accounts authorized to deploy on opted-out nodes.
+- **`AllowedTwinAdmins`**: A `StorageValue<BoundedVec<AccountId, MaxTwinAdmins>>` listing accounts authorized to deploy on opted-out nodes. Bounded to `MaxTwinAdmins` (default: 100) to prevent unbounded storage growth.
 
 ### New Extrinsics (pallet-tfgrid)
 
 | Extrinsic | Origin | Call Index |
-|---|---|---|
+| --- | --- | --- |
 | `opt_out_of_v3_billing(node_id)` | Farmer (signed) | 43 |
 | `add_twin_admin(account)` | Council (`RestrictedOrigin`) | 44 |
 | `remove_twin_admin(account)` | Council (`RestrictedOrigin`) | 45 |
@@ -49,15 +49,16 @@ This is distinct from `should_waive_standby_rent` (standby power state, rent con
 
 ### New Errors
 
-**pallet-smart-contract**
+### pallet-smart-contract
 
 - `OnlyTwinAdminCanDeployOnThisNode` — returned when a non-admin attempts to deploy on an opted-out node.
 
-**pallet-tfgrid**
+### pallet-tfgrid
 
 - `NodeV3BillingOptOutAlreadyEnabled` — returned when `opt_out_of_v3_billing` is called on a node that has already opted out.
 - `AlreadyTwinAdmin` — returned when `add_twin_admin` is called for an account already in the admin list.
 - `NotTwinAdmin` — returned when `remove_twin_admin` is called for an account not in the admin list, or when the list is empty.
+- `TwinAdminListFull` — returned when `add_twin_admin` is called but the list has reached `MaxTwinAdmins` capacity.
 
 ## Consequences
 

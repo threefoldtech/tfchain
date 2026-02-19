@@ -262,9 +262,11 @@ pub mod pallet {
 
     // Global list of accounts authorized to deploy on opted-out nodes.
     // None = list not initialized (treat as empty = no one allowed).
+    // Bounded to prevent unbounded storage growth.
     #[pallet::storage]
     #[pallet::getter(fn allowed_twin_admins)]
-    pub type AllowedTwinAdmins<T: Config> = StorageValue<_, Vec<T::AccountId>, OptionQuery>;
+    pub type AllowedTwinAdmins<T: Config> =
+        StorageValue<_, BoundedVec<T::AccountId, T::MaxTwinAdmins>, OptionQuery>;
 
     // This storage map maps a node ID to a power state, they node can modify this state
     // to indicate that it has shut down or came back alive
@@ -417,6 +419,9 @@ pub mod pallet {
 
         #[pallet::constant]
         type MaxFarmPublicIps: Get<u32>;
+
+        #[pallet::constant]
+        type MaxTwinAdmins: Get<u32>;
 
         #[pallet::constant]
         type MaxInterfacesLength: Get<u32>;
@@ -652,6 +657,7 @@ pub mod pallet {
         NodeV3BillingOptOutAlreadyEnabled,
         AlreadyTwinAdmin,
         NotTwinAdmin,
+        TwinAdminListFull,
     }
 
     #[pallet::genesis_config]
