@@ -19,7 +19,7 @@ const {
 const {
   createNode, updateNode, getNode,
   getNodeIDByPubkey, deleteNode, listNodes,
-  optOutOfV3Billing, getAllowedTwinAdmins, isNodeOptedOutOfV3Billing
+  optOutOfV3Billing, getAllowedTwinAdmins, isNodeOptedOutOfV3Billing, getNodeV3BillingOptOutTimestamp
 } = require('./node')
 const { signEntityTwinID, signEntityCreation } = require('./sign')
 const { getBalance, transfer } = require('./balance')
@@ -220,6 +220,10 @@ class Client {
 
   async isNodeOptedOutOfV3Billing(nodeID) {
     return isNodeOptedOutOfV3Billing(this, nodeID)
+  }
+
+  async getNodeV3BillingOptOutTimestamp(nodeID) {
+    return getNodeV3BillingOptOutTimestamp(this, nodeID)
   }
 
   async setNodePower (nodeId, power, callback) {

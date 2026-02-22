@@ -140,10 +140,18 @@ async function getAllowedTwinAdmins (self) {
   return result.toJSON() || []
 }
 
-// isNodeOptedOutOfV3Billing returns true if the node has opted out of v3 billing
+// isNodeOptedOutOfV3Billing returns true if the node has opted out of v3 billing.
+// Deprecated: use getNodeV3BillingOptOutTimestamp to also retrieve the opt-out time.
 async function isNodeOptedOutOfV3Billing (self, nodeID) {
+  return (await getNodeV3BillingOptOutTimestamp(self, nodeID)) !== null
+}
+
+// getNodeV3BillingOptOutTimestamp returns the Unix timestamp (seconds) at which the node
+// opted out of v3 billing, or null if the node has not opted out.
+async function getNodeV3BillingOptOutTimestamp (self, nodeID) {
   const result = await self.api.query.tfgridModule.nodeV3BillingOptOut(nodeID)
-  return !result.isNone
+  if (result.isNone) return null
+  return result.unwrap().toNumber()
 }
 
 async function validateNode (self, farmID) {
@@ -162,5 +170,6 @@ module.exports = {
   listNodes,
   optOutOfV3Billing,
   getAllowedTwinAdmins,
-  isNodeOptedOutOfV3Billing
+  isNodeOptedOutOfV3Billing,
+  getNodeV3BillingOptOutTimestamp
 }
