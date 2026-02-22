@@ -826,48 +826,6 @@ func (s *Substrate) OptOutOfV3Billing(identity Identity, nodeID uint32) (hash ty
 	return callResponse.Hash, nil
 }
 
-// AddTwinAdmin adds an account to the list of twin admins allowed to deploy on opted-out nodes.
-// Requires council (restricted) origin.
-func (s *Substrate) AddTwinAdmin(identity Identity, account AccountID) (hash types.Hash, err error) {
-	cl, meta, err := s.GetClient()
-	if err != nil {
-		return hash, err
-	}
-
-	c, err := types.NewCall(meta, "TfgridModule.add_twin_admin", account)
-	if err != nil {
-		return hash, errors.Wrap(err, "failed to create call")
-	}
-
-	callResponse, err := s.Call(cl, meta, identity, c)
-	if err != nil {
-		return hash, errors.Wrap(err, "failed to add twin admin")
-	}
-
-	return callResponse.Hash, nil
-}
-
-// RemoveTwinAdmin removes an account from the list of twin admins allowed to deploy on opted-out nodes.
-// Requires council (restricted) origin.
-func (s *Substrate) RemoveTwinAdmin(identity Identity, account AccountID) (hash types.Hash, err error) {
-	cl, meta, err := s.GetClient()
-	if err != nil {
-		return hash, err
-	}
-
-	c, err := types.NewCall(meta, "TfgridModule.remove_twin_admin", account)
-	if err != nil {
-		return hash, errors.Wrap(err, "failed to create call")
-	}
-
-	callResponse, err := s.Call(cl, meta, identity, c)
-	if err != nil {
-		return hash, errors.Wrap(err, "failed to remove twin admin")
-	}
-
-	return callResponse.Hash, nil
-}
-
 // GetAllowedTwinAdmins returns the list of accounts allowed to deploy on opted-out nodes.
 // Returns an empty slice if no admins have been configured.
 func (s *Substrate) GetAllowedTwinAdmins() ([]AccountID, error) {

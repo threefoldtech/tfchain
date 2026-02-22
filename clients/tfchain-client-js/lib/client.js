@@ -18,7 +18,8 @@ const {
 } = require('./farms')
 const {
   createNode, updateNode, getNode,
-  getNodeIDByPubkey, deleteNode, listNodes
+  getNodeIDByPubkey, deleteNode, listNodes,
+  optOutOfV3Billing, getAllowedTwinAdmins, isNodeOptedOutOfV3Billing
 } = require('./node')
 const { signEntityTwinID, signEntityCreation } = require('./sign')
 const { getBalance, transfer } = require('./balance')
@@ -207,6 +208,18 @@ class Client {
 
   async deleteNode(id, callback) {
     return deleteNode(this, id, callback)
+  }
+
+  async optOutOfV3Billing(nodeID, callback) {
+    return optOutOfV3Billing(this, nodeID, callback)
+  }
+
+  async getAllowedTwinAdmins() {
+    return getAllowedTwinAdmins(this)
+  }
+
+  async isNodeOptedOutOfV3Billing(nodeID) {
+    return isNodeOptedOutOfV3Billing(this, nodeID)
   }
 
   async setNodePower (nodeId, power, callback) {
