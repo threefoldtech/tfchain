@@ -826,48 +826,6 @@ func (s *Substrate) OptOutOfV3Billing(identity Identity, nodeID uint32) (hash ty
 	return callResponse.Hash, nil
 }
 
-// AddTwinAdmin adds an account to the list of twin admins allowed to deploy on opted-out nodes.
-// Requires council (restricted) origin.
-func (s *Substrate) AddTwinAdmin(identity Identity, account AccountID) (hash types.Hash, err error) {
-	cl, meta, err := s.GetClient()
-	if err != nil {
-		return hash, err
-	}
-
-	c, err := types.NewCall(meta, "TfgridModule.add_twin_admin", account)
-	if err != nil {
-		return hash, errors.Wrap(err, "failed to create call")
-	}
-
-	callResponse, err := s.Call(cl, meta, identity, c)
-	if err != nil {
-		return hash, errors.Wrap(err, "failed to add twin admin")
-	}
-
-	return callResponse.Hash, nil
-}
-
-// RemoveTwinAdmin removes an account from the list of twin admins allowed to deploy on opted-out nodes.
-// Requires council (restricted) origin.
-func (s *Substrate) RemoveTwinAdmin(identity Identity, account AccountID) (hash types.Hash, err error) {
-	cl, meta, err := s.GetClient()
-	if err != nil {
-		return hash, err
-	}
-
-	c, err := types.NewCall(meta, "TfgridModule.remove_twin_admin", account)
-	if err != nil {
-		return hash, errors.Wrap(err, "failed to create call")
-	}
-
-	callResponse, err := s.Call(cl, meta, identity, c)
-	if err != nil {
-		return hash, errors.Wrap(err, "failed to remove twin admin")
-	}
-
-	return callResponse.Hash, nil
-}
-
 // GetAllowedTwinAdmins returns the list of accounts allowed to deploy on opted-out nodes.
 // Returns an empty slice if no admins have been configured.
 func (s *Substrate) GetAllowedTwinAdmins() ([]AccountID, error) {
@@ -899,28 +857,48 @@ func (s *Substrate) GetAllowedTwinAdmins() ([]AccountID, error) {
 }
 
 // IsNodeOptedOutOfV3Billing returns true if the node has opted out of v3 billing.
+// Deprecated: use GetNodeV3BillingOptOutTimestamp to also retrieve the opt-out time.
 func (s *Substrate) IsNodeOptedOutOfV3Billing(nodeID uint32) (bool, error) {
-	cl, meta, err := s.GetClient()
+	ts, err := s.GetNodeV3BillingOptOutTimestamp(nodeID)
 	if err != nil {
 		return false, err
+	}
+	return ts != nil, nil
+}
+
+// GetNodeV3BillingOptOutTimestamp returns the Unix timestamp (seconds) at which the node
+// opted out of v3 billing, or nil if the node has not opted out.
+func (s *Substrate) GetNodeV3BillingOptOutTimestamp(nodeID uint32) (*uint64, error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return nil, err
 	}
 
 	bytes, err := Encode(nodeID)
 	if err != nil {
-		return false, errors.Wrap(err, "substrate: encoding error building query arguments")
+		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
 
 	key, err := types.CreateStorageKey(meta, "TfgridModule", "NodeV3BillingOptOut", bytes)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to create substrate query key")
+		return nil, errors.Wrap(err, "failed to create substrate query key")
 	}
 
 	raw, err := cl.RPC.State.GetStorageRawLatest(key)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to lookup node v3 billing opt-out")
+		return nil, errors.Wrap(err, "failed to lookup node v3 billing opt-out")
 	}
 
-	return len(*raw) > 0, nil
+	if len(*raw) == 0 {
+		return nil, nil
+	}
+
+	var ts uint64
+	if err := Decode(*raw, &ts); err != nil {
+		return nil, errors.Wrap(err, "failed to decode node v3 billing opt-out timestamp")
+	}
+
+	return &ts, nil
 }
 
 // SetNodeCertificate sets the node certificate type

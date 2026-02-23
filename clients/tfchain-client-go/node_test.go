@@ -89,32 +89,6 @@ func TestOptOutOfV3Billing(t *testing.T) {
 	require.True(t, optedOut)
 }
 
-func TestGetAllowedTwinAdmins(t *testing.T) {
-	cl := startLocalConnection(t)
-	defer cl.Close()
-
-	rootIdentity, err := NewIdentityFromSr25519Phrase(AliceMnemonics)
-	require.NoError(t, err)
-
-	bobAccount, err := FromAddress(BobAddress)
-	require.NoError(t, err)
-
-	// Ensure Bob is in the list
-	_, err = cl.AddTwinAdmin(rootIdentity, bobAccount)
-	require.NoError(t, err)
-	admins, err := cl.GetAllowedTwinAdmins()
-	require.NoError(t, err)
-	require.Contains(t, admins, bobAccount)
-
-	// Clean up
-	_, err = cl.RemoveTwinAdmin(rootIdentity, bobAccount)
-	require.NoError(t, err)
-
-	admins, err = cl.GetAllowedTwinAdmins()
-	require.NoError(t, err)
-	require.NotContains(t, admins, bobAccount)
-}
-
 func TestUptimeReport(t *testing.T) {
 	cl := startLocalConnection(t)
 	defer cl.Close()

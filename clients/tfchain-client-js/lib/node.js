@@ -134,32 +134,24 @@ async function optOutOfV3Billing (self, nodeID, callback) {
     .signAndSend(self.key, { nonce }, callback)
 }
 
-// addTwinAdmin adds an account to the list of twin admins (council origin)
-async function addTwinAdmin (self, account, callback) {
-  const nonce = await self.api.rpc.system.accountNextIndex(self.address)
-  return self.api.tx.tfgridModule
-    .addTwinAdmin(account)
-    .signAndSend(self.key, { nonce }, callback)
-}
-
-// removeTwinAdmin removes an account from the list of twin admins (council origin)
-async function removeTwinAdmin (self, account, callback) {
-  const nonce = await self.api.rpc.system.accountNextIndex(self.address)
-  return self.api.tx.tfgridModule
-    .removeTwinAdmin(account)
-    .signAndSend(self.key, { nonce }, callback)
-}
-
 // getAllowedTwinAdmins returns the list of accounts allowed to deploy on opted-out nodes
 async function getAllowedTwinAdmins (self) {
   const result = await self.api.query.tfgridModule.allowedTwinAdmins()
   return result.toJSON() || []
 }
 
-// isNodeOptedOutOfV3Billing returns true if the node has opted out of v3 billing
+// isNodeOptedOutOfV3Billing returns true if the node has opted out of v3 billing.
+// Deprecated: use getNodeV3BillingOptOutTimestamp to also retrieve the opt-out time.
 async function isNodeOptedOutOfV3Billing (self, nodeID) {
+  return (await getNodeV3BillingOptOutTimestamp(self, nodeID)) !== null
+}
+
+// getNodeV3BillingOptOutTimestamp returns the Unix timestamp (seconds) at which the node
+// opted out of v3 billing, or null if the node has not opted out.
+async function getNodeV3BillingOptOutTimestamp (self, nodeID) {
   const result = await self.api.query.tfgridModule.nodeV3BillingOptOut(nodeID)
-  return !result.isNone
+  if (result.isNone) return null
+  return result.unwrap().toNumber()
 }
 
 async function validateNode (self, farmID) {
@@ -177,8 +169,7 @@ module.exports = {
   deleteNode,
   listNodes,
   optOutOfV3Billing,
-  addTwinAdmin,
-  removeTwinAdmin,
   getAllowedTwinAdmins,
-  isNodeOptedOutOfV3Billing
+  isNodeOptedOutOfV3Billing,
+  getNodeV3BillingOptOutTimestamp
 }
