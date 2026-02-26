@@ -45,7 +45,7 @@ Per-node keying is more granular, consistent with the existing opt-out model, an
 
 ### New Storage Item (pallet-tfgrid)
 
-```
+```rust
 NodeV3OptOutMetadata: StorageMap<node_id (u32) → BoundedVec<u8, 256>>
 ```
 
@@ -69,15 +69,14 @@ NodeV3OptOutMetadata: StorageMap<node_id (u32) → BoundedVec<u8, 256>>
 
 **Behaviour:**
 
-- If `metadata` is non-empty: upsert `NodeV3OptOutMetadata[node_id]`, emit `NodeV3OptOutMetadataSet { node_id, metadata }`.
-- If `metadata` is empty: remove `NodeV3OptOutMetadata[node_id]`, emit `NodeV3OptOutMetadataCleared { node_id }`.
+- If `metadata` is non-empty: upsert `NodeV3OptOutMetadata[node_id]`, emit `NodeV3OptOutMetadataUpdated { node_id, metadata: Some(metadata) }`.
+- If `metadata` is empty: remove `NodeV3OptOutMetadata[node_id]`, emit `NodeV3OptOutMetadataUpdated { node_id, metadata: None }`.
 
 The extrinsic is idempotent and can be called repeatedly to update or clear the metadata. Only the farm owner can call it, matching the ownership model of `opt_out_of_v3_billing`.
 
 ### New Events (pallet-tfgrid)
 
-- `NodeV3OptOutMetadataSet { node_id: u32, metadata: Vec<u8> }` — emitted when metadata is set or updated.
-- `NodeV3OptOutMetadataCleared { node_id: u32 }` — emitted when metadata is explicitly cleared.
+- `NodeV3OptOutMetadataUpdated { node_id: u32, metadata: Option<Vec<u8>> }` — emitted when metadata is set, updated, or cleared. `Some(bytes)` indicates set/update, `None` indicates clear.
 
 ### New Errors (pallet-tfgrid)
 
@@ -88,21 +87,20 @@ The extrinsic is idempotent and can be called repeatedly to update or clear the 
 
 ### Full opt-out and linkage sequence
 
-```
-Farmer
-  │
-  ├─1─► opt_out_of_v3_billing(node_id)
-  │        ├── Guard: caller twin == farm owner twin
-  │        ├── Guard: node not already opted out
-  │        ├── Insert: NodeV3BillingOptOut[node_id] = now()
-  │        └── Emit:  NodeV3BillingOptedOut { node_id, opted_out_at }
-  │
-  └─2─► set_node_v3_opt_out_metadata(node_id, v4_account_bytes)
-           ├── Guard: caller twin == farm owner twin
-           ├── Guard: NodeV3BillingOptOut[node_id] exists
-           ├── Guard: len(metadata) ≤ 256
-           ├── Insert: NodeV3OptOutMetadata[node_id] = v4_account_bytes
-           └── Emit:  NodeV3OptOutMetadataSet { node_id, metadata }
+```mermaid
+graph TD
+    A[Farmer] -->|1| B[opt_out_of_v3_billing(node_id)]
+    B --> C[Guard: caller twin == farm owner twin]
+    C --> D[Guard: node not already opted out]
+    D --> E[Insert: NodeV3BillingOptOut[node_id] = now()]
+    E --> F[Emit: NodeV3BillingOptedOut { node_id, opted_out_at }]
+    
+    A -->|2| G[set_node_v3_opt_out_metadata(node_id, v4_account_bytes)]
+    G --> H[Guard: caller twin == farm owner twin]
+    H --> I[Guard: NodeV3BillingOptOut[node_id] exists]
+    I --> J[Guard: len(metadata) ≤ 256]
+    J --> K[Insert: NodeV3OptOutMetadata[node_id] = v4_account_bytes]
+    K --> L[Emit: NodeV3OptOutMetadataUpdated { node_id, metadata: Some(v4_account_bytes) }]
 ```
 
 After step 2, `NodeV3OptOutMetadata[node_id]` holds the farmer's v4 account address (or any agreed-upon linking payload).
@@ -111,26 +109,25 @@ After step 2, `NodeV3OptOutMetadata[node_id]` holds the farmer's v4 account addr
 
 When a node registers or reports uptime on the v4 marketplace, the marketplace verifier must:
 
+```mermaid
+graph TD
+    A[V4 Marketplace Verifier] -->|1| B[Query TFChain: NodeV3BillingOptOut[node_id]]
+    B --> C{None?}
+    C -->|Yes| D[Node is NOT in migration window, reject]
+    C -->|Some(opted_out_at)| E[Node is opted out, continue]
+    
+    E -->|2| F[Query TFChain: NodeV3OptOutMetadata[node_id]]
+    F --> G{None?}
+    G -->|Yes| H[Treat as unlinked]
+    G -->|Some(metadata)| I[Decode as v4 account address]
+    
+    I -->|3| J[Verify v4 account matches node's reported account]
+    J --> K{Match?}
+    K -->|Mismatch| L[Reject; farmer must update metadata]
+    K -->|Match| M[Node verified as legitimately transitioned]
+    
+    M -->|4| N[Attribute node resources and uptime to verified v4 account]
 ```
-V4 Marketplace Verifier
-  │
-  ├─1─► Query TFChain: NodeV3BillingOptOut[node_id]
-  │        ├── None  → node is NOT in migration window, reject or handle as active v3 node
-  │        └── Some(opted_out_at) → node is opted out, continue
-  │
-  ├─2─► Query TFChain: NodeV3OptOutMetadata[node_id]
-  │        ├── None  → farmer has not yet linked a v4 account, treat as unlinked
-  │        └── Some(metadata) → decode as v4 account address
-  │
-  ├─3─► Verify that the v4 account in metadata matches the account
-  │     that the node is reporting from on the v4 network
-  │        ├── Mismatch → reject; farmer must update metadata or re-register
-  │        └── Match    → node is verified as legitimately transitioned
-  │
-  └─4─► Attribute node resources and uptime to the verified v4 account
-```
-
-This means the v4 marketplace does **not** trust the node's self-reported identity alone — it cross-checks against the on-chain metadata set by the farm owner, which is the authoritative source.
 
 ### Metadata Content Convention
 
