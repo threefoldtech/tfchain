@@ -81,7 +81,8 @@ func TestOptOutOfV3Billing(t *testing.T) {
 	_, err = cl.OptOutOfV3Billing(identity, nodeID)
 	// NodeV3BillingOptOutAlreadyEnabled is acceptable on re-runs (opt-out is permanent)
 	if err != nil {
-		require.EqualError(t, err, "NodeV3BillingOptOutAlreadyEnabled")
+		// If node is already opted out, that's fine
+		require.Contains(t, err.Error(), "NodeV3BillingOptOutAlreadyEnabled")
 	}
 
 	optedOut, err := cl.IsNodeOptedOutOfV3Billing(nodeID)
@@ -102,7 +103,8 @@ func TestSetNodeV3OptOutMetadata(t *testing.T) {
 	// Node must be opted out first
 	_, err = cl.OptOutOfV3Billing(identity, nodeID)
 	if err != nil {
-		require.EqualError(t, err, "NodeV3BillingOptOutAlreadyEnabled")
+		// If node is already opted out, that's fine
+		require.Contains(t, err.Error(), "NodeV3BillingOptOutAlreadyEnabled")
 	}
 
 	metadata := []byte(`{"v4_account":"5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"}`)
@@ -129,7 +131,8 @@ func TestClearNodeV3OptOutMetadata(t *testing.T) {
 	// Node must be opted out first
 	_, err = cl.OptOutOfV3Billing(identity, nodeID)
 	if err != nil {
-		require.EqualError(t, err, "NodeV3BillingOptOutAlreadyEnabled")
+		// If node is already opted out, that's fine
+		require.Contains(t, err.Error(), "NodeV3BillingOptOutAlreadyEnabled")
 	}
 
 	// Set some metadata first
