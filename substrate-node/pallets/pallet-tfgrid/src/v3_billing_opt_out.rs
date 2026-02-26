@@ -5,6 +5,7 @@ use crate::pallet::{
 use crate::Config;
 use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, BoundedVec};
 use sp_runtime::SaturatedConversion;
+use sp_std::prelude::Vec;
 
 impl<T: Config> crate::Pallet<T> {
     pub fn _opt_out_of_v3_billing(
