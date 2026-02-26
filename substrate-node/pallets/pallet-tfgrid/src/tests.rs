@@ -2923,6 +2923,165 @@ fn test_opt_out_of_v3_billing_already_opted_out_fails() {
 }
 
 #[test]
+fn test_set_node_v3_opt_out_metadata_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        let metadata = b"alice.near".to_vec();
+        assert_ok!(TfgridModule::set_node_v3_opt_out_metadata(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            metadata.clone(),
+        ));
+
+        let stored = TfgridModule::node_v3_opt_out_metadata(node_id).unwrap();
+        assert_eq!(stored.to_vec(), metadata);
+
+        let our_events = System::events();
+        assert!(our_events.iter().any(|e| matches!(
+            &e.event,
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::NodeV3OptOutMetadataSet {
+                node_id: 1,
+                ..
+            })
+        )));
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_clear_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_ok!(TfgridModule::set_node_v3_opt_out_metadata(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            b"alice.near".to_vec(),
+        ));
+
+        assert!(TfgridModule::node_v3_opt_out_metadata(node_id).is_some());
+
+        assert_ok!(TfgridModule::set_node_v3_opt_out_metadata(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            vec![],
+        ));
+
+        assert!(TfgridModule::node_v3_opt_out_metadata(node_id).is_none());
+
+        let our_events = System::events();
+        assert!(our_events.iter().any(|e| matches!(
+            &e.event,
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::NodeV3OptOutMetadataCleared {
+                node_id: 1,
+            })
+        )));
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_not_opted_out_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_noop!(
+            TfgridModule::set_node_v3_opt_out_metadata(
+                RuntimeOrigin::signed(alice()),
+                node_id,
+                b"alice.near".to_vec(),
+            ),
+            Error::<TestRuntime>::NodeNotOptedOutOfV3Billing
+        );
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_not_farmer_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_twin_bob();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_noop!(
+            TfgridModule::set_node_v3_opt_out_metadata(
+                RuntimeOrigin::signed(bob()),
+                node_id,
+                b"bob.near".to_vec(),
+            ),
+            Error::<TestRuntime>::NodeUpdateNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_too_long_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        let too_long = vec![b'x'; 257];
+        assert_noop!(
+            TfgridModule::set_node_v3_opt_out_metadata(
+                RuntimeOrigin::signed(alice()),
+                node_id,
+                too_long,
+            ),
+            Error::<TestRuntime>::NodeV3OptOutMetadataTooLong
+        );
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_node_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        assert_noop!(
+            TfgridModule::set_node_v3_opt_out_metadata(
+                RuntimeOrigin::signed(alice()),
+                999,
+                b"alice.near".to_vec(),
+            ),
+            Error::<TestRuntime>::NodeNotExists
+        );
+    });
+}
+
+#[test]
 fn test_add_twin_admin_works() {
     ExternalityBuilder::build().execute_with(|| {
         assert_ok!(TfgridModule::add_twin_admin(

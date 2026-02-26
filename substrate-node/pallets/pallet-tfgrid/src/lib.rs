@@ -260,6 +260,13 @@ pub mod pallet {
     pub type NodeV3BillingOptOut<T> =
         StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
 
+    // Keyed by node_id. Stores optional metadata for opted-out nodes (e.g. v4 account).
+    // Max 256 bytes of arbitrary UTF-8 content. Node must be opted out before metadata can be set.
+    #[pallet::storage]
+    #[pallet::getter(fn node_v3_opt_out_metadata)]
+    pub type NodeV3OptOutMetadata<T> =
+        StorageMap<_, Blake2_128Concat, u32, BoundedVec<u8, ConstU32<256>>, OptionQuery>;
+
     // Global list of accounts authorized to deploy on opted-out nodes.
     // None = list not initialized (treat as empty = no one allowed).
     // Bounded to prevent unbounded storage growth.
@@ -489,6 +496,8 @@ pub mod pallet {
 
         // V3 billing opt-out
         NodeV3BillingOptedOut { node_id: u32, opted_out_at: u64 },
+        NodeV3OptOutMetadataSet { node_id: u32, metadata: Vec<u8> },
+        NodeV3OptOutMetadataCleared { node_id: u32 },
         TwinAdminAdded(T::AccountId),
         TwinAdminRemoved(T::AccountId),
 
@@ -655,6 +664,8 @@ pub mod pallet {
 
         // V3 billing opt-out errors
         NodeV3BillingOptOutAlreadyEnabled,
+        NodeNotOptedOutOfV3Billing,
+        NodeV3OptOutMetadataTooLong,
         AlreadyTwinAdmin,
         NotTwinAdmin,
         TwinAdminListFull,
@@ -1362,6 +1373,20 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_opt_out_of_v3_billing(account_id, node_id)
+        }
+
+        // Farmer sets metadata for an opted-out node (e.g. v4 account address).
+        // Node must already be opted out. Caller must be the farm owner.
+        // Pass empty metadata to clear.
+        #[pallet::call_index(46)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_node_v3_opt_out_metadata())]
+        pub fn set_node_v3_opt_out_metadata(
+            origin: OriginFor<T>,
+            node_id: u32,
+            metadata: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_set_node_v3_opt_out_metadata(account_id, node_id, metadata)
         }
 
         // Council adds an account to the twin admin list (allowed to deploy on opted-out nodes)

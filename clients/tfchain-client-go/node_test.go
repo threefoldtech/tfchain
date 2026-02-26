@@ -89,6 +89,63 @@ func TestOptOutOfV3Billing(t *testing.T) {
 	require.True(t, optedOut)
 }
 
+func TestSetNodeV3OptOutMetadata(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+	nodeID := assertCreateNode(t, cl, farmID, twinID, identity)
+
+	// Node must be opted out first
+	_, err = cl.OptOutOfV3Billing(identity, nodeID)
+	if err != nil {
+		require.EqualError(t, err, "NodeV3BillingOptOutAlreadyEnabled")
+	}
+
+	metadata := []byte(`{"v4_account":"5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"}`)
+
+	_, err = cl.SetNodeV3OptOutMetadata(identity, nodeID, metadata)
+	require.NoError(t, err)
+
+	got, err := cl.GetNodeV3OptOutMetadata(nodeID)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	require.Equal(t, metadata, got)
+}
+
+func TestClearNodeV3OptOutMetadata(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+	nodeID := assertCreateNode(t, cl, farmID, twinID, identity)
+
+	// Node must be opted out first
+	_, err = cl.OptOutOfV3Billing(identity, nodeID)
+	if err != nil {
+		require.EqualError(t, err, "NodeV3BillingOptOutAlreadyEnabled")
+	}
+
+	// Set some metadata first
+	metadata := []byte(`{"v4_account":"5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"}`)
+	_, err = cl.SetNodeV3OptOutMetadata(identity, nodeID, metadata)
+	require.NoError(t, err)
+
+	// Clear by passing empty bytes
+	_, err = cl.SetNodeV3OptOutMetadata(identity, nodeID, []byte{})
+	require.NoError(t, err)
+
+	got, err := cl.GetNodeV3OptOutMetadata(nodeID)
+	require.NoError(t, err)
+	require.Nil(t, got)
+}
+
 func TestUptimeReport(t *testing.T) {
 	cl := startLocalConnection(t)
 	defer cl.Close()

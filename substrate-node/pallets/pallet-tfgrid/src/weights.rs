@@ -69,6 +69,7 @@ pub trait WeightInfo {
 	fn bond_twin_account() -> Weight;
 	fn report_uptime_v2() -> Weight;
 	fn opt_out_of_v3_billing() -> Weight;
+	fn set_node_v3_opt_out_metadata() -> Weight;
 	fn add_twin_admin() -> Weight;
 	fn remove_twin_admin() -> Weight;
 }
@@ -624,6 +625,25 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 		// Minimum execution time: 41_441_000 picoseconds.
 		Weight::from_parts(66_855_000, 4134)
 			.saturating_add(T::DbWeight::get().reads(5_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
+	/// Storage: `TfgridModule::TwinIdByAccountID` (r:1 w:0)
+	/// Proof: `TfgridModule::TwinIdByAccountID` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `TfgridModule::Nodes` (r:1 w:0)
+	/// Proof: `TfgridModule::Nodes` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `TfgridModule::Farms` (r:1 w:0)
+	/// Proof: `TfgridModule::Farms` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `TfgridModule::NodeV3BillingOptOut` (r:1 w:0)
+	/// Proof: `TfgridModule::NodeV3BillingOptOut` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `TfgridModule::NodeV3OptOutMetadata` (r:0 w:1)
+	/// Proof: `TfgridModule::NodeV3OptOutMetadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	fn set_node_v3_opt_out_metadata() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `669`
+		//  Estimated: `4134`
+		// Minimum execution time: 41_441_000 picoseconds.
+		Weight::from_parts(66_855_000, 4134)
+			.saturating_add(T::DbWeight::get().reads(4_u64))
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 	/// Storage: `TfgridModule::AllowedTwinAdmins` (r:1 w:1)
@@ -1200,6 +1220,25 @@ impl WeightInfo for () {
 		// Minimum execution time: 41_441_000 picoseconds.
 		Weight::from_parts(66_855_000, 4134)
 			.saturating_add(RocksDbWeight::get().reads(5_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+	/// Storage: `TfgridModule::TwinIdByAccountID` (r:1 w:0)
+	/// Proof: `TfgridModule::TwinIdByAccountID` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `TfgridModule::Nodes` (r:1 w:0)
+	/// Proof: `TfgridModule::Nodes` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `TfgridModule::Farms` (r:1 w:0)
+	/// Proof: `TfgridModule::Farms` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `TfgridModule::NodeV3BillingOptOut` (r:1 w:0)
+	/// Proof: `TfgridModule::NodeV3BillingOptOut` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `TfgridModule::NodeV3OptOutMetadata` (r:0 w:1)
+	/// Proof: `TfgridModule::NodeV3OptOutMetadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	fn set_node_v3_opt_out_metadata() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `669`
+		//  Estimated: `4134`
+		// Minimum execution time: 41_441_000 picoseconds.
+		Weight::from_parts(66_855_000, 4134)
+			.saturating_add(RocksDbWeight::get().reads(4_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	/// Storage: `TfgridModule::AllowedTwinAdmins` (r:1 w:1)
