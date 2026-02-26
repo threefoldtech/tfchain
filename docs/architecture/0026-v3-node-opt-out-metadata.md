@@ -8,7 +8,9 @@ Accepted
 
 ## Context
 
-ADR-0025 introduced the `NodeV3BillingOptOut` mechanism allowing farmers to signal that their nodes are entering a migration window to Mycelium (v4). Once a node is opted out, the marketplace needs a way to associate that node with a v4 account so that:
+ADR-0025 introduced the `NodeV3BillingOptOut` mechanism allowing farmers to signal that their nodes
+are entering a migration window to Mycelium (v4). Once a node is opted out, the marketplace needs
+a way to associate that node with a v4 account so that:
 
 1. The v4 marketplace can verify the node is legitimately transitioning and not being double-billed.
 2. The v4 marketplace can attribute the node's resources and uptime to the correct farmer identity on v4.
@@ -17,24 +19,41 @@ ADR-0025 introduced the `NodeV3BillingOptOut` mechanism allowing farmers to sign
 ### Options Considered
 
 **Option A: Hero Ledger — mutual authentication via cross-chain signed proof**
-The proposal was a **mutual authentication** scheme: a v4 account that wants to claim ownership of a v3 node would sign a proof using the v3 farmer private key (proving control of the v3 account), then submit a transaction from the v4 account to store that signed proof in Hero Ledger. Any verifier could then fetch the proof from KVS, retrieve the v3 farmer's public key from TFChain, and verify the signature — establishing that the v3 and v4 accounts are controlled by the same party without requiring a transaction on TFChain.
+The proposal was a **mutual authentication** scheme: a v4 account that wants to claim ownership of a v3 node
+would sign a proof using the v3 farmer private key (proving control of the v3 account), then submit
+a transaction from the v4 account to store that signed proof in Hero Ledger. Any verifier could then
+fetch the proof from KVS, retrieve the v3 farmer's public key from TFChain, and verify the signature —
+establishing that the v3 and v4 accounts are controlled by the same party without requiring a
+transaction on TFChain.
 
 Rejected because:
 
 - The chosen approach (Option D) achieves the same ownership guarantee more simply: the farmer signs a TFChain extrinsic from their v3 account, which is already the authoritative proof of ownership.
 
 **Option B: TFChain `kvstore` pallet**
-Use the existing generic key-value store pallet already deployed on TFChain. Farmers could write their v4 account under a well-known key (e.g. `node:<node_id>:v4_account`). Rejected because the `kvstore` pallet is scoped per twin — any twin can write to its own namespace but there is no way to enforce that the writer is the farm owner of a specific node, or to enforce that the node must be opted out before the key can be set. The linkage would be self-asserted with no on-chain validation of the ownership relationship, making it unsuitable as a trust anchor for the marketplace verifier.
+Use the existing generic key-value store pallet already deployed on TFChain. Farmers could write their v4
+account under a well-known key (e.g. `node:<node_id>:v4_account`). Rejected because the `kvstore` pallet
+is scoped per twin — any twin can write to its own namespace but there is no way to enforce that the
+writer is the farm owner of a specific node, or to enforce that the node must be opted out before the
+key can be set. The linkage would be self-asserted with no on-chain validation of the ownership
+relationship, making it unsuitable as a trust anchor for the marketplace verifier.
 
 **Option C: Extend `NodeV3BillingOptOut` map (inline struct)**
-Change the existing `NodeV3BillingOptOut` storage value type from a bare `u64` timestamp to a struct containing both the timestamp and optional metadata. Rejected because it requires a storage migration for all existing opted-out nodes, couples two distinct concerns (immutable billing state and mutable v4 linkage) into one storage item, and makes future independent evolution of either field harder.
+Change the existing `NodeV3BillingOptOut` storage value type from a bare `u64` timestamp to a struct
+containing both the timestamp and optional metadata. Rejected because it requires a storage migration
+for all existing opted-out nodes, couples two distinct concerns (immutable billing state and mutable
+v4 linkage) into one storage item, and makes future independent evolution of either field harder.
 
 **Option D: Separate opt-out-gated storage map in pallet-tfgrid (chosen)**
-Add a new `NodeV3OptOutMetadata` storage map keyed by `node_id`, only writable when the node has already opted out. This is additive (no migration), co-located with node data, farmer-controlled, and enforces the invariant that metadata is only meaningful for opted-out nodes.
+Add a new `NodeV3OptOutMetadata` storage map keyed by `node_id`, only writable when the node has already
+opted out. This is additive (no migration), co-located with node data, farmer-controlled, and enforces
+the invariant that metadata is only meaningful for opted-out nodes.
 
 ### Per-Node vs Per-Farm Storage
 
-An alternative keying was discussed: storing one metadata entry per farm rather than per node. This would allow a single `set` call to link all nodes on a farm to one v4 account. Rejected in favour of per-node keying because:
+An alternative keying was discussed: storing one metadata entry per farm rather than per node. This would
+allow a single `set` call to link all nodes on a farm to one v4 account. Rejected in favour of per-node
+keying because:
 
 - Nodes on the same farm may migrate at different times and could legitimately map to different v4 accounts.
 - The opt-out itself (`NodeV3BillingOptOut`) is per-node, so the metadata key should match to keep the relationship unambiguous.
@@ -100,7 +119,8 @@ graph TD
     H --> I[Guard: NodeV3BillingOptOut[node_id] exists]
     I --> J[Guard: len(metadata) ≤ 256]
     J --> K[Insert: NodeV3OptOutMetadata[node_id] = v4_account_bytes]
-    K --> L[Emit: NodeV3OptOutMetadataUpdated { node_id, metadata: Some(v4_account_bytes) }]
+    K --> L[Emit: NodeV3OptOutMetadataUpdated { node_id, 
+         metadata: Some(v4_account_bytes) }]
 ```
 
 After step 2, `NodeV3OptOutMetadata[node_id]` holds the farmer's v4 account address (or any agreed-upon linking payload).
