@@ -873,7 +873,7 @@ benchmarks! {
     verify {
         let stored = TfgridModule::<T>::node_v3_opt_out_metadata(node_id).unwrap();
         assert_eq!(stored.to_vec(), metadata);
-        assert_has_event::<T>(Event::NodeV3OptOutMetadataSet { node_id, metadata }.into());
+        assert_has_event::<T>(Event::NodeV3OptOutMetadataUpdated { node_id, metadata: Some(metadata) }.into());
     }
 
     // add_twin_admin()

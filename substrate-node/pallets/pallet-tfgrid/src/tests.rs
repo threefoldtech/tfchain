@@ -2948,9 +2948,9 @@ fn test_set_node_v3_opt_out_metadata_works() {
         let our_events = System::events();
         assert!(our_events.iter().any(|e| matches!(
             &e.event,
-            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::NodeV3OptOutMetadataSet {
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::NodeV3OptOutMetadataUpdated {
                 node_id: 1,
-                ..
+                metadata: Some(_),
             })
         )));
     });
@@ -2988,8 +2988,9 @@ fn test_set_node_v3_opt_out_metadata_clear_works() {
         let our_events = System::events();
         assert!(our_events.iter().any(|e| matches!(
             &e.event,
-            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::NodeV3OptOutMetadataCleared {
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::NodeV3OptOutMetadataUpdated {
                 node_id: 1,
+                metadata: None,
             })
         )));
     });

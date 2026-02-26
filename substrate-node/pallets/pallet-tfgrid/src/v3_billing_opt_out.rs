@@ -66,12 +66,12 @@ impl<T: Config> crate::Pallet<T> {
 
         if metadata.is_empty() {
             NodeV3OptOutMetadata::<T>::remove(node_id);
-            Self::deposit_event(Event::NodeV3OptOutMetadataCleared { node_id });
+            Self::deposit_event(Event::NodeV3OptOutMetadataUpdated { node_id, metadata: None });
         } else {
             let bounded: BoundedVec<u8, frame_support::traits::ConstU32<256>> =
                 metadata.clone().try_into().map_err(|_| Error::<T>::NodeV3OptOutMetadataTooLong)?;
             NodeV3OptOutMetadata::<T>::insert(node_id, bounded);
-            Self::deposit_event(Event::NodeV3OptOutMetadataSet { node_id, metadata });
+            Self::deposit_event(Event::NodeV3OptOutMetadataUpdated { node_id, metadata: Some(metadata) });
         }
 
         Ok(().into())
