@@ -257,6 +257,8 @@ var tfgridModuleErrors = []string{
 	"AlreadyTwinAdmin",
 	"NotTwinAdmin",
 	"TwinAdminListFull",
+	"NodeNotOptedOutOfV3Billing",
+	"NodeV3OptOutMetadataTooLong",
 }
 
 // https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-tft-bridge/src/lib.rs#L152

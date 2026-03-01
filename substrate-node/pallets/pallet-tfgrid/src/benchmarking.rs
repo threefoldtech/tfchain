@@ -858,6 +858,24 @@ benchmarks! {
         }.into());
     }
 
+    // set_node_v3_opt_out_metadata()
+    // Worst case: metadata is 256 bytes (maximum allowed).
+    set_node_v3_opt_out_metadata {
+        let caller: T::AccountId = whitelisted_caller();
+        _prepare_farm_with_node::<T>(caller.clone());
+        let node_id = 1;
+        assert_ok!(TfgridModule::<T>::opt_out_of_v3_billing(
+            RawOrigin::Signed(caller.clone()).into(),
+            node_id,
+        ));
+        let metadata = vec![b'x'; 256];
+    }: _(RawOrigin::Signed(caller), node_id, metadata.clone())
+    verify {
+        let stored = TfgridModule::<T>::node_v3_opt_out_metadata(node_id).unwrap();
+        assert_eq!(stored.to_vec(), metadata);
+        assert_has_event::<T>(Event::NodeV3OptOutMetadataUpdated { node_id, metadata: Some(metadata) }.into());
+    }
+
     // add_twin_admin()
     // Worst case: list is at MaxTwinAdmins - 1 before the final insert.
     // n ranges from 0 to MaxTwinAdmins - 1; the extrinsic itself adds the (n+1)-th entry.

@@ -254,19 +254,6 @@ pub mod pallet {
     #[pallet::getter(fn zos_version)]
     pub type ZosVersion<T> = StorageValue<_, Vec<u8>, ValueQuery>;
 
-    // Keyed by node_id. Present = node has opted out of v3 billing.
-    #[pallet::storage]
-    #[pallet::getter(fn node_v3_billing_opt_out)]
-    pub type NodeV3BillingOptOut<T> =
-        StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
-
-    // Global list of accounts authorized to deploy on opted-out nodes.
-    // None = list not initialized (treat as empty = no one allowed).
-    // Bounded to prevent unbounded storage growth.
-    #[pallet::storage]
-    #[pallet::getter(fn allowed_twin_admins)]
-    pub type AllowedTwinAdmins<T: Config> =
-        StorageValue<_, BoundedVec<T::AccountId, T::MaxTwinAdmins>, OptionQuery>;
 
     // This storage map maps a node ID to a power state, they node can modify this state
     // to indicate that it has shut down or came back alive
@@ -304,6 +291,27 @@ pub mod pallet {
     #[pallet::getter(fn pending_transfer_by_twin)]
     pub type PendingTransferByTwin<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
+
+    // Keyed by node_id. Present = node has opted out of v3 billing.
+    #[pallet::storage]
+    #[pallet::getter(fn node_v3_billing_opt_out)]
+    pub type NodeV3BillingOptOut<T> =
+        StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
+
+    // Keyed by node_id. Stores optional metadata for opted-out nodes (e.g. v4 account).
+    // Max 256 bytes of arbitrary UTF-8 content. Node must be opted out before metadata can be set.
+    #[pallet::storage]
+    #[pallet::getter(fn node_v3_opt_out_metadata)]
+    pub type NodeV3OptOutMetadata<T> =
+        StorageMap<_, Blake2_128Concat, u32, BoundedVec<u8, ConstU32<256>>, OptionQuery>;
+
+    // Global list of accounts authorized to deploy on opted-out nodes.
+    // None = list not initialized (treat as empty = no one allowed).
+    // Bounded to prevent unbounded storage growth.
+    #[pallet::storage]
+    #[pallet::getter(fn allowed_twin_admins)]
+    pub type AllowedTwinAdmins<T: Config> =
+        StorageValue<_, BoundedVec<T::AccountId, T::MaxTwinAdmins>, OptionQuery>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
@@ -487,10 +495,6 @@ pub mod pallet {
             power_state: PowerState<BlockNumberFor<T>>,
         },
 
-        // V3 billing opt-out
-        NodeV3BillingOptedOut { node_id: u32, opted_out_at: u64 },
-        TwinAdminAdded(T::AccountId),
-        TwinAdminRemoved(T::AccountId),
 
         // Twin ownership transfer lifecycle
         TwinTransferRequested {
@@ -511,6 +515,12 @@ pub mod pallet {
             from: T::AccountId,
             to: T::AccountId,
         },
+
+        // V3 billing opt-out
+        NodeV3BillingOptedOut { node_id: u32, opted_out_at: u64 },
+        TwinAdminAdded(T::AccountId),
+        TwinAdminRemoved(T::AccountId),
+        NodeV3OptOutMetadataUpdated { node_id: u32, metadata: Option<Vec<u8>> },
     }
 
     #[pallet::error]
@@ -658,6 +668,8 @@ pub mod pallet {
         AlreadyTwinAdmin,
         NotTwinAdmin,
         TwinAdminListFull,
+        NodeNotOptedOutOfV3Billing,
+        NodeV3OptOutMetadataTooLong,
     }
 
     #[pallet::genesis_config]
@@ -1384,6 +1396,20 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             Self::_remove_twin_admin(account)
+        }
+
+        // Farmer sets metadata for an opted-out node (e.g. v4 account address).
+        // Node must already be opted out. Caller must be the farm owner.
+        // Pass empty metadata to clear.
+        #[pallet::call_index(46)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_node_v3_opt_out_metadata())]
+        pub fn set_node_v3_opt_out_metadata(
+            origin: OriginFor<T>,
+            node_id: u32,
+            metadata: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_set_node_v3_opt_out_metadata(account_id, node_id, metadata)
         }
     }
 }

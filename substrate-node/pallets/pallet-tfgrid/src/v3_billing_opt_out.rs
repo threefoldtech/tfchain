@@ -1,10 +1,11 @@
 use crate::pallet::{
-    AllowedTwinAdmins, Error, Event, Farms, NodeV3BillingOptOut, Nodes, TwinIdByAccountID,
+    AllowedTwinAdmins, Error, Event, Farms, NodeV3BillingOptOut, NodeV3OptOutMetadata, Nodes,
+    TwinIdByAccountID,
 };
 use crate::Config;
 use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, BoundedVec};
 use sp_runtime::SaturatedConversion;
-use sp_std::vec;
+use sp_std::prelude::Vec;
 
 impl<T: Config> crate::Pallet<T> {
     pub fn _opt_out_of_v3_billing(
@@ -37,6 +38,41 @@ impl<T: Config> crate::Pallet<T> {
             node_id,
             opted_out_at: now,
         });
+
+        Ok(().into())
+    }
+
+    pub fn _set_node_v3_opt_out_metadata(
+        account_id: T::AccountId,
+        node_id: u32,
+        metadata: Vec<u8>,
+    ) -> DispatchResultWithPostInfo {
+        let caller_twin_id =
+            TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
+
+        let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+
+        ensure!(
+            caller_twin_id == farm.twin_id,
+            Error::<T>::NodeUpdateNotAuthorized
+        );
+
+        ensure!(
+            NodeV3BillingOptOut::<T>::contains_key(node_id),
+            Error::<T>::NodeNotOptedOutOfV3Billing
+        );
+
+        if metadata.is_empty() {
+            NodeV3OptOutMetadata::<T>::remove(node_id);
+            Self::deposit_event(Event::NodeV3OptOutMetadataUpdated { node_id, metadata: None });
+        } else {
+            let bounded: BoundedVec<u8, frame_support::traits::ConstU32<256>> =
+                metadata.clone().try_into().map_err(|_| Error::<T>::NodeV3OptOutMetadataTooLong)?;
+            NodeV3OptOutMetadata::<T>::insert(node_id, bounded);
+            Self::deposit_event(Event::NodeV3OptOutMetadataUpdated { node_id, metadata: Some(metadata) });
+        }
 
         Ok(().into())
     }

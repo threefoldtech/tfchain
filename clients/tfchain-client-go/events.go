@@ -350,6 +350,13 @@ type TwinAdminRemoved struct {
 	Topics  []types.Hash
 }
 
+type NodeV3OptOutMetadataUpdated struct {
+	Phase    types.Phase
+	NodeID   types.U32         `json:"node_id"`
+	Metadata types.OptionBytes `json:"metadata"`
+	Topics   []types.Hash
+}
+
 type EventSchedulerCallUnavailable struct {
 	Phase  types.Phase
 	Task   types.TaskAddress
@@ -489,6 +496,7 @@ type EventRecords struct {
 	TfgridModule_NodeV3BillingOptedOut         []NodeV3BillingOptedOut         //nolint:stylecheck,golint
 	TfgridModule_TwinAdminAdded                []TwinAdminAdded                //nolint:stylecheck,golint
 	TfgridModule_TwinAdminRemoved              []TwinAdminRemoved              //nolint:stylecheck,golint
+	TfgridModule_NodeV3OptOutMetadataUpdated   []NodeV3OptOutMetadataUpdated   //nolint:stylecheck,golint
 
 	// burn module events
 	BurningModule_BurnTransactionCreated []BurnTransactionCreated //nolint:stylecheck,golint
