@@ -108,19 +108,18 @@ The extrinsic is idempotent and can be called repeatedly to update or clear the 
 
 ```mermaid
 graph TD
-    A[Farmer] -->|1| B[opt_out_of_v3_billing(node_id)]
-    B --> C[Guard: caller twin == farm owner twin]
-    C --> D[Guard: node not already opted out]
-    D --> E[Insert: NodeV3BillingOptOut[node_id] = now()]
-    E --> F[Emit: NodeV3BillingOptedOut { node_id, opted_out_at }]
+    A["Farmer"] -->|1| B["opt_out_of_v3_billing(node_id)"]
+    B --> C["Guard: caller twin == farm owner twin"]
+    C --> D["Guard: node not already opted out"]
+    D --> E["Insert: NodeV3BillingOptOut[node_id] = now()"]
+    E --> F["Emit: NodeV3BillingOptedOut { node_id, opted_out_at }"]
     
-    A -->|2| G[set_node_v3_opt_out_metadata(node_id, v4_account_bytes)]
-    G --> H[Guard: caller twin == farm owner twin]
-    H --> I[Guard: NodeV3BillingOptOut[node_id] exists]
-    I --> J[Guard: len(metadata) ≤ 256]
-    J --> K[Insert: NodeV3OptOutMetadata[node_id] = v4_account_bytes]
-    K --> L[Emit: NodeV3OptOutMetadataUpdated { node_id, 
-         metadata: Some(v4_account_bytes) }]
+    A -->|2| G["set_node_v3_opt_out_metadata(node_id, v4_account_bytes)"]
+    G --> H["Guard: caller twin == farm owner twin"]
+    H --> I["Guard: NodeV3BillingOptOut[node_id] exists"]
+    I --> J["Guard: len(metadata) ≤ 256"]
+    J --> K["Insert: NodeV3OptOutMetadata[node_id] = v4_account_bytes"]
+    K --> L["Emit: NodeV3OptOutMetadataUpdated { node_id, metadata: Some(v4_account_bytes) }"]
 ```
 
 After step 2, `NodeV3OptOutMetadata[node_id]` holds the farmer's v4 account address (or any agreed-upon linking payload).
@@ -131,22 +130,22 @@ When a node registers or reports uptime on the v4 marketplace, the marketplace v
 
 ```mermaid
 graph TD
-    A[V4 Marketplace Verifier] -->|1| B[Query TFChain: NodeV3BillingOptOut[node_id]]
-    B --> C{None?}
-    C -->|Yes| D[Node is NOT in migration window, reject]
-    C -->|Some(opted_out_at)| E[Node is opted out, continue]
+    A["V4 Marketplace Verifier"] -->|1| B["Query TFChain: NodeV3BillingOptOut[node_id]"]
+    B --> C{"None?"}
+    C -->|Yes| D["Node is NOT in migration window, reject"]
+    C -->|Some opted_out_at| E["Node is opted out, continue"]
     
-    E -->|2| F[Query TFChain: NodeV3OptOutMetadata[node_id]]
-    F --> G{None?}
-    G -->|Yes| H[Treat as unlinked]
-    G -->|Some(metadata)| I[Decode as v4 account address]
+    E -->|2| F["Query TFChain: NodeV3OptOutMetadata[node_id]"]
+    F --> G{"None?"}
+    G -->|Yes| H["Treat as unlinked"]
+    G -->|Some metadata| I["Decode as v4 account address"]
     
-    I -->|3| J[Verify v4 account matches node's reported account]
-    J --> K{Match?}
-    K -->|Mismatch| L[Reject; farmer must update metadata]
-    K -->|Match| M[Node verified as legitimately transitioned]
+    I -->|3| J["Verify v4 account matches node's reported account"]
+    J --> K{"Match?"}
+    K -->|Mismatch| L["Reject; farmer must update metadata"]
+    K -->|Match| M["Node verified as legitimately transitioned"]
     
-    M -->|4| N[Attribute node resources and uptime to verified v4 account]
+    M -->|4| N["Attribute node resources and uptime to verified v4 account"]
 ```
 
 ### Metadata Content Convention
