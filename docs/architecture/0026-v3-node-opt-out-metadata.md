@@ -119,7 +119,7 @@ graph TD
     H --> I["Guard: NodeV3BillingOptOut[node_id] exists"]
     I --> J["Guard: len(metadata) ≤ 256"]
     J --> K["Insert: NodeV3OptOutMetadata[node_id] = v4_account_bytes"]
-    K --> L["Emit: NodeV3OptOutMetadataUpdated { node_id, metadata: Some(v4_account_bytes) }"]
+    K --> L["Emit: NodeV3OptOutMetadataUpdated { node_id,<br/>metadata: Some(v4_account_bytes) }"]
 ```
 
 After step 2, `NodeV3OptOutMetadata[node_id]` holds the farmer's v4 account address (or any agreed-upon linking payload).
