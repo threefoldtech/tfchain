@@ -1378,7 +1378,7 @@ pub mod pallet {
 
         // Council adds an account to the twin admin list (allowed to deploy on opted-out nodes)
         #[pallet::call_index(44)]
-        #[pallet::weight(<T as Config>::WeightInfo::add_twin_admin())]
+        #[pallet::weight(<T as Config>::WeightInfo::add_twin_admin(AllowedTwinAdmins::<T>::get().as_ref().map(|v| v.len()).unwrap_or(0) as u32 + 1))]
         pub fn add_twin_admin(
             origin: OriginFor<T>,
             account: T::AccountId,
@@ -1389,7 +1389,7 @@ pub mod pallet {
 
         // Council removes an account from the twin admin list
         #[pallet::call_index(45)]
-        #[pallet::weight(<T as Config>::WeightInfo::remove_twin_admin())]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_twin_admin(AllowedTwinAdmins::<T>::get().as_ref().map(|v| v.len()).unwrap_or(0) as u32 - 1))]
         pub fn remove_twin_admin(
             origin: OriginFor<T>,
             account: T::AccountId,
