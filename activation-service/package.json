@@ -1,6 +1,6 @@
 {
   "name": "substrate-funding-service",
-  "version": "2.11.0",
+  "version": "2.12.0",
   "description": "Substrate funding service",
   "main": "index.js",
   "scripts": {
