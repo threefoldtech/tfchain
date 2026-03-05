@@ -1,7 +1,6 @@
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api')
 const crypto = require('@polkadot/util-crypto')
 const bip39 = require('bip39')
-const types = require('../types.json')
 const {
   getEntity, deleteEntity,
   createEntity, updateEntity,
@@ -388,7 +387,7 @@ async function getPolkaAPI(url) {
   }
 
   const provider = new WsProvider(url)
-  return ApiPromise.create({ provider, types })
+  return ApiPromise.create({ provider })
 }
 
 module.exports = { Client }
