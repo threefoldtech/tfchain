@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -24,6 +25,7 @@ type Bridge struct {
 	wallet           *stellar.StellarWallet
 	subClient        *subpkg.SubstrateClient
 	blockPersistency *pkg.ChainPersistency
+	idempotency      *pkg.IdempotencyStore
 	config           *pkg.BridgeConfig
 	depositFee       int64
 }
@@ -64,9 +66,17 @@ func NewBridge(ctx context.Context, cfg pkg.BridgeConfig) (*Bridge, string, erro
 		return nil, "", err
 	}
 
+	// Initialize idempotency store alongside the persistency file
+	idempotencyPath := cfg.PersistencyFile + ".idem.db"
+	idempotency, err := pkg.NewIdempotencyStore(idempotencyPath)
+	if err != nil {
+		return nil, "", err
+	}
+
 	bridge := &Bridge{
 		subClient:        subClient,
 		blockPersistency: blockPersistency,
+		idempotency:      idempotency,
 		wallet:           wallet,
 		config:           &cfg,
 		depositFee:       depositFee,
@@ -106,13 +116,22 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 			Bool("rescan_flag", bridge.config.RescanBridgeAccount).
 			Int64("deposit_fee", bridge.depositFee)).
 		Msg("the bridge instance has started")
+
+	// Close idempotency store when Start returns
+	defer bridge.idempotency.Close()
+
+	// Reconcile any PROCESSING transactions from a previous run that may have
+	// crashed between Stellar submit and TFChain confirmation
+	if err := bridge.reconcilePendingTransactions(ctx); err != nil {
+		return errors.Wrap(err, "startup reconciliation failed")
+	}
+
 	height, err := bridge.blockPersistency.GetHeight()
 	if err != nil {
 		return errors.Wrap(err, "an error occurred while reading block height from persistency")
 	}
 
-	log.Debug().
-		Msg("The Stellar subscription is starting")
+	log.Debug().Msg("The Stellar subscription is starting")
 	stellarSub := make(chan stellar.MintEventSubscription)
 	go func() {
 		defer close(stellarSub)
@@ -146,37 +165,17 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 		select {
 		case data := <-tfchainSub:
 			if data.Err != nil {
-				return errors.Wrap(err, "failed to get tfchain events")
+				return errors.Wrap(data.Err, "failed to get tfchain events")
 			}
-			for _, withdrawCreatedEvent := range data.Events.WithdrawCreatedEvents {
-				err := bridge.handleWithdrawCreated(ctx, withdrawCreatedEvent)
-				if err != nil {
-					// If the TX is already withdrawn or refunded (minted on tfchain) skip
-					if errors.Is(err, pkg.ErrTransactionAlreadyBurned) || errors.Is(err, pkg.ErrTransactionAlreadyMinted) {
-						continue
-					}
-					return errors.Wrap(err, "an error occurred while handling WithdrawCreatedEvents")
-				}
-			}
-			for _, withdrawExpiredEvent := range data.Events.WithdrawExpiredEvents {
-				err := bridge.handleWithdrawExpired(ctx, withdrawExpiredEvent)
-				if err != nil {
-					return errors.Wrap(err, "an error occurred while handling WithdrawExpiredEvents")
-				}
-			}
-			for _, withdawReadyEvent := range data.Events.WithdrawReadyEvents {
-				err := bridge.handleWithdrawReady(ctx, withdawReadyEvent)
+
+			// Process Ready events FIRST — they are time-sensitive (signatures expire in ~2 min)
+			for _, withdrawReadyEvent := range data.Events.WithdrawReadyEvents {
+				err := bridge.handleWithdrawReady(ctx, withdrawReadyEvent)
 				if err != nil {
 					if errors.Is(err, pkg.ErrTransactionAlreadyBurned) {
 						continue
 					}
 					return errors.Wrap(err, "an error occurred while handling WithdrawReadyEvents")
-				}
-			}
-			for _, refundExpiredEvent := range data.Events.RefundExpiredEvents {
-				err := bridge.handleRefundExpired(ctx, refundExpiredEvent)
-				if err != nil {
-					return errors.Wrap(err, "an error occurred while handling RefundExpiredEvents")
 				}
 			}
 			for _, refundReadyEvent := range data.Events.RefundReadyEvents {
@@ -188,9 +187,29 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 					return errors.Wrap(err, "an error occurred while handling RefundReadyEvents")
 				}
 			}
+
+			// Then process expired events
+			for _, withdrawExpiredEvent := range data.Events.WithdrawExpiredEvents {
+				err := bridge.handleWithdrawExpired(ctx, withdrawExpiredEvent)
+				if err != nil {
+					return errors.Wrap(err, "an error occurred while handling WithdrawExpiredEvents")
+				}
+			}
+			for _, refundExpiredEvent := range data.Events.RefundExpiredEvents {
+				err := bridge.handleRefundExpired(ctx, refundExpiredEvent)
+				if err != nil {
+					return errors.Wrap(err, "an error occurred while handling RefundExpiredEvents")
+				}
+			}
+
+			// Finally, batch-process Created events (proposals) — these are
+			// the least time-sensitive and benefit most from batching
+			if err := bridge.handleWithdrawCreatedBatch(ctx, data.Events.WithdrawCreatedEvents); err != nil {
+				return errors.Wrap(err, "an error occurred while handling WithdrawCreatedEvents")
+			}
 		case data := <-stellarSub:
 			if data.Err != nil {
-				return errors.Wrap(err, "failed to get stellar payments")
+				return errors.Wrap(data.Err, "failed to get stellar payments")
 			}
 
 			for _, mEvent := range data.Events {
@@ -221,4 +240,73 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+// reconcilePendingTransactions handles crash recovery by checking all transactions
+// that were in PROCESSING state when the bridge last shut down. For each one,
+// it checks whether the Stellar tx was actually submitted, and if so, completes
+// the TFChain confirmation step.
+func (bridge *Bridge) reconcilePendingTransactions(ctx context.Context) error {
+	log.Info().Msg("reconciling pending transactions from previous run...")
+
+	// Reconcile pending withdraws
+	pendingWithdraws, err := bridge.idempotency.GetPendingWithdraws()
+	if err != nil {
+		return errors.Wrap(err, "failed to get pending withdraws")
+	}
+	for _, txID := range pendingWithdraws {
+		log.Info().Uint64("tx_id", txID).Msg("reconciling pending withdraw")
+
+		stellarTx, err := bridge.wallet.FindPaymentByMemo(ctx, fmt.Sprint(txID))
+		if err != nil {
+			log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to check Horizon for pending withdraw")
+			continue
+		}
+		if stellarTx != nil {
+			log.Info().Uint64("tx_id", txID).Msg("found existing Stellar tx, completing TFChain confirmation")
+			if err := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); err != nil {
+				log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to set withdraw executed during reconciliation")
+				continue
+			}
+			if err := bridge.idempotency.MarkWithdrawCompleted(txID); err != nil {
+				log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to mark withdraw completed during reconciliation")
+			}
+		} else {
+			log.Info().Uint64("tx_id", txID).Msg("no Stellar tx found, will retry on next event")
+		}
+	}
+
+	// Reconcile pending refunds
+	pendingRefunds, err := bridge.idempotency.GetPendingRefunds()
+	if err != nil {
+		return errors.Wrap(err, "failed to get pending refunds")
+	}
+	for _, txHash := range pendingRefunds {
+		log.Info().Str("tx_hash", txHash).Msg("reconciling pending refund")
+
+		stellarTx, err := bridge.wallet.FindRefundByReturnHash(ctx, txHash)
+		if err != nil {
+			log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to check Horizon for pending refund")
+			continue
+		}
+		if stellarTx != nil {
+			log.Info().Str("tx_hash", txHash).Msg("found existing Stellar refund tx, completing TFChain confirmation")
+			if err := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, txHash); err != nil {
+				log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to set refund executed during reconciliation")
+				continue
+			}
+			if err := bridge.idempotency.MarkRefundCompleted(txHash); err != nil {
+				log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to mark refund completed during reconciliation")
+			}
+		} else {
+			log.Info().Str("tx_hash", txHash).Msg("no Stellar tx found for refund, will retry on next event")
+		}
+	}
+
+	log.Info().
+		Int("pending_withdraws", len(pendingWithdraws)).
+		Int("pending_refunds", len(pendingRefunds)).
+		Msg("reconciliation complete")
+
+	return nil
 }

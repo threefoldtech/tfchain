@@ -189,6 +189,69 @@ func (w *StellarWallet) CreateRefundAndReturnSignature(ctx context.Context, targ
 	return base64.StdEncoding.EncodeToString(signatures[0].Signature), uint64(txn.SequenceNumber()), nil
 }
 
+// FindPaymentByMemo searches recent transactions on the bridge account for a
+// payment with a matching text memo. This is used during crash recovery to
+// determine if a Stellar transaction was already submitted for a given withdraw ID.
+// Returns nil, nil if no matching transaction is found.
+func (w *StellarWallet) FindPaymentByMemo(ctx context.Context, memo string) (*hProtocol.Transaction, error) {
+	client, err := w.getHorizonClient()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get horizon client for memo lookup")
+	}
+
+	req := horizonclient.TransactionRequest{
+		ForAccount: w.config.StellarBridgeAccount,
+		Order:      horizonclient.OrderDesc,
+		Limit:      200,
+	}
+
+	resp, err := client.Transactions(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query horizon for memo lookup")
+	}
+
+	for _, tx := range resp.Embedded.Records {
+		if tx.MemoType == "text" && tx.Memo == memo {
+			txCopy := tx
+			return &txCopy, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// FindRefundByReturnHash searches recent transactions on the bridge account for a
+// refund payment with a matching MemoReturn hash. This is used during crash recovery
+// to determine if a Stellar refund transaction was already submitted for a given tx hash.
+// Returns nil, nil if no matching transaction is found.
+func (w *StellarWallet) FindRefundByReturnHash(ctx context.Context, txHash string) (*hProtocol.Transaction, error) {
+	client, err := w.getHorizonClient()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get horizon client for refund memo lookup")
+	}
+
+	req := horizonclient.TransactionRequest{
+		ForAccount: w.config.StellarBridgeAccount,
+		Order:      horizonclient.OrderDesc,
+		Limit:      200,
+	}
+
+	resp, err := client.Transactions(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query horizon for refund memo lookup")
+	}
+
+	// MemoReturn stores the hash as hex-encoded in the Horizon API response
+	for _, tx := range resp.Embedded.Records {
+		if tx.MemoType == "return" && tx.Memo == txHash {
+			txCopy := tx
+			return &txCopy, nil
+		}
+	}
+
+	return nil, nil
+}
+
 func (w *StellarWallet) CheckAccount(account string) error {
 	acc, err := w.getAccountDetails(account)
 	if err != nil {

@@ -161,6 +161,42 @@ func (s *SubstrateClient) RetrySetRefundTransactionExecutedTx(ctx context.Contex
 	return nil
 }
 
+// BurnProposal holds the parameters for a single ProposeBurnTransactionOrAddSig call.
+type BurnProposal struct {
+	TxID           uint64
+	Target         string
+	Amount         *big.Int
+	Signature      string
+	StellarAddress string
+	SequenceNumber uint64
+}
+
+// BatchProposeWithdrawOrAddSig submits multiple ProposeBurnTransactionOrAddSig calls
+// as a single Utility.batch extrinsic. Individual failures do not abort the batch.
+func (s *SubstrateClient) BatchProposeWithdrawOrAddSig(ctx context.Context, proposals []BurnProposal) (*substrate.BatchResult, error) {
+	if len(proposals) == 0 {
+		return &substrate.BatchResult{}, nil
+	}
+
+	_, meta, err := s.GetClient()
+	if err != nil {
+		return nil, err
+	}
+
+	calls := make([]types.Call, 0, len(proposals))
+	for _, p := range proposals {
+		c, err := types.NewCall(meta, "TFTBridgeModule.propose_burn_transaction_or_add_sig",
+			p.TxID, p.Target, types.U64(p.Amount.Uint64()), p.Signature, p.StellarAddress, p.SequenceNumber,
+		)
+		if err != nil {
+			return nil, err
+		}
+		calls = append(calls, c)
+	}
+
+	return s.BatchCalls(s.identity, calls)
+}
+
 func (s *SubstrateClient) RetryProposeMintOrVote(ctx context.Context, txID string, target substrate.AccountID, amount *big.Int) error {
 	err := s.ProposeOrVoteMintTransaction(s.identity, txID, target, amount)
 	for err != nil {

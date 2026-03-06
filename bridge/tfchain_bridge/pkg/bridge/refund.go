@@ -70,12 +70,55 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 
 func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent subpkg.RefundTransactionReadyEvent) error {
 	logger := log.Logger.With().Str("trace_id", refundReadyEvent.Hash).Logger()
-	refunded, err := bridge.subClient.IsRefundedAlready(refundReadyEvent.Hash)
+	txHash := refundReadyEvent.Hash
+
+	// 1. Check idempotency store
+	state, err := bridge.idempotency.GetRefundState(txHash)
 	if err != nil {
 		return err
 	}
+	if state == pkg.TxStateCompleted {
+		logger.Info().
+			Str("event_action", "refund_skipped").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Msg("idempotency: refund already completed, skipping")
+		return pkg.ErrTransactionAlreadyRefunded
+	}
 
+	// 2. If PROCESSING, check if Stellar tx was already submitted (crash recovery)
+	if state == pkg.TxStateProcessing {
+		logger.Warn().
+			Str("event_action", "refund_crash_recovery").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Msg("idempotency: refund in PROCESSING state (possible crash recovery)")
+
+		stellarTx, err := bridge.wallet.FindRefundByReturnHash(ctx, txHash)
+		if err != nil {
+			return err
+		}
+		if stellarTx != nil {
+			logger.Info().
+				Str("event_action", "refund_recovered").
+				Str("event_kind", "event").
+				Str("category", "refund").
+				Msg("idempotency: found existing Stellar tx for this refund, completing TFChain confirmation")
+			if err := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, txHash); err != nil {
+				return err
+			}
+			return bridge.idempotency.MarkRefundCompleted(txHash)
+		}
+		logger.Info().Msg("idempotency: no Stellar tx found for refund, safe to retry")
+	}
+
+	// 3. Check TFChain: already refunded?
+	refunded, err := bridge.subClient.IsRefundedAlready(txHash)
+	if err != nil {
+		return err
+	}
 	if refunded {
+		_ = bridge.idempotency.MarkRefundCompleted(txHash)
 		logger.Info().
 			Str("event_action", "refund_skipped").
 			Str("event_kind", "event").
@@ -84,11 +127,11 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 		return pkg.ErrTransactionAlreadyRefunded
 	}
 
-	refund, err := bridge.subClient.GetRefundTransaction(refundReadyEvent.Hash)
+	// 4. Get refund tx with signatures
+	refund, err := bridge.subClient.GetRefundTransaction(txHash)
 	if err != nil {
 		return err
 	}
-
 	if len(refund.Signatures) == 0 {
 		logger.Info().
 			Str("event_action", "refund_postponed").
@@ -98,15 +141,33 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 		return nil
 	}
 
-	// Todo, retry here?
-	if err = bridge.wallet.CreateRefundPaymentWithSignaturesAndSubmit(ctx, refund.Target, uint64(refund.Amount), refund.TxHash, refund.Signatures, int64(refund.SequenceNumber)); err != nil {
+	// 5. Mark PROCESSING before Stellar submit
+	if err := bridge.idempotency.MarkRefundProcessing(txHash); err != nil {
 		return err
 	}
 
-	err = bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, refund.TxHash)
-	if err != nil {
+	// 6. Submit to Stellar
+	if err = bridge.wallet.CreateRefundPaymentWithSignaturesAndSubmit(ctx, refund.Target, uint64(refund.Amount), refund.TxHash, refund.Signatures, int64(refund.SequenceNumber)); err != nil {
+		logger.Info().
+			Str("event_action", "refund_postponed").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Dict("metadata", zerolog.Dict().
+				Str("reason", err.Error())).
+			Msgf("the refund has been postponed due to a problem in sending this transaction to the stellar network. error was %s", err.Error())
+		return nil // leave as PROCESSING, will reconcile on next attempt
+	}
+
+	// 7. Mark executed on TFChain
+	if err := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, refund.TxHash); err != nil {
 		return err
 	}
+
+	// 8. Mark COMPLETED
+	if err := bridge.idempotency.MarkRefundCompleted(txHash); err != nil {
+		return err
+	}
+
 	logger.Info().
 		Str("event_action", "refund_completed").
 		Str("event_kind", "event").
