@@ -1,11 +1,11 @@
 module github.com/threefoldtech/tfchain/bridge/tfchain_bridge
 
-go 1.23
+go 1.21
 
 require (
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.12
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/pflag v1.0.6
+	github.com/spf13/pflag v1.0.5
 )
 
 require (
@@ -15,7 +15,7 @@ require (
 	github.com/rs/zerolog v1.26.0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/stellar/go v0.0.0-20210922122349-e6f322c047c5
-	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/vedhavyas/go-subkey v1.0.3
 )
 
@@ -50,10 +50,10 @@ require (
 	github.com/rs/cors v1.8.2 // indirect
 	github.com/segmentio/go-loggly v0.5.1-0.20171222203950-eb91657e62b2 // indirect
 	github.com/stellar/go-xdr v0.0.0-20201028102745-f80a23dac78a // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
-	go.etcd.io/bbolt v1.4.3 // indirect
+	github.com/stretchr/testify v1.8.1 // indirect
+	go.etcd.io/bbolt v1.3.9
 	golang.org/x/crypto v0.7.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
