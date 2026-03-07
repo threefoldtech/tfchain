@@ -11,7 +11,7 @@ This document will explain how you can transfer TFT from TF Chain to Stellar and
 
 ## Stellar to TF Chain
 
-Transfer the TFT from your Stellar wallet to bridge wallet address that you configured. A depositfee of 1 TFT will be taken, so make sure you send a larger amount as 1 TFT.
+Transfer the TFT from your Stellar wallet to bridge wallet address that you configured. A depositfee will be taken (10 TFT on mainnet/testnet by default), so make sure you send a larger amount than the fee.
 
 ### Transfer to TF Chain
 
@@ -29,7 +29,7 @@ To deposit to a TF Grid object, this object **must** exists. If the object is no
 ## TF Chain to Stellar
 
 Browse to https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.grid.tf#/extrinsics (for mainnet), select tftBridgeModule and extrinsic: `swap_to_stellar()`. Provide your stellar target address and amount and sign it with your account holding the tft balance.
-Again, a withdrawfee of 1 TFT will be taken, so make sure you send a larger amount as 1 TFT.
+Again, a withdrawfee will be taken (10 TFT on mainnet/testnet by default), so make sure you send a larger amount than the fee.
 
 The amount withdrawn from TF Chain will be sent to your Stellar wallet.
 
