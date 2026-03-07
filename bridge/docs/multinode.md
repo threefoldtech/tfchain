@@ -41,7 +41,9 @@ Following predefined tfchain keys can be used to start a bridge daemon:
 
 By default, only 1 bridge validator is inserted in the tfchain runtime. In this example we will run a 3 node bridge setup, so we need to add 2 keys to the bridge validators on tfchain.
 
-> **Note:** tfchain does **not** have a `sudo` pallet. `addBridgeValidator` is a restricted call gated by `EnsureRootOrCouncilApproval` (council 3/5 threshold). In `--dev` mode, Alice is the sole council member so a council proposal from Alice satisfies the threshold immediately.
+> **Note:** tfchain does **not** have a `sudo` pallet. `addBridgeValidator` is a restricted call
+> gated by `EnsureRootOrCouncilApproval` (council 3/5 threshold). In `--dev` mode, Alice is the
+> sole council member so a council proposal from Alice satisfies the threshold immediately.
 
 - Open: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics
 - Select "Alice" account
@@ -99,7 +101,13 @@ Now Open a second terminal pane and execute:
 Now open a third teminal pane and execute:
 
 ```sh
-./tfchain_bridge --secret SBFMRNGJQ5NMVXJKDMSBHDDCHVXOJE4E7A62A4MHAD4A5DH5RU5ONWVK --tfchainurl ws://localhost:9944 --tfchainseed "remind bird banner word spread volume card keep want faith insect mind" --bridgewallet GAYJSBPBQ3J32CZZ72OM3GZP646KSVD3V5QB3WBJSSGPYHYS5MZSS4Z6 --persistency ./signer3.json --network testnet
+./tfchain_bridge \
+  --secret SBFMRNGJQ5NMVXJKDMSBHDDCHVXOJE4E7A62A4MHAD4A5DH5RU5ONWVK \
+  --tfchainurl ws://localhost:9944 \
+  --tfchainseed "remind bird banner word spread volume card keep want faith insect mind" \
+  --bridgewallet GAYJSBPBQ3J32CZZ72OM3GZP646KSVD3V5QB3WBJSSGPYHYS5MZSS4Z6 \
+  --persistency ./signer3.json \
+  --network testnet
 ```
 
 If all goes well, you should see something similar to following output:
@@ -146,7 +154,10 @@ Now, request some Testnet TFT by doing a swap on the stellar dex using the same 
 
 Given this command did not give an error, your account you just generated now has 100 TFT.
 
-> **Note:** The `stellar-utils faucet` command may fail on Stellar testnet if there are no active TFT orders on the DEX order book. See [setup_issues_and_workarounds.md](./setup_issues_and_workarounds.md#11-stellar-testnet-tft-faucet-has-no-liquidity) for the workaround.
+> **Note:** The `stellar-utils faucet` command may fail on Stellar testnet if there are no active
+> TFT orders on the DEX order book. See
+> [setup_issues_and_workarounds.md](./setup_issues_and_workarounds.md#11-stellar-testnet-tft-faucet-has-no-liquidity)
+> for the workaround.
 
 ## Step 4: Deposit TFT to the bridge
 

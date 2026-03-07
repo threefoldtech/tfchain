@@ -82,7 +82,12 @@ Now, request some Testnet TFT by doing a swap on the stellar dex using the same 
 
 Given this command did not give an error, your account you just generated now has 100 TFT.
 
-> **Note:** The `stellar-utils faucet` command performs a DEX path payment (XLM → TFT). On Stellar testnet this may fail with a path payment error if there are no active TFT orders on the testnet DEX order book. If you encounter this, ask a team member who operates the testnet TFT issuer to send you testnet TFT directly, or refer to [setup_issues_and_workarounds.md](./setup_issues_and_workarounds.md#11-stellar-testnet-tft-faucet-has-no-liquidity) for the custom issuer workaround.
+> **Note:** The `stellar-utils faucet` command performs a DEX path payment (XLM → TFT). On
+> Stellar testnet this may fail with a path payment error if there are no active TFT orders on
+> the testnet DEX order book. If you encounter this, ask a team member who operates the testnet
+> TFT issuer to send you testnet TFT directly, or refer to
+> [setup_issues_and_workarounds.md](./setup_issues_and_workarounds.md#11-stellar-testnet-tft-faucet-has-no-liquidity)
+> for the custom issuer workaround.
 
 ## Step 4: Deposit TFT to the bridge
 

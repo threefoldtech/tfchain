@@ -1,6 +1,8 @@
 # Bridge Local Development Setup & Validation
 
-This document describes how to set up a complete local bridge environment for development and testing, including full end-to-end validation of both transfer directions, crash recovery (#1054), and batch proposal behavior (#1053).
+This document describes how to set up a complete local bridge environment for development and
+testing, including full end-to-end validation of both transfer directions, crash recovery (#1054),
+and batch proposal behavior (#1053).
 
 > **Note:** See [setup_issues_and_workarounds.md](./setup_issues_and_workarounds.md) for known pitfalls and their resolutions.
 
@@ -57,6 +59,7 @@ curl -s -H "Content-Type: application/json" \
 
 The bridge requires a twin to route deposits. Use polkadot.js or the following Node.js script:
 
+<!-- markdownlint-disable MD013 -->
 ```javascript
 // create_twin.mjs
 import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
@@ -69,6 +72,7 @@ await api.tx.tfgridModule.createTwin(null, null).signAndSend(alice);
 await new Promise(r => setTimeout(r, 6000));
 await api.disconnect();
 ```
+<!-- markdownlint-enable MD013 -->
 
 ```bash
 node create_twin.mjs
@@ -101,7 +105,9 @@ Add trustlines and issue TFT (Node.js with `stellar-sdk`):
 // 2. Issue 10,000 TFT to bridge, 1,000 TFT to user from custom issuer
 ```
 
-> **Testnet only:** The custom issuer `GDPARZINMN52LJMVZSQPOEDHC2TWKJVFZSNHKDP4OUH6RI4PMXH4JA6Q` is used exclusively for local testing. Mainnet uses `GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47`.
+> **Testnet only:** The custom issuer `GDPARZINMN52LJMVZSQPOEDHC2TWKJVFZSNHKDP4OUH6RI4PMXH4JA6Q`
+> is used exclusively for local testing. Mainnet uses
+> `GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47`.
 
 You must also patch `TFTTest` in `bridge/tfchain_bridge/pkg/stellar/stellar.go` to use the custom issuer address, then rebuild.
 
@@ -125,6 +131,7 @@ go vet ./... && echo "vet OK"
 
 ## Step 6 — Start the Bridge
 
+<!-- markdownlint-disable MD013 -->
 ```bash
 cd ~/projects/tfchain/bridge/tfchain_bridge
 ./tfchain_bridge_test \
@@ -137,6 +144,7 @@ cd ~/projects/tfchain/bridge/tfchain_bridge
   > /tmp/bridge.log 2>&1 &
 echo "Bridge PID: $!"
 ```
+<!-- markdownlint-enable MD013 -->
 
 Flags:
 
@@ -233,7 +241,9 @@ curl -s "https://horizon-testnet.stellar.org/accounts/GBXIQP76.../payments?order
 
 ### TEST 3 — Crash Recovery / Idempotent Stellar Submission (#1054)
 
-**Purpose:** Verify that if the bridge crashes after marking a tx as PROCESSING but before completing TFChain confirmation, a restart correctly handles the in-flight transaction without double-spending.
+**Purpose:** Verify that if the bridge crashes after marking a tx as PROCESSING but before
+completing TFChain confirmation, a restart correctly handles the in-flight transaction without
+double-spending.
 
 **Setup:** The idempotency store is a bbolt DB at `<persistency>.idem.db`. It tracks two states per tx:
 
@@ -252,6 +262,7 @@ curl -s "https://horizon-testnet.stellar.org/accounts/GBXIQP76.../payments?order
 5. On next `BurnTransactionReady` event: bridge safely retries the Stellar submission
 
 **Inspect idempotency DB:**
+<!-- markdownlint-disable MD013 -->
 ```go
 // read_idem.go — inspect bbolt state
 package main
@@ -275,6 +286,7 @@ func main() {
     })
 }
 ```
+<!-- markdownlint-enable MD013 -->
 
 **Verify:**
 ```bash
@@ -292,7 +304,11 @@ go run /tmp/read_idem.go
 - Idempotency DB showed COMPLETED after recovery
 
 **Note on path 2 (crash after Stellar submission):**
-The code path for detecting an already-submitted Stellar tx (via `FindPaymentByMemo`) and completing only the TFChain confirmation is correct, but triggering it reliably in automation requires killing the bridge in a sub-second window between Stellar submit and TFChain confirm. Manual inspection of the code and Horizon API confirms correctness. The Stellar memo fix (issue #12 in this doc) is required for this path to work.
+The code path for detecting an already-submitted Stellar tx (via `FindPaymentByMemo`) and
+completing only the TFChain confirmation is correct, but triggering it reliably in automation
+requires killing the bridge in a sub-second window between Stellar submit and TFChain confirm.
+Manual inspection of the code and Horizon API confirms correctness. The Stellar memo fix
+(issue #12 in this doc) is required for this path to work.
 
 ---
 
@@ -360,6 +376,9 @@ Before submitting a PR, verify:
 
 2. **Stellar testnet liquidity**: `stellar-utils faucet` is broken on testnet (empty DEX order book). Requires custom issuer workaround (see issue #11 above).
 
-3. **Crash recovery window**: The exact scenario of crash-after-Stellar-submit-before-TFChain-confirm is difficult to trigger in automation due to the sub-second window. The code is correct and tested for correctness; the timing scenario is documented as a known limitation of the automated test suite.
+3. **Crash recovery window**: The exact scenario of crash-after-Stellar-submit-before-TFChain-confirm
+   is difficult to trigger in automation due to the sub-second window. The code is correct and
+   tested for correctness; the timing scenario is documented as a known limitation of the
+   automated test suite.
 
 4. **`--tmp` chain**: The `--tmp` flag means chain state is lost on restart. For persistence across sessions, use `--base-path /tmp/tfchain-data` instead.
