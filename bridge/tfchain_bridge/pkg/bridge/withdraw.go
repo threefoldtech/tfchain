@@ -92,7 +92,7 @@ func (bridge *Bridge) handleWithdrawCreatedBatch(ctx context.Context, events []s
 		batchProposals = append(batchProposals, subpkg.BurnProposal{
 			TxID:           p.event.ID,
 			Target:         p.event.Target,
-			Amount:         big.NewInt(int64(p.event.Amount)),
+			Amount:         new(big.Int).SetUint64(p.event.Amount),
 			Signature:      p.signature,
 			StellarAddress: bridge.wallet.GetKeypair().Address(),
 			SequenceNumber: p.sequenceNumber,
@@ -104,7 +104,7 @@ func (bridge *Bridge) handleWithdrawCreatedBatch(ctx context.Context, events []s
 		// On batch failure, fall back to individual submissions
 		log.Warn().Err(err).Msg("batch proposal failed, falling back to individual submissions")
 		for _, p := range proposals {
-			if err := bridge.subClient.RetryProposeWithdrawOrAddSig(ctx, p.event.ID, p.event.Target, big.NewInt(int64(p.event.Amount)), p.signature, bridge.wallet.GetKeypair().Address(), p.sequenceNumber); err != nil {
+			if err := bridge.subClient.RetryProposeWithdrawOrAddSig(ctx, p.event.ID, p.event.Target, new(big.Int).SetUint64(p.event.Amount), p.signature, bridge.wallet.GetKeypair().Address(), p.sequenceNumber); err != nil {
 				log.Warn().Err(err).Uint64("tx_id", p.event.ID).Msg("individual proposal also failed")
 			}
 		}
@@ -280,6 +280,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 			Str("category", "withdraw").
 			Msg("idempotency: withdraw in PROCESSING state (possible crash recovery)")
 
+		// Primary check: look for a tx with matching memo (current bridge behaviour)
 		stellarTx, err := bridge.wallet.FindPaymentByMemo(ctx, txKey)
 		if err != nil {
 			return err
@@ -289,13 +290,40 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 				Str("event_action", "withdraw_recovered").
 				Str("event_kind", "event").
 				Str("category", "withdraw").
-				Msg("idempotency: found existing Stellar tx for this withdraw, completing TFChain confirmation")
+				Msg("idempotency: found existing Stellar tx by memo, completing TFChain confirmation")
 			if err := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); err != nil {
 				return err
 			}
 			return bridge.idempotency.MarkWithdrawCompleted(txID)
 		}
-		logger.Info().Msg("idempotency: no Stellar tx found, safe to retry")
+
+		// Fallback: look for a tx by sequence number, covering pre-upgrade submissions
+		// that were made without a memo. The sequence number stored in the TFChain burn tx
+		// is the exact sequence used when building the Stellar tx, uniquely identifying it.
+		// Since the bridge is stopped during upgrades, no new outgoing txs can appear
+		// between the old submission and this lookup, so 200 records is always sufficient.
+		burnTxForSeq, err := bridge.subClient.GetBurnTransaction(types.U64(txID))
+		if err != nil {
+			return err
+		}
+		stellarTxBySeq, err := bridge.wallet.FindPaymentBySequence(ctx, int64(burnTxForSeq.SequenceNumber))
+		if err != nil {
+			return err
+		}
+		if stellarTxBySeq != nil {
+			logger.Info().
+				Str("event_action", "withdraw_recovered").
+				Str("event_kind", "event").
+				Str("category", "withdraw").
+				Int64("sequence_number", int64(burnTxForSeq.SequenceNumber)).
+				Msg("idempotency: found pre-upgrade Stellar tx by sequence number (no memo), completing TFChain confirmation")
+			if err := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); err != nil {
+				return err
+			}
+			return bridge.idempotency.MarkWithdrawCompleted(txID)
+		}
+
+		logger.Info().Msg("idempotency: no Stellar tx found by memo or sequence, safe to retry")
 	}
 
 	// 3. Check TFChain: already burned?

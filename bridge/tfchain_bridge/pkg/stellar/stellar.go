@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
-	"fmt"
-	"math/big"
 	"encoding/json"
+	"fmt"
+	"io"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -204,31 +205,43 @@ func (w *StellarWallet) CreateRefundAndReturnSignature(ctx context.Context, targ
 // which filters server-side to only transactions where the bridge account is the source.
 // This guarantees the limit covers that many actual outgoing (withdraw/refund) transactions,
 // regardless of how many incoming deposit transactions exist on the account.
+// It reuses the Horizon client's HTTP transport (which has timeouts configured) and
+// validates the HTTP status code before decoding to avoid misreporting Horizon errors
+// as "no transaction found".
 func (w *StellarWallet) fetchOutgoingTransactions(ctx context.Context, limit uint) (hProtocol.TransactionsPage, error) {
 	client, err := w.getHorizonClient()
 	if err != nil {
 		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to get horizon client")
 	}
 
-	url := fmt.Sprintf("%stransactions?source_account=%s&order=desc&limit=%d",
+	reqURL := fmt.Sprintf("%stransactions?source_account=%s&order=desc&limit=%d",
 		strings.TrimRight(client.HorizonURL, "/")+"/",
 		w.config.StellarBridgeAccount,
 		limit,
 	)
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to build horizon request")
 	}
 
-	httpResp, err := http.DefaultClient.Do(httpReq)
+	// Reuse the Horizon client's HTTP transport which has timeouts configured
+	httpResp, err := client.HTTP.Do(httpReq)
 	if err != nil {
 		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to execute horizon request")
 	}
 	defer httpResp.Body.Close()
 
+	// Validate status before decoding — a non-200 response would decode as an empty
+	// TransactionsPage and cause crash recovery to falsely conclude "no tx found"
+	if httpResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(httpResp.Body, 1024))
+		return hProtocol.TransactionsPage{}, fmt.Errorf("horizon returned HTTP %d: %s", httpResp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	// Limit body size to protect against unexpectedly large responses
 	var page hProtocol.TransactionsPage
-	if err := json.NewDecoder(httpResp.Body).Decode(&page); err != nil {
+	if err := json.NewDecoder(io.LimitReader(httpResp.Body, 4*1024*1024)).Decode(&page); err != nil {
 		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to decode horizon response")
 	}
 
@@ -271,6 +284,32 @@ func (w *StellarWallet) FindRefundByReturnHash(ctx context.Context, txHash strin
 	// MemoReturn stores the hash as hex-encoded in the Horizon API response.
 	for _, tx := range resp.Embedded.Records {
 		if tx.MemoType == "return" && tx.Memo == txHash {
+			txCopy := tx
+			return &txCopy, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// FindPaymentBySequence searches the 200 most recent outgoing transactions from the
+// bridge account for one with a matching Stellar source account sequence number.
+// This is used as a fallback during crash recovery when the transaction was submitted
+// by an older bridge version that did not include a memo (pre-upgrade compatibility).
+// Since the bridge is stopped during upgrades, it cannot submit any outgoing transactions
+// while down, so the target tx is guaranteed to be within the 200 most recent records.
+// The sequence number stored in the TFChain burn tx is exactly the sequence used when
+// building the Stellar tx, making it a reliable unique identifier regardless of memo presence.
+// Returns nil, nil if no matching transaction is found.
+func (w *StellarWallet) FindPaymentBySequence(ctx context.Context, sequenceNumber int64) (*hProtocol.Transaction, error) {
+	resp, err := w.fetchOutgoingTransactions(ctx, 200)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query horizon for sequence lookup")
+	}
+
+	seqStr := strconv.FormatInt(sequenceNumber, 10)
+	for _, tx := range resp.Embedded.Records {
+		if tx.AccountSequence == seqStr {
 			txCopy := tx
 			return &txCopy, nil
 		}

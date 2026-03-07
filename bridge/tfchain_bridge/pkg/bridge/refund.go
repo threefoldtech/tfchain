@@ -94,6 +94,7 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 			Str("category", "refund").
 			Msg("idempotency: refund in PROCESSING state (possible crash recovery)")
 
+		// Primary check: look for a refund tx with matching MemoReturn hash (current bridge behaviour)
 		stellarTx, err := bridge.wallet.FindRefundByReturnHash(ctx, txHash)
 		if err != nil {
 			return err
@@ -103,13 +104,37 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 				Str("event_action", "refund_recovered").
 				Str("event_kind", "event").
 				Str("category", "refund").
-				Msg("idempotency: found existing Stellar tx for this refund, completing TFChain confirmation")
+				Msg("idempotency: found existing Stellar tx by return hash, completing TFChain confirmation")
 			if err := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, txHash); err != nil {
 				return err
 			}
 			return bridge.idempotency.MarkRefundCompleted(txHash)
 		}
-		logger.Info().Msg("idempotency: no Stellar tx found for refund, safe to retry")
+
+		// Fallback: look for a tx by sequence number, covering pre-upgrade submissions
+		// that were made without a memo. See FindPaymentBySequence for rationale.
+		refundTxForSeq, err := bridge.subClient.GetRefundTransaction(txHash)
+		if err != nil {
+			return err
+		}
+		stellarTxBySeq, err := bridge.wallet.FindPaymentBySequence(ctx, int64(refundTxForSeq.SequenceNumber))
+		if err != nil {
+			return err
+		}
+		if stellarTxBySeq != nil {
+			logger.Info().
+				Str("event_action", "refund_recovered").
+				Str("event_kind", "event").
+				Str("category", "refund").
+				Int64("sequence_number", int64(refundTxForSeq.SequenceNumber)).
+				Msg("idempotency: found pre-upgrade Stellar tx by sequence number (no memo), completing TFChain confirmation")
+			if err := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, txHash); err != nil {
+				return err
+			}
+			return bridge.idempotency.MarkRefundCompleted(txHash)
+		}
+
+		logger.Info().Msg("idempotency: no Stellar tx found by return hash or sequence, safe to retry")
 	}
 
 	// 3. Check TFChain: already refunded?

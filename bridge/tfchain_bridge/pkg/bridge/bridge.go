@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -257,11 +258,31 @@ func (bridge *Bridge) reconcilePendingTransactions(ctx context.Context) error {
 	for _, txID := range pendingWithdraws {
 		log.Info().Uint64("tx_id", txID).Msg("reconciling pending withdraw")
 
+		// Primary: find by memo (current bridge behaviour)
 		stellarTx, err := bridge.wallet.FindPaymentByMemo(ctx, fmt.Sprint(txID))
 		if err != nil {
-			log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to check Horizon for pending withdraw")
+			log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to check Horizon for pending withdraw by memo")
 			continue
 		}
+
+		// Fallback: find by sequence number (pre-upgrade compatibility, no memo)
+		if stellarTx == nil {
+			burnTx, err := bridge.subClient.GetBurnTransaction(types.U64(txID))
+			if err != nil {
+				log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to get burn tx for sequence lookup during reconciliation")
+			} else {
+				stellarTx, err = bridge.wallet.FindPaymentBySequence(ctx, int64(burnTx.SequenceNumber))
+				if err != nil {
+					log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to check Horizon for pending withdraw by sequence")
+					continue
+				}
+				if stellarTx != nil {
+					log.Info().Uint64("tx_id", txID).Int64("sequence_number", int64(burnTx.SequenceNumber)).
+						Msg("reconcile: found pre-upgrade Stellar tx by sequence number (no memo)")
+				}
+			}
+		}
+
 		if stellarTx != nil {
 			log.Info().Uint64("tx_id", txID).Msg("found existing Stellar tx, completing TFChain confirmation")
 			if err := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); err != nil {
@@ -272,7 +293,7 @@ func (bridge *Bridge) reconcilePendingTransactions(ctx context.Context) error {
 				log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to mark withdraw completed during reconciliation")
 			}
 		} else {
-			log.Info().Uint64("tx_id", txID).Msg("no Stellar tx found, will retry on next event")
+			log.Info().Uint64("tx_id", txID).Msg("no Stellar tx found by memo or sequence, will retry on next event")
 		}
 	}
 
@@ -284,11 +305,31 @@ func (bridge *Bridge) reconcilePendingTransactions(ctx context.Context) error {
 	for _, txHash := range pendingRefunds {
 		log.Info().Str("tx_hash", txHash).Msg("reconciling pending refund")
 
+		// Primary: find by MemoReturn hash (current bridge behaviour)
 		stellarTx, err := bridge.wallet.FindRefundByReturnHash(ctx, txHash)
 		if err != nil {
-			log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to check Horizon for pending refund")
+			log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to check Horizon for pending refund by return hash")
 			continue
 		}
+
+		// Fallback: find by sequence number (pre-upgrade compatibility, no memo)
+		if stellarTx == nil {
+			refundTx, err := bridge.subClient.GetRefundTransaction(txHash)
+			if err != nil {
+				log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to get refund tx for sequence lookup during reconciliation")
+			} else {
+				stellarTx, err = bridge.wallet.FindPaymentBySequence(ctx, int64(refundTx.SequenceNumber))
+				if err != nil {
+					log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to check Horizon for pending refund by sequence")
+					continue
+				}
+				if stellarTx != nil {
+					log.Info().Str("tx_hash", txHash).Int64("sequence_number", int64(refundTx.SequenceNumber)).
+						Msg("reconcile: found pre-upgrade Stellar refund tx by sequence number (no memo)")
+				}
+			}
+		}
+
 		if stellarTx != nil {
 			log.Info().Str("tx_hash", txHash).Msg("found existing Stellar refund tx, completing TFChain confirmation")
 			if err := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, txHash); err != nil {
@@ -299,7 +340,7 @@ func (bridge *Bridge) reconcilePendingTransactions(ctx context.Context) error {
 				log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to mark refund completed during reconciliation")
 			}
 		} else {
-			log.Info().Str("tx_hash", txHash).Msg("no Stellar tx found for refund, will retry on next event")
+			log.Info().Str("tx_hash", txHash).Msg("no Stellar tx found by return hash or sequence, will retry on next event")
 		}
 	}
 

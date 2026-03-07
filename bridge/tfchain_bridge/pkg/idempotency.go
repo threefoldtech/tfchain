@@ -136,6 +136,20 @@ func (s *IdempotencyStore) Close() error {
 func (s *IdempotencyStore) setState(bucket []byte, key string, state TxState) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucket)
+
+		// Guard against downgrading a COMPLETED entry back to PROCESSING.
+		// This should never happen via normal code paths (callers check state first),
+		// but we enforce it at the store level as a safety net.
+		if state == TxStateProcessing {
+			existing := b.Get([]byte(key))
+			if existing != nil {
+				var cur TxState
+				if err := json.Unmarshal(existing, &cur); err == nil && cur == TxStateCompleted {
+					return fmt.Errorf("refusing to downgrade completed tx %q to PROCESSING", key)
+				}
+			}
+		}
+
 		val, err := json.Marshal(state)
 		if err != nil {
 			return err
