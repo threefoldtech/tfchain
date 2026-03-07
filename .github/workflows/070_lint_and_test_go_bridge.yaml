@@ -23,9 +23,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.20"
+          go-version: "1.21"
           cache: false
-          # cache-dependency-path: bridge/tfchain_bridge/go.sum
         id: go
 
       - name: golangci-lint
@@ -37,7 +36,7 @@ jobs:
       - name: staticcheck
         uses: dominikh/staticcheck-action@v1.4.0
         with:
-          version: "latest"
+          version: "2024.1.1"
           install-go: false
           working-directory: bridge/tfchain_bridge
         env:
