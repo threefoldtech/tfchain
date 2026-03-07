@@ -35,9 +35,10 @@ jobs:
           working-directory: bridge/tfchain_bridge
 
       - name: staticcheck
-        uses: dominikh/staticcheck-action@v1.3.0
+        uses: dominikh/staticcheck-action@v1.4.0
         with:
           version: "latest"
+          install-go: false
           working-directory: bridge/tfchain_bridge
         env:
           GO111MODULE: on
