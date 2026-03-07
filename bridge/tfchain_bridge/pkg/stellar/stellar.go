@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -199,34 +200,55 @@ func (w *StellarWallet) CreateRefundAndReturnSignature(ctx context.Context, targ
 	return base64.StdEncoding.EncodeToString(signatures[0].Signature), uint64(txn.SequenceNumber()), nil
 }
 
+// fetchOutgoingTransactions queries Horizon's /transactions?source_account= endpoint
+// which filters server-side to only transactions where the bridge account is the source.
+// This guarantees the limit covers that many actual outgoing (withdraw/refund) transactions,
+// regardless of how many incoming deposit transactions exist on the account.
+func (w *StellarWallet) fetchOutgoingTransactions(ctx context.Context, limit uint) (hProtocol.TransactionsPage, error) {
+	client, err := w.getHorizonClient()
+	if err != nil {
+		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to get horizon client")
+	}
+
+	url := fmt.Sprintf("%stransactions?source_account=%s&order=desc&limit=%d",
+		strings.TrimRight(client.HorizonURL, "/")+"/",
+		w.config.StellarBridgeAccount,
+		limit,
+	)
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to build horizon request")
+	}
+
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to execute horizon request")
+	}
+	defer httpResp.Body.Close()
+
+	var page hProtocol.TransactionsPage
+	if err := json.NewDecoder(httpResp.Body).Decode(&page); err != nil {
+		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to decode horizon response")
+	}
+
+	return page, nil
+}
+
 // FindPaymentByMemo searches the 200 most recent outgoing transactions from the
-// bridge account for one with a matching text memo. Outgoing means the bridge
-// account is the source of the transaction; this filters out deposits (incoming
-// from users) so the limit covers 200 actual withdrawals rather than mixed traffic.
+// bridge account for one with a matching text memo. It uses the Horizon
+// /transactions?source_account= endpoint which filters server-side to only
+// transactions where the bridge is the source (true outgoing), ensuring the
+// 200-record limit covers 200 actual withdrawals regardless of deposit volume.
 // Used during crash recovery to detect if a Stellar withdraw was already submitted.
 // Returns nil, nil if no matching transaction is found.
 func (w *StellarWallet) FindPaymentByMemo(ctx context.Context, memo string) (*hProtocol.Transaction, error) {
-	client, err := w.getHorizonClient()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get horizon client for memo lookup")
-	}
-
-	req := horizonclient.TransactionRequest{
-		ForAccount: w.config.StellarBridgeAccount,
-		Order:      horizonclient.OrderDesc,
-		Limit:      200,
-	}
-
-	resp, err := client.Transactions(req)
+	resp, err := w.fetchOutgoingTransactions(ctx, 200)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query horizon for memo lookup")
 	}
 
 	for _, tx := range resp.Embedded.Records {
-		// Only consider outgoing transactions (bridge is the source)
-		if tx.Account != w.config.StellarBridgeAccount {
-			continue
-		}
 		if tx.MemoType == "text" && tx.Memo == memo {
 			txCopy := tx
 			return &txCopy, nil
@@ -241,28 +263,13 @@ func (w *StellarWallet) FindPaymentByMemo(ctx context.Context, memo string) (*hP
 // to determine if a Stellar refund transaction was already submitted for a given tx hash.
 // Returns nil, nil if no matching transaction is found.
 func (w *StellarWallet) FindRefundByReturnHash(ctx context.Context, txHash string) (*hProtocol.Transaction, error) {
-	client, err := w.getHorizonClient()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get horizon client for refund memo lookup")
-	}
-
-	req := horizonclient.TransactionRequest{
-		ForAccount: w.config.StellarBridgeAccount,
-		Order:      horizonclient.OrderDesc,
-		Limit:      200,
-	}
-
-	resp, err := client.Transactions(req)
+	resp, err := w.fetchOutgoingTransactions(ctx, 200)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query horizon for refund memo lookup")
 	}
 
-	// Only consider outgoing transactions (bridge is the source).
 	// MemoReturn stores the hash as hex-encoded in the Horizon API response.
 	for _, tx := range resp.Embedded.Records {
-		if tx.Account != w.config.StellarBridgeAccount {
-			continue
-		}
 		if tx.MemoType == "return" && tx.Memo == txHash {
 			txCopy := tx
 			return &txCopy, nil
