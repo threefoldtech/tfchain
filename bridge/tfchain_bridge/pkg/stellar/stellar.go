@@ -29,7 +29,7 @@ import (
 
 const (
 	TFTMainnet = "TFT:GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47"
-	TFTTest    = "TFT:GA47YZA3PKFUZMPLQ3B5F2E3CJIB57TGGU7SPCQT2WAEYKN766PWIMB3"
+	TFTTest    = "TFT:GDPARZINMN52LJMVZSQPOEDHC2TWKJVFZSNHKDP4OUH6RI4PMXH4JA6Q"
 
 	stellarPrecision       = 1e7
 	stellarPrecisionDigits = 7
@@ -86,6 +86,12 @@ func (w *StellarWallet) CreatePaymentAndReturnSignature(ctx context.Context, tar
 		return "", 0, err
 	}
 
+	// Include the burn tx ID as a text memo so the signed transaction hash matches
+	// the one that will be submitted (with the same memo) in CreatePaymentWithSignaturesAndSubmit.
+	// This is required for crash recovery: FindPaymentByMemo can locate the submitted
+	// Stellar tx by memo to avoid double-submission.
+	txnBuild.Memo = txnbuild.MemoText(fmt.Sprint(txID))
+
 	txn, err := w.createTransaction(ctx, txnBuild, true)
 	if err != nil {
 		return "", 0, err
@@ -103,6 +109,10 @@ func (w *StellarWallet) CreatePaymentWithSignaturesAndSubmit(ctx context.Context
 	if err != nil {
 		return err
 	}
+
+	// Set text memo to the burn transaction ID so crash recovery can identify
+	// this Stellar tx on Horizon via FindPaymentByMemo
+	txnBuild.Memo = txnbuild.MemoText(txHash)
 
 	txn, err := w.createTransaction(ctx, txnBuild, false)
 	if err != nil {
