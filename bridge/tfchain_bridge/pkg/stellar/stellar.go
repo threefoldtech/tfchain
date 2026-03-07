@@ -199,9 +199,11 @@ func (w *StellarWallet) CreateRefundAndReturnSignature(ctx context.Context, targ
 	return base64.StdEncoding.EncodeToString(signatures[0].Signature), uint64(txn.SequenceNumber()), nil
 }
 
-// FindPaymentByMemo searches recent transactions on the bridge account for a
-// payment with a matching text memo. This is used during crash recovery to
-// determine if a Stellar transaction was already submitted for a given withdraw ID.
+// FindPaymentByMemo searches the 200 most recent outgoing transactions from the
+// bridge account for one with a matching text memo. Outgoing means the bridge
+// account is the source of the transaction; this filters out deposits (incoming
+// from users) so the limit covers 200 actual withdrawals rather than mixed traffic.
+// Used during crash recovery to detect if a Stellar withdraw was already submitted.
 // Returns nil, nil if no matching transaction is found.
 func (w *StellarWallet) FindPaymentByMemo(ctx context.Context, memo string) (*hProtocol.Transaction, error) {
 	client, err := w.getHorizonClient()
@@ -221,6 +223,10 @@ func (w *StellarWallet) FindPaymentByMemo(ctx context.Context, memo string) (*hP
 	}
 
 	for _, tx := range resp.Embedded.Records {
+		// Only consider outgoing transactions (bridge is the source)
+		if tx.Account != w.config.StellarBridgeAccount {
+			continue
+		}
 		if tx.MemoType == "text" && tx.Memo == memo {
 			txCopy := tx
 			return &txCopy, nil
@@ -251,8 +257,12 @@ func (w *StellarWallet) FindRefundByReturnHash(ctx context.Context, txHash strin
 		return nil, errors.Wrap(err, "failed to query horizon for refund memo lookup")
 	}
 
-	// MemoReturn stores the hash as hex-encoded in the Horizon API response
+	// Only consider outgoing transactions (bridge is the source).
+	// MemoReturn stores the hash as hex-encoded in the Horizon API response.
 	for _, tx := range resp.Embedded.Records {
+		if tx.Account != w.config.StellarBridgeAccount {
+			continue
+		}
 		if tx.MemoType == "return" && tx.Memo == txHash {
 			txCopy := tx
 			return &txCopy, nil
