@@ -139,6 +139,7 @@ echo "Bridge PID: $!"
 ```
 
 Flags:
+
 - `--secret`: Stellar bridge wallet secret key
 - `--tfchainurl`: local TFChain RPC endpoint
 - `--tfchainseed`: bridge validator mnemonic (pre-seeded in dev genesis)
@@ -165,6 +166,7 @@ All tests below were run and passed on branch `fix/bridge-batching-atomicity`, c
 **Purpose:** Verify the Stellar inbound payment flow mints TFT on TFChain.
 
 **Steps:**
+
 1. Send TFT from user Stellar account to bridge wallet with memo `twin_1`:
    ```javascript
    // Using stellar-sdk:
@@ -187,6 +189,7 @@ grep "MintCompleted\|mint" /tmp/bridge.log | tail -5
 **Expected:** Alice receives 40 TFT (50 TFT sent - 10 TFT deposit fee).
 
 **Result: ✅ PASSED**
+
 - Tx hash: `2aeaf9811dc7e4fbe340fd1df92c62cd0d4baf2e2562d366c1e2013c90e6910e`
 - Amount minted: 500,000,000 muTFT (50 TFT gross, 40 TFT net after 10 TFT fee)
 
@@ -197,6 +200,7 @@ grep "MintCompleted\|mint" /tmp/bridge.log | tail -5
 **Purpose:** Verify the TFChain outbound flow burns TFT on-chain and sends to Stellar.
 
 **Steps:**
+
 1. Submit `swapToStellar` extrinsic:
    ```javascript
    api.tx.tftBridgeModule.swapToStellar(USER_STELLAR_ADDR, 30_000_000)
@@ -221,6 +225,7 @@ curl -s "https://horizon-testnet.stellar.org/accounts/GBXIQP76.../payments?order
 **Expected:** User receives 20 TFT (30 TFT sent - 10 TFT withdraw fee). Stellar tx has `memo_type=text` with the burn tx ID.
 
 **Result: ✅ PASSED**
+
 - User TFT balance: 950 → 952 TFT (net +2 TFT after fee on second run; initial balance was 950 after deposit fee)
 - Stellar tx confirmed on Horizon with text memo matching burn tx ID
 
@@ -231,10 +236,12 @@ curl -s "https://horizon-testnet.stellar.org/accounts/GBXIQP76.../payments?order
 **Purpose:** Verify that if the bridge crashes after marking a tx as PROCESSING but before completing TFChain confirmation, a restart correctly handles the in-flight transaction without double-spending.
 
 **Setup:** The idempotency store is a bbolt DB at `<persistency>.idem.db`. It tracks two states per tx:
+
 - `PROCESSING`: Stellar tx may or may not have been submitted
 - `COMPLETED`: Stellar tx submitted + TFChain confirmation done
 
 **Test scenario (crash before Stellar submission):**
+
 1. Kill bridge with `kill -9` on the bridge binary PID immediately after `swapToStellar`
 2. Wait for bridge to mark tx `PROCESSING` in idempotency DB
 3. Restart bridge
@@ -278,6 +285,7 @@ go run /tmp/read_idem.go
 ```
 
 **Result: ✅ PASSED**
+
 - Bridge correctly detected PROCESSING state on restart
 - Correctly queried Horizon for prior Stellar tx by memo
 - Safely retried and completed without double-submission
@@ -293,6 +301,7 @@ The code path for detecting an already-submitted Stellar tx (via `FindPaymentByM
 **Purpose:** Verify that N `WithdrawCreated` events in the same block are processed in a single `Utility.batch` extrinsic instead of N sequential submissions.
 
 **Steps:**
+
 1. Submit 5 `swapToStellar` calls atomically in one block using `utility.batch`:
    ```javascript
    const calls = Array.from({length: 5}, () =>
@@ -322,6 +331,7 @@ grep -E "batch|withdraw_proposed" /tmp/bridge.log | grep -A6 "batch processing"
 **After fix (N=5):** 1 × 6s = 6s for all proposals
 
 **Result: ✅ PASSED**
+
 - 5 `BurnTransactionCreated` events in block `0x990785d4100d`
 - Single `Utility.batch` extrinsic submitted
 - All 5 proposals (tx IDs 8–12) processed in one block

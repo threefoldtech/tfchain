@@ -10,6 +10,7 @@ This document tracks every mistake, unexpected issue, and its resolution encount
 **Issue:** Initial setup script used `api.tx.sudo.sudo(...)` to call restricted functions like `addBridgeValidator`, `setFeeAccount`, `setWithdrawFee`, `setDepositFee`.  
 **Root cause:** Assumed tfchain uses sudo pallet (common in dev Substrate chains). tfchain does NOT include sudo — it uses `EnsureRootOrCouncilApproval = EitherOfDiverse<EnsureRoot, pallet_collective::EnsureProportionAtLeast<3, 5>>`.  
 **Workaround/Fix:** None needed — the genesis config for `--dev` chain already pre-seeds all bridge pallet configuration:
+
 - Bridge validators (mnemonic "quarter between satisfy three sphere six soda boss cute decade old trend" + 2 others)
 - Fee account (Alice in dev mode)
 - Deposit fee: 10,000,000 muTFT (10 TFT)
@@ -89,6 +90,7 @@ cargo build > /tmp/cargo_build.log 2>&1
 
 **Phase:** Scheduling the progress reminder  
 **Issue:** Multiple iterations needed to get the cron command right:
+
 - Missing `--name` flag → error
 - Used `--prompt` (doesn't exist) → error
 - Used `--exact` with `--every` (only valid with `--cron`) → error
@@ -145,6 +147,7 @@ return errors.Wrap(data.Err, "failed to get tfchain events")
 **Issue:** `stellar-utils faucet --secret <secret>` failed with a path payment error. The DEX path swap (XLM → TFT) found no matching orders.  
 **Root cause:** Stellar testnet DEX has zero TFT liquidity. The official ThreeFold testnet TFT issuer (`GA47YZA3PKFUZMPLQ3B5F2E3CJIB57TGGU7SPCQT2WAEYKN766PWIMB3`) doesn't actively maintain testnet DEX orders, so path payment swaps always fail.  
 **Workaround:** Create a custom TFT issuer on testnet:
+
 1. Generate a new Stellar keypair — this becomes the issuer
 2. Fund it via friendbot: `https://friendbot.stellar.org/?addr=<issuer_address>`
 3. Add a trustline from each test account to the custom issuer
@@ -152,6 +155,7 @@ return errors.Wrap(data.Err, "failed to get tfchain events")
 5. Patch `TFTTest` constant in `stellar.go` to point to the custom issuer
 
 **Custom testnet issuer used (test only, not for production):**
+
 - Address: `GDPARZINMN52LJMVZSQPOEDHC2TWKJVFZSNHKDP4OUH6RI4PMXH4JA6Q`
 
 > ⚠️ **Important:** Never use a custom issuer in production. Mainnet uses `GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47`.
