@@ -248,74 +248,88 @@ func (w *StellarWallet) fetchOutgoingTransactions(ctx context.Context, limit uin
 	return page, nil
 }
 
-// FindPaymentByMemo searches the 200 most recent outgoing transactions from the
-// bridge account for one with a matching text memo. It uses the Horizon
-// /transactions?source_account= endpoint which filters server-side to only
-// transactions where the bridge is the source (true outgoing), ensuring the
-// 200-record limit covers 200 actual withdrawals regardless of deposit volume.
-// Used during crash recovery to detect if a Stellar withdraw was already submitted.
-// Returns nil, nil if no matching transaction is found.
-func (w *StellarWallet) FindPaymentByMemo(ctx context.Context, memo string) (*hProtocol.Transaction, error) {
-	resp, err := w.fetchOutgoingTransactions(ctx, 200)
+// FetchOutgoingTransactionsPage fetches the 200 most recent outgoing transactions
+// from the bridge account in a single Horizon request. Callers that need multiple
+// lookups (memo + sequence) should fetch once and use the page-based helpers below
+// to avoid redundant HTTP round-trips.
+func (w *StellarWallet) FetchOutgoingTransactionsPage(ctx context.Context) (hProtocol.TransactionsPage, error) {
+	page, err := w.fetchOutgoingTransactions(ctx, 200)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to query horizon for memo lookup")
+		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to fetch outgoing transactions from Horizon")
 	}
+	return page, nil
+}
 
-	for _, tx := range resp.Embedded.Records {
+// FindPaymentByMemoInPage scans a pre-fetched transactions page for a text memo match.
+// Use this when you already have a page from FetchOutgoingTransactionsPage to avoid
+// redundant Horizon API calls.
+func (w *StellarWallet) FindPaymentByMemoInPage(page hProtocol.TransactionsPage, memo string) *hProtocol.Transaction {
+	for _, tx := range page.Embedded.Records {
 		if tx.MemoType == "text" && tx.Memo == memo {
 			txCopy := tx
-			return &txCopy, nil
+			return &txCopy
 		}
 	}
-
-	return nil, nil
+	return nil
 }
 
-// FindRefundByReturnHash searches recent transactions on the bridge account for a
-// refund payment with a matching MemoReturn hash. This is used during crash recovery
-// to determine if a Stellar refund transaction was already submitted for a given tx hash.
-// Returns nil, nil if no matching transaction is found.
-func (w *StellarWallet) FindRefundByReturnHash(ctx context.Context, txHash string) (*hProtocol.Transaction, error) {
-	resp, err := w.fetchOutgoingTransactions(ctx, 200)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to query horizon for refund memo lookup")
-	}
-
-	// MemoReturn stores the hash as hex-encoded in the Horizon API response.
-	for _, tx := range resp.Embedded.Records {
+// FindRefundByReturnHashInPage scans a pre-fetched transactions page for a MemoReturn hash match.
+func (w *StellarWallet) FindRefundByReturnHashInPage(page hProtocol.TransactionsPage, txHash string) *hProtocol.Transaction {
+	for _, tx := range page.Embedded.Records {
 		if tx.MemoType == "return" && tx.Memo == txHash {
 			txCopy := tx
-			return &txCopy, nil
+			return &txCopy
 		}
 	}
-
-	return nil, nil
+	return nil
 }
 
-// FindPaymentBySequence searches the 200 most recent outgoing transactions from the
-// bridge account for one with a matching Stellar source account sequence number.
+// FindPaymentBySequenceInPage scans a pre-fetched transactions page for a source account
+// sequence number match. Used as a fallback for pre-upgrade txs submitted without a memo.
+func (w *StellarWallet) FindPaymentBySequenceInPage(page hProtocol.TransactionsPage, sequenceNumber int64) *hProtocol.Transaction {
+	seqStr := strconv.FormatInt(sequenceNumber, 10)
+	for _, tx := range page.Embedded.Records {
+		if tx.AccountSequence == seqStr {
+			txCopy := tx
+			return &txCopy
+		}
+	}
+	return nil
+}
+
+// FindPaymentByMemo fetches outgoing transactions and searches for a text memo match.
+// For callers that only need a single lookup; use FetchOutgoingTransactionsPage +
+// FindPaymentByMemoInPage when multiple lookups are needed.
+func (w *StellarWallet) FindPaymentByMemo(ctx context.Context, memo string) (*hProtocol.Transaction, error) {
+	page, err := w.FetchOutgoingTransactionsPage(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.FindPaymentByMemoInPage(page, memo), nil
+}
+
+// FindRefundByReturnHash fetches outgoing transactions and searches for a MemoReturn hash match.
+func (w *StellarWallet) FindRefundByReturnHash(ctx context.Context, txHash string) (*hProtocol.Transaction, error) {
+	page, err := w.FetchOutgoingTransactionsPage(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.FindRefundByReturnHashInPage(page, txHash), nil
+}
+
+// FindPaymentBySequence fetches outgoing transactions and searches by source account sequence.
 // This is used as a fallback during crash recovery when the transaction was submitted
 // by an older bridge version that did not include a memo (pre-upgrade compatibility).
 // Since the bridge is stopped during upgrades, it cannot submit any outgoing transactions
 // while down, so the target tx is guaranteed to be within the 200 most recent records.
 // The sequence number stored in the TFChain burn tx is exactly the sequence used when
 // building the Stellar tx, making it a reliable unique identifier regardless of memo presence.
-// Returns nil, nil if no matching transaction is found.
 func (w *StellarWallet) FindPaymentBySequence(ctx context.Context, sequenceNumber int64) (*hProtocol.Transaction, error) {
-	resp, err := w.fetchOutgoingTransactions(ctx, 200)
+	page, err := w.FetchOutgoingTransactionsPage(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to query horizon for sequence lookup")
+		return nil, err
 	}
-
-	seqStr := strconv.FormatInt(sequenceNumber, 10)
-	for _, tx := range resp.Embedded.Records {
-		if tx.AccountSequence == seqStr {
-			txCopy := tx
-			return &txCopy, nil
-		}
-	}
-
-	return nil, nil
+	return w.FindPaymentBySequenceInPage(page, sequenceNumber), nil
 }
 
 func (w *StellarWallet) CheckAccount(account string) error {

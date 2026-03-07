@@ -27,6 +27,11 @@ var (
 // IdempotencyStore provides crash-safe tracking of transaction processing state
 // using a bbolt (BoltDB) embedded database. It prevents double Stellar submissions
 // when the bridge crashes between Stellar tx submit and TFChain confirmation.
+// IdempotencyStore is a bbolt-backed persistent store for transaction states.
+// Keys are never deleted — COMPLETED entries accumulate over time. At ~50 bytes
+// per entry, growth is negligible even at high transaction volumes (e.g. 1000
+// txs/day → ~18 MB/year). Pruning is intentionally omitted for simplicity and
+// auditability.
 type IdempotencyStore struct {
 	db *bolt.DB
 }

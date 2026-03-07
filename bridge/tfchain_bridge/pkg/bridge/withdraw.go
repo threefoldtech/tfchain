@@ -72,7 +72,12 @@ func (bridge *Bridge) handleWithdrawCreatedBatch(ctx context.Context, events []s
 
 		signature, sequenceNumber, err := bridge.wallet.CreatePaymentAndReturnSignature(ctx, withdraw.Target, withdraw.Amount, withdraw.ID)
 		if err != nil {
-			return err
+			// Skip this event rather than aborting the whole batch — a failure here
+			// (e.g. Stellar SDK error for one tx) should not prevent valid proposals
+			// for the remaining events. The skipped event will be retried via the
+			// BurnTransactionExpired path.
+			log.Warn().Err(err).Uint64("tx_id", withdraw.ID).Msg("failed to create Stellar signature for batch event, skipping")
+			continue
 		}
 
 		proposals = append(proposals, validProposal{
@@ -111,19 +116,39 @@ func (bridge *Bridge) handleWithdrawCreatedBatch(ctx context.Context, events []s
 		return nil
 	}
 
-	// Phase 3: Log results
-	if result.FailedCount > 0 {
+	// Phase 3: Log results — only emit withdraw_proposed for proposals that succeeded.
+	// For BatchInterrupted (older runtimes) we know exact failed indices; for ItemFailed
+	// (newer runtimes) the event doesn't carry the call index, so we can only log that
+	// some proposals may have failed without knowing which ones.
+	failedSet := make(map[int]bool, len(result.FailedIndexes))
+	for _, idx := range result.FailedIndexes {
+		failedSet[idx] = true
+	}
+	batchHadFailures := result.FailedCount > 0
+	if batchHadFailures {
 		log.Warn().
 			Int("failed", result.FailedCount).
 			Int("total", len(proposals)).
+			Bool("exact_indices_known", len(result.FailedIndexes) > 0).
 			Msg("some proposals failed within batch (may already be signed or expired)")
 	}
-	for _, p := range proposals {
+	for i, p := range proposals {
+		if failedSet[i] {
+			// We know this specific proposal failed (BatchInterrupted case)
+			log.Warn().
+				Str("event_action", "withdraw_proposal_failed").
+				Str("event_kind", "event").
+				Str("category", "withdraw").
+				Uint64("tx_id", p.event.ID).
+				Msg("withdraw proposal failed within batch")
+			continue
+		}
 		log.Info().
 			Str("trace_id", fmt.Sprint(p.event.ID)).
 			Str("event_action", "withdraw_proposed").
 			Str("event_kind", "event").
 			Str("category", "withdraw").
+			Bool("batch_had_failures", batchHadFailures && len(result.FailedIndexes) == 0).
 			Dict("metadata", zerolog.Dict().
 				Uint64("amount", p.event.Amount).
 				Str("tx_id", fmt.Sprint(p.event.ID)).
@@ -132,6 +157,7 @@ func (bridge *Bridge) handleWithdrawCreatedBatch(ctx context.Context, events []s
 	}
 
 	log.Info().
+		Str("event_action", "batch_proposal_completed").
 		Int("total", len(proposals)).
 		Int("succeeded", result.SuccessCount).
 		Int("failed", result.FailedCount).
@@ -280,12 +306,15 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 			Str("category", "withdraw").
 			Msg("idempotency: withdraw in PROCESSING state (possible crash recovery)")
 
-		// Primary check: look for a tx with matching memo (current bridge behaviour)
-		stellarTx, err := bridge.wallet.FindPaymentByMemo(ctx, txKey)
+		// Fetch the outgoing transactions page once and reuse it for both lookups
+		// to avoid redundant Horizon HTTP round-trips.
+		outgoingPage, err := bridge.wallet.FetchOutgoingTransactionsPage(ctx)
 		if err != nil {
 			return err
 		}
-		if stellarTx != nil {
+
+		// Primary check: look for a tx with matching memo (current bridge behaviour)
+		if stellarTx := bridge.wallet.FindPaymentByMemoInPage(outgoingPage, txKey); stellarTx != nil {
 			logger.Info().
 				Str("event_action", "withdraw_recovered").
 				Str("event_kind", "event").
@@ -302,15 +331,13 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 		// is the exact sequence used when building the Stellar tx, uniquely identifying it.
 		// Since the bridge is stopped during upgrades, no new outgoing txs can appear
 		// between the old submission and this lookup, so 200 records is always sufficient.
+		// NOTE: adding memo to Stellar txs is a breaking change — all validators must be
+		// upgraded together. A mixed-version cluster will produce invalid signature sets.
 		burnTxForSeq, err := bridge.subClient.GetBurnTransaction(types.U64(txID))
 		if err != nil {
 			return err
 		}
-		stellarTxBySeq, err := bridge.wallet.FindPaymentBySequence(ctx, int64(burnTxForSeq.SequenceNumber))
-		if err != nil {
-			return err
-		}
-		if stellarTxBySeq != nil {
+		if stellarTxBySeq := bridge.wallet.FindPaymentBySequenceInPage(outgoingPage, int64(burnTxForSeq.SequenceNumber)); stellarTxBySeq != nil {
 			logger.Info().
 				Str("event_action", "withdraw_recovered").
 				Str("event_kind", "event").

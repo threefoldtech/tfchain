@@ -94,12 +94,15 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 			Str("category", "refund").
 			Msg("idempotency: refund in PROCESSING state (possible crash recovery)")
 
-		// Primary check: look for a refund tx with matching MemoReturn hash (current bridge behaviour)
-		stellarTx, err := bridge.wallet.FindRefundByReturnHash(ctx, txHash)
+		// Fetch the outgoing transactions page once and reuse it for both lookups
+		// to avoid redundant Horizon HTTP round-trips.
+		outgoingPage, err := bridge.wallet.FetchOutgoingTransactionsPage(ctx)
 		if err != nil {
 			return err
 		}
-		if stellarTx != nil {
+
+		// Primary check: look for a refund tx with matching MemoReturn hash (current bridge behaviour)
+		if stellarTx := bridge.wallet.FindRefundByReturnHashInPage(outgoingPage, txHash); stellarTx != nil {
 			logger.Info().
 				Str("event_action", "refund_recovered").
 				Str("event_kind", "event").
@@ -112,16 +115,12 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 		}
 
 		// Fallback: look for a tx by sequence number, covering pre-upgrade submissions
-		// that were made without a memo. See FindPaymentBySequence for rationale.
+		// that were made without a memo. See FindPaymentBySequenceInPage for rationale.
 		refundTxForSeq, err := bridge.subClient.GetRefundTransaction(txHash)
 		if err != nil {
 			return err
 		}
-		stellarTxBySeq, err := bridge.wallet.FindPaymentBySequence(ctx, int64(refundTxForSeq.SequenceNumber))
-		if err != nil {
-			return err
-		}
-		if stellarTxBySeq != nil {
+		if stellarTxBySeq := bridge.wallet.FindPaymentBySequenceInPage(outgoingPage, int64(refundTxForSeq.SequenceNumber)); stellarTxBySeq != nil {
 			logger.Info().
 				Str("event_action", "refund_recovered").
 				Str("event_kind", "event").

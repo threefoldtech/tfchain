@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	hProtocol "github.com/stellar/go/protocols/horizon"
 	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg"
 	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/stellar"
 	subpkg "github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/substrate"
@@ -250,19 +251,39 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 func (bridge *Bridge) reconcilePendingTransactions(ctx context.Context) error {
 	log.Info().Msg("reconciling pending transactions from previous run...")
 
-	// Reconcile pending withdraws
 	pendingWithdraws, err := bridge.idempotency.GetPendingWithdraws()
 	if err != nil {
 		return errors.Wrap(err, "failed to get pending withdraws")
 	}
+	pendingRefunds, err := bridge.idempotency.GetPendingRefunds()
+	if err != nil {
+		return errors.Wrap(err, "failed to get pending refunds")
+	}
+
+	// If there are no pending transactions, skip the Horizon fetch entirely.
+	if len(pendingWithdraws) == 0 && len(pendingRefunds) == 0 {
+		log.Info().Msg("reconciliation complete: no pending transactions")
+		return nil
+	}
+
+	// Fetch outgoing transactions once and reuse the page for all lookups,
+	// avoiding one Horizon HTTP call per pending transaction.
+	outgoingPage, err := bridge.wallet.FetchOutgoingTransactionsPage(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to fetch Horizon transactions for reconciliation, pending transactions will retry on next event")
+		// Non-fatal: pending txs will be retried when the next Ready event fires.
+		outgoingPage = hProtocol.TransactionsPage{}
+	}
+
+	// Reconcile pending withdraws
 	for _, txID := range pendingWithdraws {
 		log.Info().Uint64("tx_id", txID).Msg("reconciling pending withdraw")
 
+		var stellarTx *hProtocol.Transaction
+
 		// Primary: find by memo (current bridge behaviour)
-		stellarTx, err := bridge.wallet.FindPaymentByMemo(ctx, fmt.Sprint(txID))
-		if err != nil {
-			log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to check Horizon for pending withdraw by memo")
-			continue
+		if tx := bridge.wallet.FindPaymentByMemoInPage(outgoingPage, fmt.Sprint(txID)); tx != nil {
+			stellarTx = tx
 		}
 
 		// Fallback: find by sequence number (pre-upgrade compatibility, no memo)
@@ -270,16 +291,10 @@ func (bridge *Bridge) reconcilePendingTransactions(ctx context.Context) error {
 			burnTx, err := bridge.subClient.GetBurnTransaction(types.U64(txID))
 			if err != nil {
 				log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to get burn tx for sequence lookup during reconciliation")
-			} else {
-				stellarTx, err = bridge.wallet.FindPaymentBySequence(ctx, int64(burnTx.SequenceNumber))
-				if err != nil {
-					log.Warn().Err(err).Uint64("tx_id", txID).Msg("failed to check Horizon for pending withdraw by sequence")
-					continue
-				}
-				if stellarTx != nil {
-					log.Info().Uint64("tx_id", txID).Int64("sequence_number", int64(burnTx.SequenceNumber)).
-						Msg("reconcile: found pre-upgrade Stellar tx by sequence number (no memo)")
-				}
+			} else if tx := bridge.wallet.FindPaymentBySequenceInPage(outgoingPage, int64(burnTx.SequenceNumber)); tx != nil {
+				log.Info().Uint64("tx_id", txID).Int64("sequence_number", int64(burnTx.SequenceNumber)).
+					Msg("reconcile: found pre-upgrade Stellar tx by sequence number (no memo)")
+				stellarTx = tx
 			}
 		}
 
@@ -298,18 +313,14 @@ func (bridge *Bridge) reconcilePendingTransactions(ctx context.Context) error {
 	}
 
 	// Reconcile pending refunds
-	pendingRefunds, err := bridge.idempotency.GetPendingRefunds()
-	if err != nil {
-		return errors.Wrap(err, "failed to get pending refunds")
-	}
 	for _, txHash := range pendingRefunds {
 		log.Info().Str("tx_hash", txHash).Msg("reconciling pending refund")
 
+		var stellarTx *hProtocol.Transaction
+
 		// Primary: find by MemoReturn hash (current bridge behaviour)
-		stellarTx, err := bridge.wallet.FindRefundByReturnHash(ctx, txHash)
-		if err != nil {
-			log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to check Horizon for pending refund by return hash")
-			continue
+		if tx := bridge.wallet.FindRefundByReturnHashInPage(outgoingPage, txHash); tx != nil {
+			stellarTx = tx
 		}
 
 		// Fallback: find by sequence number (pre-upgrade compatibility, no memo)
@@ -317,16 +328,10 @@ func (bridge *Bridge) reconcilePendingTransactions(ctx context.Context) error {
 			refundTx, err := bridge.subClient.GetRefundTransaction(txHash)
 			if err != nil {
 				log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to get refund tx for sequence lookup during reconciliation")
-			} else {
-				stellarTx, err = bridge.wallet.FindPaymentBySequence(ctx, int64(refundTx.SequenceNumber))
-				if err != nil {
-					log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to check Horizon for pending refund by sequence")
-					continue
-				}
-				if stellarTx != nil {
-					log.Info().Str("tx_hash", txHash).Int64("sequence_number", int64(refundTx.SequenceNumber)).
-						Msg("reconcile: found pre-upgrade Stellar refund tx by sequence number (no memo)")
-				}
+			} else if tx := bridge.wallet.FindPaymentBySequenceInPage(outgoingPage, int64(refundTx.SequenceNumber)); tx != nil {
+				log.Info().Str("tx_hash", txHash).Int64("sequence_number", int64(refundTx.SequenceNumber)).
+					Msg("reconcile: found pre-upgrade Stellar refund tx by sequence number (no memo)")
+				stellarTx = tx
 			}
 		}
 
