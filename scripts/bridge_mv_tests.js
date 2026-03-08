@@ -140,11 +140,16 @@ function killValidator (valIndex, signal = 'SIGKILL') {
   }
 }
 
+// Bridge validator dev seeds (from substrate-node/node/src/chain_spec.rs)
+const VAL_TFCHAIN_SEEDS = [
+  'quarter between satisfy three sphere six soda boss cute decade old trend',
+  'employ split promote annual couple elder remain cricket company fitness senior fiscal'
+]
+
 function startValidator (valIndex) {
-  const secrets = ['VAL1_STELLAR_SECRET', 'VAL2_STELLAR_SECRET', 'VAL3_STELLAR_SECRET']
-  const seeds = ['//Bob', '//Charlie']
+  const secrets = ['VAL1_STELLAR_SECRET', 'VAL2_STELLAR_SECRET']
   const secret = getEnv(secrets[valIndex - 1])
-  const seed = seeds[valIndex - 1]
+  const seed = VAL_TFCHAIN_SEEDS[valIndex - 1]
   const persistency = `${BRIDGE_DIR}/signer_mv_${valIndex}.json`
   const logFile = VAL_LOG_FILES[valIndex - 1]
 

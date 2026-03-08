@@ -87,15 +87,17 @@ bridge-start:
 	  nohup $(BRIDGE_BIN) \
 	    --secret "$$BRIDGE_SECRET" \
 	    --tfchainurl $(TFCHAIN_URL) \
-	    --tfchainseed "//Bob" \
+	    --tfchainseed "quarter between satisfy three sphere six soda boss cute decade old trend" \
 	    --bridgewallet "$$BRIDGE_ADDRESS" \
 	    --persistency $(BRIDGE_DIR)/signer_local.json \
 	    --network testnet \
 	  > $(BRIDGE_LOG) 2>&1 & echo $$! > $(BRIDGE_PID_FILE)
 	@echo "==> Bridge started (PID $$(cat $(BRIDGE_PID_FILE))), log: $(BRIDGE_LOG)"
 	@echo "==> Waiting for bridge to be ready..."
-	@timeout 30 sh -c 'until grep -q "bridge_started" $(BRIDGE_LOG) 2>/dev/null; do sleep 1; done' \
-	  && echo "==> Bridge ready." || echo "==> Warning: bridge_started not seen in 30s, check $(BRIDGE_LOG)"
+	@i=0; while [ $$i -lt 30 ] && ! grep -q "bridge_started" $(BRIDGE_LOG) 2>/dev/null; do sleep 1; i=$$((i+1)); done; \
+	  grep -q "bridge_started" $(BRIDGE_LOG) 2>/dev/null \
+	  && echo "==> Bridge ready." \
+	  || echo "==> Warning: bridge_started not seen in 30s, check $(BRIDGE_LOG)"
 
 ## bridge-stop: Stop the bridge daemon
 bridge-stop:
@@ -151,7 +153,8 @@ bridge-mv-setup:
 	TFCHAIN_URL=$(TFCHAIN_URL) BRIDGE_MV_ENV_FILE=$(BRIDGE_MV_ENV_FILE) \
 	  node $(SCRIPTS_DIR)/bridge_mv_setup.js
 
-## bridge-mv-start: Start 3 bridge daemons (Val1=Alice, Val2=Bob, Val3=Charlie)
+## bridge-mv-start: Start 2 bridge daemons (Val1=genesis-key-1, Val2=genesis-key-2)
+# Seeds are from chain_spec.rs "bridge validator dev key" entries (validators 2+3 added via council in bridge-mv-setup)
 bridge-mv-start:
 	@test -f $(BRIDGE_BIN) || (echo "ERROR: Bridge binary not found. Run: make bridge-build" && exit 1)
 	@test -f $(BRIDGE_MV_ENV_FILE) || (echo "ERROR: $(BRIDGE_MV_ENV_FILE) not found. Run: make bridge-mv-accounts" && exit 1)
@@ -161,24 +164,25 @@ bridge-mv-start:
 	  nohup $(BRIDGE_BIN) \
 	    --secret "$$VAL1_STELLAR_SECRET" \
 	    --tfchainurl $(TFCHAIN_URL) \
-	    --tfchainseed "//Bob" \
+	    --tfchainseed "quarter between satisfy three sphere six soda boss cute decade old trend" \
 	    --bridgewallet "$$BRIDGE_ADDRESS" \
 	    --persistency $(BRIDGE_DIR)/signer_mv_1.json \
 	    --network testnet \
 	  > /tmp/bridge_mv_1.log 2>&1 & echo $$! > /tmp/bridge_mv_1.pid && \
-	  echo "==> Val1 (Bob) started (PID $$(cat /tmp/bridge_mv_1.pid))" && \
+	  echo "==> Val1 started (PID $$(cat /tmp/bridge_mv_1.pid))" && \
 	  nohup $(BRIDGE_BIN) \
 	    --secret "$$VAL2_STELLAR_SECRET" \
 	    --tfchainurl $(TFCHAIN_URL) \
-	    --tfchainseed "//Charlie" \
+	    --tfchainseed "employ split promote annual couple elder remain cricket company fitness senior fiscal" \
 	    --bridgewallet "$$BRIDGE_ADDRESS" \
 	    --persistency $(BRIDGE_DIR)/signer_mv_2.json \
 	    --network testnet \
 	  > /tmp/bridge_mv_2.log 2>&1 & echo $$! > /tmp/bridge_mv_2.pid && \
-	  echo "==> Val2 (Charlie) started (PID $$(cat /tmp/bridge_mv_2.pid))"
+	  echo "==> Val2 started (PID $$(cat /tmp/bridge_mv_2.pid))"
 	@echo "==> Waiting for both validators to be ready..."
 	@for i in 1 2; do \
-	  timeout 30 sh -c "until grep -q bridge_started /tmp/bridge_mv_$$i.log 2>/dev/null; do sleep 1; done" \
+	  j=0; while [ $$j -lt 30 ] && ! grep -q bridge_started /tmp/bridge_mv_$$i.log 2>/dev/null; do sleep 1; j=$$((j+1)); done; \
+	  grep -q bridge_started /tmp/bridge_mv_$$i.log 2>/dev/null \
 	    && echo "==> Val$$i ready" || echo "==> Warning: Val$$i bridge_started not seen"; \
 	done
 
