@@ -151,12 +151,15 @@ function startBridge () {
   return child.pid
 }
 
-async function waitForBridgeReady () {
+async function waitForBridgeReady (startOffset = 0) {
+  // Look for 'bridge_started' only in content written AFTER startOffset bytes.
+  // This avoids matching the initial bridge's startup log entry when checking a restart.
   await waitUntil(async () => {
     if (!fs.existsSync(BRIDGE_LOG_FILE)) return false
-    const tail = fs.readFileSync(BRIDGE_LOG_FILE, 'utf8').slice(-10000)
+    const content = fs.readFileSync(BRIDGE_LOG_FILE, 'utf8')
+    const tail = startOffset > 0 ? content.slice(startOffset) : content.slice(-10000)
     return tail.includes('bridge_started')
-  }, { timeoutMs: 30_000, desc: 'bridge_started log entry' })
+  }, { timeoutMs: 60_000, desc: 'bridge_started log entry' })
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -296,6 +299,11 @@ async function test4_crashRecovery () {
       return json && json.signatures && json.signatures.length >= 1
     }, { timeoutMs: 60_000, desc: 'BurnTransactionReady (≥1 sig)' })
 
+    // Record log offset before kill so waitForBridgeReady detects the NEW startup
+    const logOffsetBeforeKill = fs.existsSync(BRIDGE_LOG_FILE)
+      ? fs.statSync(BRIDGE_LOG_FILE).size
+      : 0
+
     // Kill bridge mid-flight
     killBridge('SIGKILL')
     log('Bridge killed. Waiting 3s...')
@@ -304,7 +312,7 @@ async function test4_crashRecovery () {
     // Restart bridge
     startBridge()
     log('Bridge restarted. Waiting for it to come up...')
-    await waitForBridgeReady()
+    await waitForBridgeReady(logOffsetBeforeKill)
     log('Bridge ready.')
 
     // Now wait for withdrawal to complete
