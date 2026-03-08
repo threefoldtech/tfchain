@@ -1,453 +1,256 @@
-# Bridge Local Development Setup & Validation
+# Bridge Local Development Setup
 
-This document describes how to set up a complete local bridge environment for development and
-testing, including full end-to-end validation of both transfer directions, crash recovery (#1054),
-and batch proposal behavior (#1053).
-
-> **Note:** See [setup_issues_and_workarounds.md](./setup_issues_and_workarounds.md) for known pitfalls and their resolutions.
+This document describes how to run a complete local bridge environment for development and
+testing — single-validator and multi-validator — using the Make targets provided in the
+repository root.
 
 ---
 
 ## Prerequisites
 
-- Go (≥ 1.21): installed at `~/sdk/go/bin` or in PATH
-- Rust + Cargo: via rustup, at `~/.cargo/bin`
-- Node.js (≥ 18): for polkadot.js scripts
-- `curl`, `python3`: for Horizon API queries
+| Tool | Minimum version | Notes |
+|---|---|---|
+| Go | 1.21 | `go version` |
+| Rust + Cargo | stable | via [rustup](https://rustup.rs/) |
+| Node.js + npm | 18 | `node --version` |
+| Internet | — | Stellar testnet (Friendbot + Horizon) |
+
+---
+
+## Quick Start
+
+### Single-validator
 
 ```bash
-export PATH="$HOME/.cargo/bin:$HOME/sdk/go/bin:$HOME/go/bin:$PATH"
+make bridge-dev
+```
+
+That's it. On first run this builds TFChain (Rust, ~20–40 min). Every subsequent run reuses
+the existing binary and takes ~1 min.
+
+### Multi-validator (3 daemons, 2-of-3 threshold)
+
+```bash
+make bridge-mv-dev
+```
+
+Same one-shot command. Spins up 3 bridge daemons (Alice, Bob, Charlie), configures the bridge
+Stellar account as a 2-of-3 multi-sig, and runs the full MV test suite.
+
+---
+
+## What `make bridge-dev` Does
+
+| Step | Target | What happens |
+|---|---|---|
+| 1 | `bridge-clean` | Kill any running bridge/TFChain processes, delete persistency files and logs |
+| 2 | `bridge-build` | `go build` the bridge binary (fast, ~5s) |
+| 3 | _(auto)_ | Build TFChain node if binary missing (`substrate-node/target/release/tfchain`) |
+| 4 | `bridge-accounts` | Generate fresh Stellar keypairs; fund via Friendbot; create TFT trustlines; issue TFT to bridge via `path_payment_strict_send` and to user via `payment`; write `/tmp/bridge_local_env.sh` |
+| 5 | `bridge-tfchain-start` | Start TFChain `--dev --tmp`; poll WS until node is ready |
+| 6 | `bridge-setup` | Register Alice as bridge validator; set bridge wallet, fee account, deposit/withdraw fees via sudo |
+| 7 | `bridge-start` | Start bridge daemon; wait for `bridge_started` log entry |
+| 8 | `bridge-test` | Run 4-scenario E2E test suite |
+
+TFChain is built once via Make's file-dependency model. If `substrate-node/target/release/tfchain`
+already exists, the Rust build step is skipped entirely.
+
+---
+
+## Individual Targets
+
+```bash
+# Build
+make bridge-build           # Go build only (fast)
+make bridge-build-tfchain   # Rust build (slow, one-time)
+
+# Environment lifecycle
+make bridge-accounts        # (Re)generate Stellar accounts → /tmp/bridge_local_env.sh
+make bridge-tfchain-start   # Start TFChain dev node
+make bridge-setup           # Configure bridge pallet on TFChain
+make bridge-start           # Start bridge daemon
+make bridge-stop            # Stop bridge daemon
+make bridge-tfchain-stop    # Stop TFChain node
+make bridge-clean           # Stop everything + delete all local state
+
+# Testing
+make bridge-test            # Run E2E tests against a running environment
+```
+
+### Configuration overrides
+
+All targets accept environment variable overrides:
+
+```bash
+TFCHAIN_URL=ws://localhost:9944 \   # default
+BRIDGE_TFT_FLOAT=20000 \            # TFT issued to bridge wallet
+USER_TFT_AMOUNT=1000 \              # TFT issued to test user
+DEPOSIT_FEE=10000000 \              # 1 TFT (7 decimal places)
+WITHDRAW_FEE=10000000 \             # 1 TFT
+BRIDGE_ENV_FILE=/tmp/bridge_local_env.sh \
+  make bridge-dev
 ```
 
 ---
 
-## Step 1 — Build the Chain Node
+## Account Sharing Between Steps
 
-```bash
-cd ~/projects/tfchain/substrate-node
-cargo build 2>&1
-# Binary: target/debug/tfchain (~984 MB)
+All scripts share account details via a single env file written by `make bridge-accounts`:
+
+```
+/tmp/bridge_local_env.sh      # single-validator
+/tmp/bridge_mv_env.sh         # multi-validator
 ```
 
-Build takes ~20–40 minutes on first run. Subsequent incremental builds are faster.
+Each subsequent script (`bridge_setup.js`, `bridge_tests.js`, etc.) calls `loadEnv()` at
+startup to read this file into `process.env`. The Makefile shell targets source it for
+`BRIDGE_SECRET`, `BRIDGE_ADDRESS`, etc.
+
+Re-running `make bridge-accounts` generates fresh Stellar keypairs and invalidates the current
+environment — you would need to re-run `bridge-setup` and `bridge-start` as well. The
+`make bridge-clean` + `make bridge-dev` cycle handles this automatically.
 
 ---
 
-## Step 2 — Start the Chain
+## Logs
 
 ```bash
-~/projects/tfchain/substrate-node/target/debug/tfchain \
-  --dev --tmp --rpc-port 9944 --rpc-external --rpc-cors all \
-  > /tmp/tfchain.log 2>&1 &
-echo "Chain PID: $!"
-```
+tail -f /tmp/bridge_local.log    # bridge daemon
+tail -f /tmp/tfchain_local.log   # TFChain node
 
-- `--dev`: enables dev mode with pre-seeded keys (Alice, Bob, etc.) and bridge genesis config
-- `--tmp`: ephemeral storage (state lost on restart — clean slate every run)
-- Wait ~5 seconds for the node to start producing blocks
-
-Verify:
-```bash
-curl -s -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"chain_getBlockHash","params":[1],"id":1}' \
-  http://localhost:9944 | python3 -c "import sys,json; print(json.load(sys.stdin))"
-```
-
----
-
-## Step 3 — Create a Twin on Chain
-
-The bridge requires a twin to route deposits. Use polkadot.js or the following Node.js script:
-
-<!-- markdownlint-disable MD013 -->
-```javascript
-// create_twin.mjs
-import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
-const api = await ApiPromise.create({ provider: new WsProvider('ws://localhost:9944') });
-const alice = new Keyring({ type: 'sr25519' }).addFromUri('//Alice');
-
-await api.tx.tfgridModule.userAcceptTc('https://terms.example', 'hash123').signAndSend(alice);
-await new Promise(r => setTimeout(r, 6000));
-await api.tx.tfgridModule.createTwin(null, null).signAndSend(alice);
-await new Promise(r => setTimeout(r, 6000));
-await api.disconnect();
-```
-<!-- markdownlint-enable MD013 -->
-
-```bash
-node create_twin.mjs
-# Twin ID 1 created for Alice (5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY)
+# Multi-validator
+tail -f /tmp/bridge_mv_1.log     # Val1 (Alice)
+tail -f /tmp/bridge_mv_2.log     # Val2 (Bob)
+tail -f /tmp/bridge_mv_3.log     # Val3 (Charlie)
 ```
 
 ---
 
-## Step 4 — Set Up Stellar Testnet Accounts
+## Tests
 
-The official Stellar testnet TFT faucet (`stellar-utils faucet`) requires DEX liquidity which is typically unavailable. Use a custom issuer instead:
+### Single-validator tests (`make bridge-test`)
 
-```bash
-# Fund accounts via Stellar friendbot
-BRIDGE_ADDR="GBXIQP76OWZN535VKWC2RHVLE5ASOWHRJSDSB6HYDGFUO2KRRVAEZV5W"
-USER_ADDR="GD4OQKFTSLEFYQDYA444LMWBD6OWVY3ODNXNDVPLYP3VHI4VJQFDQURR"
-ISSUER_ADDR="GDPARZINMN52LJMVZSQPOEDHC2TWKJVFZSNHKDP4OUH6RI4PMXH4JA6Q"
+| Test | Description | Expected outcome |
+|---|---|---|
+| 1 | Normal withdraw | Swap 2 TFT on TFChain → receive 1 TFT on Stellar (1 TFT fee) |
+| 2 | Batch withdraws | 5 simultaneous swaps in one block → all 5 delivered |
+| 3 | Bad deposit | Send TFT to bridge without memo → full refund on Stellar |
+| 4 | Crash recovery | SIGKILL bridge mid-withdraw → restart → delivery completes |
 
-curl "https://friendbot.stellar.org/?addr=$BRIDGE_ADDR"
-curl "https://friendbot.stellar.org/?addr=$USER_ADDR"
-curl "https://friendbot.stellar.org/?addr=$ISSUER_ADDR"
-```
+### Multi-validator tests (`make bridge-mv-test`)
 
-Add trustlines and issue TFT (Node.js with `stellar-sdk`):
+| Test | Description | Expected outcome |
+|---|---|---|
+| MV1 | Normal withdraw | 3 validators, threshold=2; 1 TFT delivered |
+| MV2 | Deposit/mint | All 3 validators propose; mint threshold met |
+| MV3 | Bad deposit | All 3 detect bad deposit; full refund delivered |
+| MV4 | Validator offline | Val3 killed; Val1+Val2 meet threshold=2; refund works; Val3 restarted after |
+| MV5 | Batch withdraws | 3 simultaneous burns; all 3 delivered (uses expiry recovery if sequence collision) |
 
-```bash
-npm install @stellar/stellar-sdk
-```
-
-```javascript
-// stellar_setup.mjs — run with: node stellar_setup.mjs
-import * as StellarSdk from "@stellar/stellar-sdk";
-
-const server = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
-const NETWORK_PASSPHRASE = StellarSdk.Networks.TESTNET;
-
-const ISSUER_SECRET  = "<your-issuer-secret>";
-const ISSUER_ADDRESS = "<your-issuer-address>";
-const BRIDGE_SECRET  = "<bridge-stellar-secret>";
-const BRIDGE_ADDRESS = "<bridge-stellar-address>";
-const USER_SECRET    = "<user-stellar-secret>";
-const USER_ADDRESS   = "<user-stellar-address>";
-
-const TFT = new StellarSdk.Asset("TFT", ISSUER_ADDRESS);
-
-async function submitTx(keypair, operations) {
-  const account = await server.loadAccount(keypair.publicKey());
-  const tx = new StellarSdk.TransactionBuilder(account, {
-    fee: StellarSdk.BASE_FEE,
-    networkPassphrase: NETWORK_PASSPHRASE,
-  });
-  for (const op of operations) tx.addOperation(op);
-  const built = tx.setTimeout(30).build();
-  built.sign(keypair);
-  return server.submitTransaction(built);
-}
-
-const issuerKp = StellarSdk.Keypair.fromSecret(ISSUER_SECRET);
-const bridgeKp = StellarSdk.Keypair.fromSecret(BRIDGE_SECRET);
-const userKp   = StellarSdk.Keypair.fromSecret(USER_SECRET);
-
-// 1. Add TFT trustlines
-await submitTx(bridgeKp, [StellarSdk.Operation.changeTrust({ asset: TFT })]);
-await submitTx(userKp,   [StellarSdk.Operation.changeTrust({ asset: TFT })]);
-
-// 2. Issue TFT from custom issuer
-await submitTx(issuerKp, [
-  StellarSdk.Operation.payment({ destination: BRIDGE_ADDRESS, asset: TFT, amount: "10000" }),
-]);
-await submitTx(issuerKp, [
-  StellarSdk.Operation.payment({ destination: USER_ADDRESS, asset: TFT, amount: "1000" }),
-]);
-
-console.log("Done. Patch TFTTest in stellar.go to:", `TFT:${ISSUER_ADDRESS}`);
-```
-
-> **Testnet only:** The custom issuer `GDPARZINMN52LJMVZSQPOEDHC2TWKJVFZSNHKDP4OUH6RI4PMXH4JA6Q`
-> is used exclusively for local testing. Mainnet uses
-> `GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47`.
-
-You must also patch `TFTTest` in `bridge/tfchain_bridge/pkg/stellar/stellar.go` to use the custom issuer address, then rebuild.
+The test runner exits non-zero on any failure, making it composable with CI.
 
 ---
 
-## Step 5 — Build the Bridge
+## Multi-validator Setup Details
 
-```bash
-cd ~/projects/tfchain/bridge/tfchain_bridge
-export PATH="$HOME/sdk/go/bin:$HOME/go/bin:$PATH"
-go build -o tfchain_bridge_test . 2>&1
-echo "Build: $?"
+### What `make bridge-mv-dev` does
+
+| Step | Target | What happens |
+|---|---|---|
+| 1 | `bridge-mv-clean` | Kill all 3 daemons, delete MV persistency files and logs |
+| 2 | `bridge-build` | Build bridge binary |
+| 3 | _(auto)_ | Build TFChain if binary missing |
+| 4 | `bridge-mv-accounts` | Generate 4 keypairs (val1=bridge, val2, val3, user); fund via Friendbot; create trustlines; fund bridge via `path_payment_strict_send`; configure bridge as 2-of-3 multi-sig (val1 master key, val2+val3 added as signers, thresholds: low=1, med=2, high=3); write `/tmp/bridge_mv_env.sh` |
+| 5 | `bridge-tfchain-start` | Start TFChain dev node |
+| 6 | `bridge-mv-setup` | Create twins for Alice, Bob, Charlie; register all 3 as validators; set bridge wallet, fee account, fees |
+| 7 | `bridge-mv-start` | Start 3 bridge daemons; wait for all 3 to log `bridge_started` |
+| 8 | `bridge-mv-test` | Run MV1–MV5 test suite |
+
+### Multi-sig architecture
+
+```
+Bridge Stellar account = Val1's keypair (master key, weight=1)
+Val2 keypair added as signer (weight=1)
+Val3 keypair added as signer (weight=1)
+
+Thresholds:
+  low  = 1  (any 1 of 3 can change account options)
+  med  = 2  (any 2 of 3 must sign TFT payment transactions)
+  high = 3  (all 3 must sign for account deletion etc.)
 ```
 
-Verify the binary is correct:
-```bash
-go vet ./... && echo "vet OK"
-```
+Each bridge daemon signs with its own validator Stellar key and stores its signature on TFChain.
+When `BurnTransactionReady` or `RefundTransactionReady` fires, the first validator to receive it
+fetches all stored signatures from TFChain and builds a multi-sig Stellar transaction meeting
+the threshold.
 
 ---
 
-## Step 6 — Start the Bridge
+## Fee Mechanics
 
-<!-- markdownlint-disable MD013 -->
-```bash
-cd ~/projects/tfchain/bridge/tfchain_bridge
-./tfchain_bridge_test \
-  --secret "SCKE7RRJLDF56DOC3FSGMVROBHSLVNISVO6BJGND6A3UP6KNLJRDLTZH" \
-  --tfchainurl ws://localhost:9944 \
-  --tfchainseed "quarter between satisfy three sphere six soda boss cute decade old trend" \
-  --bridgewallet "GBXIQP76OWZN535VKWC2RHVLE5ASOWHRJSDSB6HYDGFUO2KRRVAEZV5W" \
-  --persistency ./signer_test.json \
-  --network testnet \
-  > /tmp/bridge.log 2>&1 &
-echo "Bridge PID: $!"
-```
-<!-- markdownlint-enable MD013 -->
+TFT uses 7 decimal places: `1 TFT = 10,000,000 base units`.
+Default fees are 1 TFT each (configurable via `DEPOSIT_FEE` and `WITHDRAW_FEE`).
 
-Flags:
+### Deposit (Stellar → TFChain)
 
-- `--secret`: Stellar bridge wallet secret key
-- `--tfchainurl`: local TFChain RPC endpoint
-- `--tfchainseed`: bridge validator mnemonic (pre-seeded in dev genesis)
-- `--bridgewallet`: Stellar bridge wallet public key
-- `--persistency`: path to signing state + idempotency DB base name (`.idem.db` is appended automatically)
-- `--network testnet`: uses `https://horizon-testnet.stellar.org`
+Two enforcement layers:
 
-Verify bridge started:
-```bash
-tail -5 /tmp/bridge.log | grep -o '"message":"[^"]*"'
-# Expected: "the bridge instance has started"
-```
+1. **Bridge** (`mint.go`): if incoming Stellar amount ≤ `DepositFee`, bridge refunds on Stellar
+   without proposing a mint (avoids an on-chain tx that would fail anyway).
+2. **Pallet** (`execute_mint_transaction`): deducts `DepositFee` and mints `amount - deposit_fee`
+   to the user's TFChain account.
+
+### Withdraw (TFChain → Stellar)
+
+One enforcement layer:
+
+1. **Pallet** (`swap_to_stellar`): rejects if `amount ≤ WithdrawFee` with
+   `AmountIsLessThanWithdrawFee`. If valid, stores `burn_amount = amount - withdraw_fee` in the
+   event. The bridge reads this value directly and sends it to Stellar — no additional fee applied.
 
 ---
 
-## Validation Tests
+## Bridge Funding: Why `path_payment_strict_send`
 
-All tests below were run and passed on branch `fix/bridge-batching-atomicity`, commit `8c01499` + stellar.go memo fix.
-
----
-
-### TEST 1 — Stellar → TFChain Deposit
-
-**Purpose:** Verify the Stellar inbound payment flow mints TFT on TFChain.
-
-**Steps:**
-
-1. Send TFT from user Stellar account to bridge wallet with memo `twin_1`:
-   ```javascript
-   // Using stellar-sdk:
-   // Payment: from USER to BRIDGE, amount=50 TFT, memo=MemoText("twin_1")
-   ```
-2. Bridge detects the incoming Stellar transaction via `stellar_monitor`
-3. Bridge submits `proposeOrVoteMintTransaction` on TFChain
-4. With 1 validator (dev mode), mint threshold is immediately met
-5. `MintCompleted` event emitted on TFChain
-
-**Verify:**
-```bash
-# Check bridge log for MintCompleted
-grep "MintCompleted\|mint" /tmp/bridge.log | tail -5
-
-# Check Alice's TFChain TFT balance via polkadot.js:
-# api.query.tftBridgeModule.executeByTransferHash(txHash)
-```
-
-**Expected:** Alice receives 49 TFT (50 TFT sent - 1 TFT deposit fee).
-
-> **Fee mechanics (deposit — Stellar → TFChain):**
-> TFT uses 7 decimal places on both TFChain and Stellar (1 TFT = 10,000,000 base units).
-> The genesis `deposit_fee` = 10,000,000 units = **1 TFT**.
-> This fee is enforced at **two layers**:
->
-> 1. **Bridge code** (`mint.go`): if the incoming Stellar amount ≤ `DepositFee` (read from
->    TFChain storage at startup), the bridge refunds the sender on Stellar without proposing
->    a mint — to avoid an on-chain transaction that would fail anyway.
-> 2. **Pallet** (`execute_mint_transaction`): deducts `DepositFee` from the proposed amount
->    and mints the remainder (`amount - deposit_fee`) to the user's TFChain account.
->
-> Both layers read from the same `TFTBridgeModule.DepositFee` storage value.
-
-**Result: ✅ PASSED**
-
-- Tx hash: `2aeaf9811dc7e4fbe340fd1df92c62cd0d4baf2e2562d366c1e2013c90e6910e`
-- Amount minted: 500,000,000 muTFT (50 TFT gross, 49 TFT net after 1 TFT fee)
+The bridge Stellar deposit monitor only watches `payment` operations on the bridge account.
+A `path_payment_strict_send` operation is structurally different and is not picked up by the
+monitor — so funding the bridge wallet this way does not trigger a spurious refund on startup
+rescan. Always use `path_payment_strict_send` when issuing TFT to the bridge account in test
+setup.
 
 ---
 
-### TEST 2 — TFChain → Stellar Withdraw
+## Idempotency and Crash Recovery
 
-**Purpose:** Verify the TFChain outbound flow burns TFT on-chain and sends to Stellar.
-
-**Steps:**
-
-1. Submit `swapToStellar` extrinsic:
-   ```javascript
-   api.tx.tftBridgeModule.swapToStellar(USER_STELLAR_ADDR, 30_000_000)
-     .signAndSend(alice);
-   // amount: 30,000,000 muTFT (3 TFT — 7 decimal places, 1 TFT = 10,000,000 units)
-   ```
-2. `BurnTransactionCreated` event emitted on TFChain
-3. Bridge picks up event, signs a Stellar payment, submits `proposeBurnTransactionOrAddSig`
-4. With 1 validator, `BurnTransactionReady` fires immediately
-5. Bridge submits Stellar payment from bridge wallet to user wallet
-6. Bridge calls `SetWithdrawExecuted` on TFChain
-
-**Verify:**
-```bash
-# Check bridge log
-grep "withdraw_completed\|the withdraw has proceed" /tmp/bridge.log
-
-# Check Stellar transaction on Horizon
-curl -s "https://horizon-testnet.stellar.org/accounts/GBXIQP76.../payments?order=desc&limit=5"
-```
-
-**Expected:** User receives 2 TFT (3 TFT sent - 1 TFT withdraw fee). Stellar tx has
-`memo_type=text` with the burn tx ID.
-
-> **Fee mechanics (withdraw — TFChain → Stellar):**
-> The genesis `withdraw_fee` = 10,000,000 units = **1 TFT**.
-> This fee is enforced at **one layer only** — the pallet:
->
-> - **Pallet** (`swap_to_stellar`): rejects the call if `amount ≤ WithdrawFee`
->   (`AmountIsLessThanWithdrawFee`). If valid, deducts `WithdrawFee` and stores
->   `burn_amount = amount - withdraw_fee` in the BurnTransaction event.
-> - **Bridge code**: reads `burn_amount` from the event (already post-fee) and sends
->   exactly that amount to the user's Stellar address. The bridge does **not** read
->   `WithdrawFee` separately and applies no additional fee of its own.
-
-**Result: ✅ PASSED**
-
-- User Stellar TFT balance: 950 → 952 TFT (net +2 TFT; 3 TFT burned on TFChain, 1 TFT fee, 2 TFT received on Stellar)
-- Stellar tx confirmed on Horizon with text memo matching burn tx ID
-
----
-
-### TEST 3 — Crash Recovery / Idempotent Stellar Submission (#1054)
-
-**Purpose:** Verify that if the bridge crashes after marking a tx as PROCESSING but before
-completing TFChain confirmation, a restart correctly handles the in-flight transaction without
-double-spending.
-
-**Setup:** The idempotency store is a bbolt DB at `<persistency>.idem.db`. It tracks two states per tx:
+The bridge writes an idempotency record (bbolt DB at `<persistency>.idem.db`) before submitting
+any Stellar transaction:
 
 - `PROCESSING`: Stellar tx may or may not have been submitted
-- `COMPLETED`: Stellar tx submitted + TFChain confirmation done
+- `COMPLETED`: Stellar tx submitted and TFChain confirmation done
 
-**Test scenario (crash before Stellar submission):**
+On restart, `reconcilePendingTransactions` scans all `PROCESSING` entries. For each:
 
-1. Kill bridge with `kill -9` on the bridge binary PID immediately after `swapToStellar`
-2. Wait for bridge to mark tx `PROCESSING` in idempotency DB
-3. Restart bridge
-4. Bridge startup runs `reconcilePendingTransactions`:
-   - Finds tx in `PROCESSING`
-   - Queries Horizon for Stellar tx with matching text memo
-   - If not found: logs `"idempotency: no Stellar tx found, safe to retry"`
-5. On next `BurnTransactionReady` event: bridge safely retries the Stellar submission
-
-**Inspect idempotency DB:**
-<!-- markdownlint-disable MD013 -->
-```go
-// read_idem.go — inspect bbolt state
-package main
-import (
-    "fmt"
-    bolt "go.etcd.io/bbolt"
-)
-func main() {
-    db, _ := bolt.Open("signer_test.json.idem.db", 0600, &bolt.Options{ReadOnly: true})
-    defer db.Close()
-    db.View(func(tx *bolt.Tx) error {
-        tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-            fmt.Printf("Bucket: %s\n", name)
-            b.ForEach(func(k, v []byte) error {
-                fmt.Printf("  key=%s state=%s\n", k, v)
-                return nil
-            })
-            return nil
-        })
-        return nil
-    })
-}
-```
-<!-- markdownlint-enable MD013 -->
-
-**Verify:**
-```bash
-cd ~/projects/tfchain/bridge/tfchain_bridge
-go run /tmp/read_idem.go
-# Expected: key=<tx_id> state=PROCESSING (before restart)
-# Expected: key=<tx_id> state=COMPLETED (after successful recovery)
-```
-
-**Result: ✅ PASSED**
-
-- Bridge correctly detected PROCESSING state on restart
-- Correctly queried Horizon for prior Stellar tx by memo
-- Safely retried and completed without double-submission
-- Idempotency DB showed COMPLETED after recovery
-
-**Note on path 2 (crash after Stellar submission):**
-The code path for detecting an already-submitted Stellar tx (via `FindPaymentByMemo`) and
-completing only the TFChain confirmation is correct, but triggering it reliably in automation
-requires killing the bridge in a sub-second window between Stellar submit and TFChain confirm.
-Manual inspection of the code and Horizon API confirms correctness. The Stellar memo fix
-(issue #12 in this doc) is required for this path to work.
-
----
-
-### TEST 4 — Batch Proposal (#1053)
-
-**Purpose:** Verify that N `WithdrawCreated` events in the same block are processed in a single `Utility.batch` extrinsic instead of N sequential submissions.
-
-**Steps:**
-
-1. Submit 5 `swapToStellar` calls atomically in one block using `utility.batch`:
-   ```javascript
-   const calls = Array.from({length: 5}, () =>
-     api.tx.tftBridgeModule.swapToStellar(USER_STELLAR_ADDR, 30_000_000)
-   );
-   await api.tx.utility.batch(calls).signAndSend(alice);
-   // All 5 BurnTransactionCreated events land in the same block
-   ```
-2. Bridge event loop collects all events for the block
-3. `handleWithdrawCreatedBatch` is invoked with 5 events
-4. Bridge builds one `Utility.batch` extrinsic containing all 5 `proposeBurnTransactionOrAddSig` calls
-5. Submits once, waits for one 6-second block
-
-**Bridge log signature:**
-```
-"batch processing WithdrawCreated events"   ← triggered for N > 1 events
-"withdraw_proposed" × 5                     ← one per tx ID
-"batch proposal completed"                  ← single extrinsic, single block
-```
-
-**Verify:**
-```bash
-grep -E "batch|withdraw_proposed" /tmp/bridge.log | grep -A6 "batch processing"
-```
-
-**Before fix (N=5):** 5 × 6s = 30s minimum for all proposals
-**After fix (N=5):** 1 × 6s = 6s for all proposals
-
-**Result: ✅ PASSED**
-
-- 5 `BurnTransactionCreated` events in block `0x990785d4100d`
-- Single `Utility.batch` extrinsic submitted
-- All 5 proposals (tx IDs 8–12) processed in one block
-- Log confirmed: `"batch processing WithdrawCreated events"` → `"batch proposal completed"`
-
----
-
-## Consistency Checklist
-
-Before submitting a PR, verify:
-
-- [ ] `go build ./...` exits 0 for `bridge/tfchain_bridge` and `clients/tfchain-client-go`
-- [ ] `go vet ./...` produces no output
-- [ ] All 4 tests pass (deposit, withdraw, crash recovery, batching)
-- [ ] Stellar withdraw transactions have `memo_type=text` with burn tx ID (check Horizon)
-- [ ] Idempotency DB (`signer_test.json.idem.db`) shows COMPLETED after each withdraw
-- [ ] Bridge log shows no `ERROR` or `WARN` level entries during normal operation
-- [ ] `bridge/docs/setup_issues_and_workarounds.md` updated with any new issues
-- [ ] `bridge/docs/local_development_setup.md` reflects current procedure
+1. Fetch recent outgoing Stellar transactions from Horizon (single request, reused for all checks)
+2. Search by memo text (primary) then by sequence number (fallback)
+3. If found: proceed directly to TFChain confirmation — no double-spend
+4. If not found: log `"no Stellar tx found by memo or sequence, safe to retry"` — re-submit on
+   next Ready event
 
 ---
 
 ## Known Limitations
 
-1. **Single-validator dev setup**: The `--dev` genesis seeds only one bridge validator. The bridge immediately reaches threshold on any proposal. Multi-validator quorum behavior is not tested locally.
+1. **Sequence coordination under load**: All validators sign Stellar transactions at proposal time
+   with a fixed sequence number. If another Stellar transaction from the bridge account is
+   submitted between proposal and `Ready` events, the stored signatures reference a stale
+   sequence → all validators get `tx_bad_seq` on first attempt. Recovery is automatic via the
+   expiry cycle (~20 blocks, ~2 min delay). This is a pre-existing design constraint, not
+   introduced by this PR.
 
-2. **Stellar testnet liquidity**: `stellar-utils faucet` is broken on testnet (empty DEX order book). Requires custom issuer workaround (see issue #11 above).
+2. **Stellar testnet Friendbot rate limits**: If Friendbot rejects account funding (rate limited
+   or account already exists with funds), re-running `make bridge-accounts` generates fresh
+   keypairs. This requires re-running `make bridge-setup` and `make bridge-start` as well —
+   or simply re-run `make bridge-dev` for a clean slate.
 
-3. **Crash recovery window**: The exact scenario of crash-after-Stellar-submit-before-TFChain-confirm
-   is difficult to trigger in automation due to the sub-second window. The code is correct and
-   tested for correctness; the timing scenario is documented as a known limitation of the
-   automated test suite.
-
-4. **`--tmp` chain**: The `--tmp` flag means chain state is lost on restart. For persistence across sessions, use `--base-path /tmp/tfchain-data` instead.
+3. **`--tmp` chain**: State is lost on TFChain restart. For persistent sessions, replace
+   `--tmp` with `--base-path /tmp/tfchain-data` in the `bridge-tfchain-start` Makefile target.
