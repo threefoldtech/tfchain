@@ -190,14 +190,14 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 				}
 			}
 
-			// Batch all proposal events (Created + Expired for both burns and refunds)
+			// Batch all proposal events (BurnCreated, BurnExpired, RefundExpired)
 			// into a single Utility.force_batch extrinsic. This drains backlogs from
 			// bridge outages in one block rather than N sequential blocks.
+			// Note: RefundCreated is intentionally excluded — see handleProposalsBatch.
 			if err := bridge.handleProposalsBatch(
 				ctx,
 				data.Events.WithdrawCreatedEvents,
 				data.Events.WithdrawExpiredEvents,
-				data.Events.RefundCreatedEvents,
 				data.Events.RefundExpiredEvents,
 			); err != nil {
 				return errors.Wrap(err, "an error occurred while handling proposal events")

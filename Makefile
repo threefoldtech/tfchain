@@ -1,3 +1,143 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Bridge local development environment
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Quick start (first run builds TFChain — takes 20-40 min):
+#   make bridge-dev
+#
+# Subsequent runs (TFChain already built):
+#   make bridge-dev
+#
+# Run tests against an already-running environment:
+#   make bridge-test
+#
+# Configurable via environment variables:
+#   TFCHAIN_URL        WebSocket URL for TFChain node  (default: ws://localhost:9944)
+#   BRIDGE_TFT_FLOAT   TFT to mint into bridge wallet  (default: 20000)
+#   USER_TFT_AMOUNT    TFT to mint into test user wallet (default: 1000)
+#   DEPOSIT_FEE        Deposit fee in base units        (default: 10000000 = 1 TFT)
+#   WITHDRAW_FEE       Withdraw fee in base units        (default: 10000000 = 1 TFT)
+#   BRIDGE_ENV_FILE    Env file path                    (default: /tmp/bridge_local_env.sh)
+
+# Paths (relative to repo root)
+BRIDGE_DIR       := bridge/tfchain_bridge
+BRIDGE_BIN       := $(BRIDGE_DIR)/tfchain_bridge_local
+TFCHAIN_BIN      := substrate-node/target/release/tfchain
+SCRIPTS_DIR      := scripts
+BRIDGE_LOG       := /tmp/bridge_local.log
+BRIDGE_PID_FILE  := /tmp/bridge_local.pid
+TFCHAIN_LOG      := /tmp/tfchain_local.log
+BRIDGE_ENV_FILE  ?= /tmp/bridge_local_env.sh
+TFCHAIN_URL      ?= ws://localhost:9944
+
+.PHONY: bridge-build bridge-build-tfchain bridge-accounts bridge-tfchain-start \
+        bridge-tfchain-stop bridge-setup bridge-start bridge-stop bridge-test \
+        bridge-dev bridge-clean bridge-help
+
+## bridge-help: Show bridge dev environment targets
+bridge-help:
+	@grep -E '^## bridge-' $(MAKEFILE_LIST) | sed 's/## /  make /'
+
+## bridge-build: Build the bridge binary (Go, fast ~5s)
+bridge-build:
+	@echo "==> Building bridge..."
+	cd $(BRIDGE_DIR) && go build -o tfchain_bridge_local .
+	@echo "==> Bridge binary: $(BRIDGE_BIN)"
+
+## bridge-build-tfchain: Build TFChain node (Rust, slow first-time ~30min)
+bridge-build-tfchain:
+	@echo "==> Building TFChain node (this may take 20-40 minutes on first run)..."
+	cd substrate-node && cargo build --release
+	@echo "==> TFChain binary: $(TFCHAIN_BIN)"
+
+## bridge-accounts: Generate Stellar accounts and write env file
+bridge-accounts:
+	@echo "==> Installing npm dependencies..."
+	cd $(SCRIPTS_DIR) && npm install --silent
+	@echo "==> Generating Stellar accounts..."
+	BRIDGE_ENV_FILE=$(BRIDGE_ENV_FILE) node $(SCRIPTS_DIR)/bridge_accounts.js
+
+## bridge-tfchain-start: Start TFChain dev node and wait until ready
+bridge-tfchain-start:
+	@test -f $(TFCHAIN_BIN) || (echo "ERROR: TFChain binary not found at $(TFCHAIN_BIN). Run: make bridge-build-tfchain" && exit 1)
+	@echo "==> Starting TFChain dev node..."
+	@pkill -f "$(notdir $(TFCHAIN_BIN)) --dev" 2>/dev/null || true
+	@sleep 1
+	nohup $(TFCHAIN_BIN) --dev --tmp > $(TFCHAIN_LOG) 2>&1 &
+	@echo "==> Waiting for TFChain to be ready..."
+	TFCHAIN_URL=$(TFCHAIN_URL) node $(SCRIPTS_DIR)/wait_for_node.js
+
+## bridge-tfchain-stop: Stop the TFChain dev node
+bridge-tfchain-stop:
+	@pkill -f "$(notdir $(TFCHAIN_BIN)) --dev" 2>/dev/null && echo "==> TFChain stopped" || echo "==> TFChain was not running"
+
+## bridge-setup: Configure TFChain bridge pallet (validators, fees, wallet address)
+bridge-setup:
+	@test -f $(BRIDGE_ENV_FILE) || (echo "ERROR: $(BRIDGE_ENV_FILE) not found. Run: make bridge-accounts" && exit 1)
+	@echo "==> Configuring TFChain bridge pallet..."
+	TFCHAIN_URL=$(TFCHAIN_URL) BRIDGE_ENV_FILE=$(BRIDGE_ENV_FILE) node $(SCRIPTS_DIR)/bridge_setup.js
+
+## bridge-start: Start the bridge daemon
+bridge-start:
+	@test -f $(BRIDGE_BIN) || (echo "ERROR: Bridge binary not found. Run: make bridge-build" && exit 1)
+	@test -f $(BRIDGE_ENV_FILE) || (echo "ERROR: $(BRIDGE_ENV_FILE) not found. Run: make bridge-accounts" && exit 1)
+	@pkill -f "$(notdir $(BRIDGE_BIN))" 2>/dev/null || true
+	@sleep 1
+	@. $(BRIDGE_ENV_FILE) && \
+	  nohup $(BRIDGE_BIN) \
+	    --secret "$$BRIDGE_SECRET" \
+	    --tfchainurl $(TFCHAIN_URL) \
+	    --tfchainseed "//Alice" \
+	    --bridgewallet "$$BRIDGE_ADDRESS" \
+	    --persistency $(BRIDGE_DIR)/signer_local.json \
+	    --network testnet \
+	  > $(BRIDGE_LOG) 2>&1 & echo $$! > $(BRIDGE_PID_FILE)
+	@echo "==> Bridge started (PID $$(cat $(BRIDGE_PID_FILE))), log: $(BRIDGE_LOG)"
+	@echo "==> Waiting for bridge to be ready..."
+	@timeout 30 sh -c 'until grep -q "bridge_started" $(BRIDGE_LOG) 2>/dev/null; do sleep 1; done' \
+	  && echo "==> Bridge ready." || echo "==> Warning: bridge_started not seen in 30s, check $(BRIDGE_LOG)"
+
+## bridge-stop: Stop the bridge daemon
+bridge-stop:
+	@if [ -f $(BRIDGE_PID_FILE) ]; then \
+	  kill $$(cat $(BRIDGE_PID_FILE)) 2>/dev/null && echo "==> Bridge stopped" || true; \
+	  rm -f $(BRIDGE_PID_FILE); \
+	else \
+	  pkill -f "$(notdir $(BRIDGE_BIN))" 2>/dev/null && echo "==> Bridge stopped" || echo "==> Bridge was not running"; \
+	fi
+
+## bridge-test: Run the E2E test suite against a running environment
+bridge-test:
+	@test -f $(BRIDGE_ENV_FILE) || (echo "ERROR: $(BRIDGE_ENV_FILE) not found. Run: make bridge-accounts" && exit 1)
+	@echo "==> Running bridge E2E tests..."
+	TFCHAIN_URL=$(TFCHAIN_URL) \
+	BRIDGE_ENV_FILE=$(BRIDGE_ENV_FILE) \
+	BRIDGE_PID_FILE=$(BRIDGE_PID_FILE) \
+	BRIDGE_LOG_FILE=$(BRIDGE_LOG) \
+	BRIDGE_BIN=$(BRIDGE_BIN) \
+	node $(SCRIPTS_DIR)/bridge_tests.js
+
+## bridge-clean: Stop everything and delete all local state
+bridge-clean: bridge-stop bridge-tfchain-stop
+	@echo "==> Cleaning local bridge state..."
+	rm -f $(BRIDGE_DIR)/signer_local.json
+	rm -f $(BRIDGE_DIR)/signer_local.json.idem.db
+	rm -f $(BRIDGE_LOG) $(TFCHAIN_LOG) $(BRIDGE_PID_FILE)
+	@echo "==> Clean done."
+
+## bridge-dev: Full one-shot local dev environment (build → accounts → start → test)
+## Note: TFChain is built only if binary is missing (slow first run, fast after).
+bridge-dev: bridge-clean bridge-build $(TFCHAIN_BIN) bridge-accounts \
+            bridge-tfchain-start bridge-setup bridge-start bridge-test
+
+# Build TFChain only if binary doesn't exist (expensive Rust build)
+$(TFCHAIN_BIN):
+	@$(MAKE) bridge-build-tfchain
+
+# ─────────────────────────────────────────────────────────────────────────────
+# End bridge local development environment
+# ─────────────────────────────────────────────────────────────────────────────
+
 .PHONY: version-bump
 
 # * Usage Examples:*

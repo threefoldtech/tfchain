@@ -17,22 +17,28 @@ import (
 
 // handleProposalsBatch processes all proposal events from a single TFChain block in one
 // Utility.force_batch extrinsic. This covers:
-//   - BurnTransactionCreated  → propose_burn_transaction_or_add_sig
-//   - BurnTransactionExpired  → same (re-sign with fresh Stellar sequence; pre-runtime-147 dropped)
-//   - RefundTransactionCreated → create_refund_transaction_or_add_sig (allows validators that
-//     missed the triggering Stellar deposit to add their signature without waiting for expiry)
-//   - RefundTransactionExpired → same (offline-validator recovery path)
+//   - BurnTransactionCreated → propose_burn_transaction_or_add_sig
+//   - BurnTransactionExpired → same (re-sign with fresh Stellar sequence; pre-runtime-147 dropped)
+//   - RefundTransactionExpired → create_refund_transaction_or_add_sig (offline-validator recovery)
+//
+// Note: RefundTransactionCreated is intentionally NOT handled here.
+// In a multi-validator setup every online validator monitors the Stellar cursor independently
+// and calls proposeRefundDirect as soon as it detects a bad deposit — before
+// RefundTransactionCreated is even emitted on TFChain. By the time this event fires, the
+// proposing validator has already signed. Processing it here would only ever help a validator
+// that somehow missed its entire Stellar cursor history, which is not a realistic scenario.
+// If "catch-up" mode for validators joining mid-stream without Stellar history is ever needed,
+// RefundTransactionCreated handling should be re-added here.
 //
 // Ready events (BurnTransactionReady, RefundTransactionReady) are NOT handled here — they
 // involve actual Stellar submissions, not TFChain extrinsics, and remain sequential.
 // Deposit-triggered refunds (mint.go → refund()) are also NOT batched here; they call
-// handleRefundExpired directly so that all validators propose at the same time with a
+// proposeRefundDirect directly so that all validators propose at the same time with a
 // consistent Stellar sequence number.
 func (bridge *Bridge) handleProposalsBatch(
 	ctx context.Context,
 	withdrawCreated []subpkg.WithdrawCreatedEvent,
 	withdrawExpired []subpkg.WithdrawExpiredEvent,
-	refundCreated []subpkg.RefundTransactionCreatedEvent,
 	refundExpired []subpkg.RefundTransactionExpiredEvent,
 ) error {
 	// Step 1: Convert BurnTransactionExpired (≥runtime-147) to WithdrawCreatedEvent.
@@ -56,16 +62,13 @@ func (bridge *Bridge) handleProposalsBatch(
 		})
 	}
 
-	// Step 2: Normalise refund events — Created and Expired have identical fields.
+	// Step 2: Normalise refund expired events.
 	type refundItem struct {
 		Hash   string
 		Target string
 		Amount uint64
 	}
 	var allRefunds []refundItem
-	for _, e := range refundCreated {
-		allRefunds = append(allRefunds, refundItem{e.Hash, e.Target, e.Amount})
-	}
 	for _, e := range refundExpired {
 		allRefunds = append(allRefunds, refundItem{e.Hash, e.Target, e.Amount})
 	}
