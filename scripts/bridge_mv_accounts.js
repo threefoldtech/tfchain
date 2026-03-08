@@ -2,23 +2,27 @@
 /**
  * bridge_mv_accounts.js
  *
- * Sets up Stellar accounts for a 2-validator bridge dev environment.
- * TFChain genesis pre-registers Bob (//Bob) and Charlie (//Charlie) as validators.
- * This script sets up their corresponding Stellar keys and the multi-sig bridge account.
+ * Sets up Stellar accounts for a 3-validator bridge dev environment.
  *
- * Multi-sig configuration (2-of-2):
- *   - Bridge account = Val1 (Bob) Stellar keypair (master key, weight=1)
- *   - Val2 (Charlie) Stellar keypair added as signer (weight=1)
- *   - Thresholds: low=1, med=2 (both must sign TFT payments), high=2
+ * Multi-sig configuration (2-of-3):
+ *   - Bridge account = Val1 Stellar keypair (master key, weight=1)
+ *   - Val2 Stellar keypair added as signer (weight=1)
+ *   - Val3 Stellar keypair added as signer (weight=1)
+ *   - Thresholds: low=1, med=2 (any 2 of 3 can sign TFT payments), high=2
+ *
+ * TFChain genesis bridge validators (from substrate-node/node/src/chain_spec.rs):
+ *   Val1: "quarter between satisfy three sphere six soda boss cute decade old trend"   (genesis)
+ *   Val2: "employ split promote annual couple elder remain cricket company fitness senior fiscal" (added via council)
+ *   Val3: "remind bird banner word spread volume card keep want faith insect mind"     (added via council)
  *
  * Steps:
- *   1. Generate keypairs: val1 (bridge master), val2 (Charlie signer), user, issuer
+ *   1. Generate keypairs: val1 (bridge master), val2, val3, user, issuer
  *   2. Fund all via Stellar Friendbot
- *   3. Create TFT trustlines on bridge (val1) and user
+ *   3. Create TFT trustline on bridge (val1) and user
  *   4. Fund bridge via path_payment_strict_send (invisible to deposit monitor)
  *   5. Fund user via regular payment
- *   6. Configure bridge as 2-of-2 multi-sig (val1 master + val2 signer)
- *   7. Write /tmp/bridge_mv_env.sh
+ *   6. Configure bridge as 2-of-3 multi-sig (val1 master + val2 + val3 signers)
+ *   7. Write env file
  *
  * Usage:
  *   node scripts/bridge_mv_accounts.js
@@ -77,15 +81,17 @@ async function submitTx (kp, acc, ops) {
 }
 
 async function main () {
-  // 1. Generate or reuse keypairs
-  // Val1 (Bob //Bob) — master key of the bridge Stellar account
+  // 1. Generate keypairs
   const val1Kp = process.env.VAL1_STELLAR_SECRET
     ? StellarSdk.Keypair.fromSecret(process.env.VAL1_STELLAR_SECRET)
     : StellarSdk.Keypair.random()
 
-  // Val2 (Charlie //Charlie) — added as second signer on bridge account
   const val2Kp = process.env.VAL2_STELLAR_SECRET
     ? StellarSdk.Keypair.fromSecret(process.env.VAL2_STELLAR_SECRET)
+    : StellarSdk.Keypair.random()
+
+  const val3Kp = process.env.VAL3_STELLAR_SECRET
+    ? StellarSdk.Keypair.fromSecret(process.env.VAL3_STELLAR_SECRET)
     : StellarSdk.Keypair.random()
 
   const userKp = process.env.USER_SECRET
@@ -99,8 +105,9 @@ async function main () {
   const bridgeAddress = val1Kp.publicKey()
 
   log(`Issuer:        ${issuerKp.publicKey()}`)
-  log(`Val1 / Bridge: ${val1Kp.publicKey()} (TFChain: //Bob)`)
-  log(`Val2:          ${val2Kp.publicKey()} (TFChain: //Charlie)`)
+  log(`Val1 / Bridge: ${val1Kp.publicKey()}`)
+  log(`Val2:          ${val2Kp.publicKey()}`)
+  log(`Val3:          ${val3Kp.publicKey()}`)
   log(`User:          ${userKp.publicKey()}`)
 
   const TFT = new StellarSdk.Asset(TFT_ASSET_CODE, issuerKp.publicKey())
@@ -111,29 +118,32 @@ async function main () {
     friendbot(issuerKp.publicKey()),
     friendbot(val1Kp.publicKey()),
     friendbot(val2Kp.publicKey()),
+    friendbot(val3Kp.publicKey()),
     friendbot(userKp.publicKey())
   ])
   log('Friendbot done. Waiting for accounts...')
 
-  const [, bridgeAcc, , userAcc] = await Promise.all([
+  const [, bridgeAcc, , , userAcc] = await Promise.all([
     waitForAccount(issuerKp.publicKey()),
     waitForAccount(val1Kp.publicKey()),
     waitForAccount(val2Kp.publicKey()),
+    waitForAccount(val3Kp.publicKey()),
     waitForAccount(userKp.publicKey())
   ])
 
-  // 3. TFT trustlines on bridge and user
-  log('Creating TFT trustlines...')
+  // 3. TFT trustlines on bridge and user only (val2/val3 are signers, not holders)
+  log('Creating TFT trustlines on bridge and user...')
   await Promise.all([
     submitTx(val1Kp, bridgeAcc, [StellarSdk.Operation.changeTrust({ asset: TFT })]),
     submitTx(userKp, userAcc, [StellarSdk.Operation.changeTrust({ asset: TFT })])
   ])
   log('Trustlines created.')
 
-  const [issuerAcc2, bridgeAcc2, , userAcc2] = await Promise.all([
+  const [issuerAcc2, bridgeAcc2, , , userAcc2] = await Promise.all([
     waitForAccount(issuerKp.publicKey()),
     waitForAccount(val1Kp.publicKey()),
     waitForAccount(val2Kp.publicKey()),
+    waitForAccount(val3Kp.publicKey()),
     waitForAccount(userKp.publicKey())
   ])
 
@@ -163,14 +173,17 @@ async function main () {
   ])
   log(`User funded with ${USER_TFT_AMOUNT} TFT.`)
 
-  // 6. Configure bridge as 2-of-2 multi-sig
-  // Val1 is master (weight=1 by default), val2 added as signer (weight=1)
-  // Any 2 of 2 signers needed for med ops (TFT payments)
+  // 6. Configure bridge as 2-of-3 multi-sig
+  // Val1 is master (weight=1), val2 and val3 added as signers (weight=1 each)
+  // Any 2 of 3 signers needed for med ops (TFT payments)
   const bridgeAcc3 = await waitForAccount(val1Kp.publicKey())
-  log('Configuring bridge as 2-of-2 multi-sig (low=1, med=2, high=2)...')
+  log('Configuring bridge as 2-of-3 multi-sig (low=1, med=2, high=2)...')
   await submitTx(val1Kp, bridgeAcc3, [
     StellarSdk.Operation.setOptions({
       signer: { ed25519PublicKey: val2Kp.publicKey(), weight: 1 }
+    }),
+    StellarSdk.Operation.setOptions({
+      signer: { ed25519PublicKey: val3Kp.publicKey(), weight: 1 }
     }),
     StellarSdk.Operation.setOptions({
       lowThreshold: 1,
@@ -181,12 +194,15 @@ async function main () {
 
   const finalAcc = await waitForAccount(bridgeAddress)
   log(`Bridge thresholds: low=${finalAcc.thresholds.low_threshold} med=${finalAcc.thresholds.med_threshold} high=${finalAcc.thresholds.high_threshold}`)
-  log(`Bridge signers: ${finalAcc.signers.length} (expected 2)`)
+  log(`Bridge signers: ${finalAcc.signers.length} (expected 3: val1 master + val2 + val3)`)
 
   // 7. Write env file
   const envContent = `# Auto-generated by bridge_mv_accounts.js — do not edit manually
-# Val1 = Bob (//Bob TFChain seed), master key of bridge Stellar account
-# Val2 = Charlie (//Charlie TFChain seed), second signer on bridge Stellar account
+# Multi-sig: 2-of-3 (val1 master + val2 + val3 all weight=1, med threshold=2)
+# TFChain validator seeds (from substrate-node/node/src/chain_spec.rs):
+#   Val1: "quarter between satisfy three sphere six soda boss cute decade old trend"               (genesis)
+#   Val2: "employ split promote annual couple elder remain cricket company fitness senior fiscal"  (added via council)
+#   Val3: "remind bird banner word spread volume card keep want faith insect mind"                (added via council)
 export ISSUER_ADDRESS="${issuerKp.publicKey()}"
 export ISSUER_SECRET="${issuerKp.secret()}"
 export BRIDGE_ADDRESS="${bridgeAddress}"
@@ -194,6 +210,8 @@ export VAL1_STELLAR_SECRET="${val1Kp.secret()}"
 export VAL1_STELLAR_ADDRESS="${val1Kp.publicKey()}"
 export VAL2_STELLAR_SECRET="${val2Kp.secret()}"
 export VAL2_STELLAR_ADDRESS="${val2Kp.publicKey()}"
+export VAL3_STELLAR_SECRET="${val3Kp.secret()}"
+export VAL3_STELLAR_ADDRESS="${val3Kp.publicKey()}"
 export USER_ADDRESS="${userKp.publicKey()}"
 export USER_SECRET="${userKp.secret()}"
 export TFT_ASSET_CODE="${TFT_ASSET_CODE}"

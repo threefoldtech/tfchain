@@ -154,8 +154,9 @@ bridge-mv-setup:
 	TFCHAIN_URL=$(TFCHAIN_URL) BRIDGE_MV_ENV_FILE=$(BRIDGE_MV_ENV_FILE) \
 	  node $(SCRIPTS_DIR)/bridge_mv_setup.js
 
-## bridge-mv-start: Start 2 bridge daemons (Val1=genesis-key-1, Val2=genesis-key-2)
-# Seeds are from chain_spec.rs "bridge validator dev key" entries (validators 2+3 added via council in bridge-mv-setup)
+## bridge-mv-start: Start 3 bridge daemons (Val1=genesis, Val2+Val3 added via council)
+# Seeds are from chain_spec.rs; val2+val3 must already be added via bridge-mv-setup.
+# Each validator runs in its own shell line to avoid $! capture issues when chaining.
 bridge-mv-start:
 	@test -f $(BRIDGE_BIN) || (echo "ERROR: Bridge binary not found. Run: make bridge-build" && exit 1)
 	@test -f $(BRIDGE_MV_ENV_FILE) || (echo "ERROR: $(BRIDGE_MV_ENV_FILE) not found. Run: make bridge-mv-accounts" && exit 1)
@@ -169,8 +170,9 @@ bridge-mv-start:
 	    --bridgewallet "$$BRIDGE_ADDRESS" \
 	    --persistency $(BRIDGE_DIR)/signer_mv_1.json \
 	    --network testnet \
-	  > /tmp/bridge_mv_1.log 2>&1 & echo $$! > /tmp/bridge_mv_1.pid && \
-	  echo "==> Val1 started (PID $$(cat /tmp/bridge_mv_1.pid))" && \
+	  > /tmp/bridge_mv_1.log 2>&1 & echo $$! > /tmp/bridge_mv_1.pid
+	@echo "==> Val1 started (PID $$(cat /tmp/bridge_mv_1.pid))"
+	@. $(BRIDGE_MV_ENV_FILE) && \
 	  nohup $(BRIDGE_BIN) \
 	    --secret "$$VAL2_STELLAR_SECRET" \
 	    --tfchainurl $(TFCHAIN_URL) \
@@ -178,18 +180,32 @@ bridge-mv-start:
 	    --bridgewallet "$$BRIDGE_ADDRESS" \
 	    --persistency $(BRIDGE_DIR)/signer_mv_2.json \
 	    --network testnet \
-	  > /tmp/bridge_mv_2.log 2>&1 & echo $$! > /tmp/bridge_mv_2.pid && \
-	  echo "==> Val2 started (PID $$(cat /tmp/bridge_mv_2.pid))"
-	@echo "==> Waiting for both validators to be ready..."
-	@for i in 1 2; do \
+	  > /tmp/bridge_mv_2.log 2>&1 & echo $$! > /tmp/bridge_mv_2.pid
+	@echo "==> Val2 started (PID $$(cat /tmp/bridge_mv_2.pid))"
+	@. $(BRIDGE_MV_ENV_FILE) && \
+	  nohup $(BRIDGE_BIN) \
+	    --secret "$$VAL3_STELLAR_SECRET" \
+	    --tfchainurl $(TFCHAIN_URL) \
+	    --tfchainseed "remind bird banner word spread volume card keep want faith insect mind" \
+	    --bridgewallet "$$BRIDGE_ADDRESS" \
+	    --persistency $(BRIDGE_DIR)/signer_mv_3.json \
+	    --network testnet \
+	  > /tmp/bridge_mv_3.log 2>&1 & echo $$! > /tmp/bridge_mv_3.pid
+	@echo "==> Val3 started (PID $$(cat /tmp/bridge_mv_3.pid))"
+	@echo "==> Waiting for validators to be ready..."
+	@for i in 1 2 3; do \
 	  j=0; while [ $$j -lt 30 ] && ! grep -q bridge_started /tmp/bridge_mv_$$i.log 2>/dev/null; do sleep 1; j=$$((j+1)); done; \
-	  grep -q bridge_started /tmp/bridge_mv_$$i.log 2>/dev/null \
-	    && echo "==> Val$$i ready" || echo "==> Warning: Val$$i bridge_started not seen"; \
+	  if grep -q bridge_started /tmp/bridge_mv_$$i.log 2>/dev/null; then \
+	    echo "==> Val$$i ready"; \
+	  else \
+	    echo "==> WARNING: Val$$i bridge_started not seen. Last log lines:"; \
+	    tail -5 /tmp/bridge_mv_$$i.log 2>/dev/null || echo "(no log)"; \
+	  fi; \
 	done
 
 ## bridge-mv-stop: Stop all 3 bridge daemons
 bridge-mv-stop:
-	@for i in 1 2; do \
+	@for i in 1 2 3; do \
 	  if [ -f /tmp/bridge_mv_$$i.pid ]; then \
 	    kill $$(cat /tmp/bridge_mv_$$i.pid) 2>/dev/null || true; \
 	    rm -f /tmp/bridge_mv_$$i.pid; \

@@ -5,14 +5,15 @@
  * Configures TFChain for multi-validator bridge dev testing.
  *
  * Genesis pre-configures only validator 1 (dev key 1). This script uses
- * council governance (Alice + Bob are genesis council members) to add
- * validator 2 (dev key 2) to the bridge validator set.
+ * council governance (Alice + Bob are genesis council members, 2-of-2) to
+ * add validators 2 and 3 to the bridge validator set.
  *
  * TFChain bridge validator dev seeds (from chain_spec.rs):
- *   Val1: "quarter between satisfy three sphere six soda boss cute decade old trend"   (genesis)
- *   Val2: "employ split promote annual couple elder remain cricket company fitness senior fiscal" (added via council)
+ *   Val1: "quarter between satisfy three sphere six soda boss cute decade old trend"              (genesis)
+ *   Val2: "employ split promote annual couple elder remain cricket company fitness senior fiscal" (added here)
+ *   Val3: "remind bird banner word spread volume card keep want faith insect mind"               (added here)
  *
- * Council flow: Alice proposes → Bob votes → Alice closes → call executes.
+ * Council flow per validator: Alice proposes → Bob votes yes → Alice votes yes → Alice closes.
  *
  * Usage:
  *   node scripts/bridge_mv_setup.js
@@ -26,6 +27,7 @@ const TFCHAIN_URL = process.env.TFCHAIN_URL || 'ws://localhost:9944'
 
 // Bridge validator dev seeds (from substrate-node/node/src/chain_spec.rs)
 const VAL2_SEED = 'employ split promote annual couple elder remain cricket company fitness senior fiscal'
+const VAL3_SEED = 'remind bird banner word spread volume card keep want faith insect mind'
 
 function log (msg) { console.log(`[mv-setup] ${msg}`) }
 function die (msg) { console.error(`[mv-setup] FATAL: ${msg}`); process.exit(1) }
@@ -54,18 +56,82 @@ function signAndWait (api, tx, signer) {
   })
 }
 
-/** Wait for a block to be finalized */
-async function waitBlocks (api, n = 2) {
+/** Wait for N new blocks */
+async function waitBlocks (api, n = 1) {
   return new Promise((resolve) => {
     let count = 0
-    const unsub = api.rpc.chain.subscribeNewHeads(header => {
+    api.rpc.chain.subscribeNewHeads(header => {
       count++
-      if (count >= n) {
-        unsub.then(fn => fn())
-        resolve()
-      }
+      if (count >= n) resolve()
     })
   })
+}
+
+/** Add a bridge validator via council governance (Alice proposes, both vote, Alice closes) */
+async function addValidatorViaCouncil (api, alice, bob, validatorAddress, label) {
+  // Check if already registered
+  const validators = await api.query.tftBridgeModule.validators()
+  const valList = validators.toHuman()
+  log(`Current validators: ${JSON.stringify(valList)}`)
+
+  if (valList.includes(validatorAddress)) {
+    log(`${label} (${validatorAddress}) already registered. Skipping.`)
+    return
+  }
+
+  log(`Adding ${label} (${validatorAddress}) via council governance...`)
+
+  // Build the addBridgeValidator call
+  const addValCall = api.tx.tftBridgeModule.addBridgeValidator(validatorAddress)
+  const encodedCall = addValCall.method.toHex()
+  const callLen = encodedCall.length / 2 - 1 // bytes
+
+  // Alice proposes with threshold=2 (Alice + Bob must both vote)
+  log(`Alice proposing addBridgeValidator(${label})...`)
+  const { events: proposeEvents } = await signAndWait(
+    api,
+    api.tx.council.propose(2, addValCall, callLen),
+    alice
+  )
+
+  // Extract proposal hash and index from Proposed event
+  let proposalHash, proposalIndex
+  for (const { event } of proposeEvents) {
+    if (api.events.council.Proposed.is(event)) {
+      proposalHash = event.data[2].toHex()
+      proposalIndex = event.data[1].toNumber()
+      break
+    }
+  }
+  if (!proposalHash) die('Could not extract proposal hash from Proposed event')
+  log(`Proposal: hash=${proposalHash.slice(0, 12)}... index=${proposalIndex}`)
+
+  // Bob votes yes
+  log('Bob voting yes...')
+  await signAndWait(api, api.tx.council.vote(proposalHash, proposalIndex, true), bob)
+  log('Bob voted yes.')
+
+  // Alice votes yes
+  log('Alice voting yes...')
+  await signAndWait(api, api.tx.council.vote(proposalHash, proposalIndex, true), alice)
+  log('Alice voted yes.')
+
+  // Close the proposal (executes the call)
+  log('Closing proposal...')
+  const maxWeight = { refTime: BigInt(1_000_000_000), proofSize: BigInt(1_000_000) }
+  await signAndWait(api, api.tx.council.close(proposalHash, proposalIndex, maxWeight, callLen), alice)
+  log('Proposal closed.')
+
+  // Verify
+  await waitBlocks(api, 1)
+  const newValidators = await api.query.tftBridgeModule.validators()
+  const newValList = newValidators.toHuman()
+  log(`Updated validators: ${JSON.stringify(newValList)}`)
+
+  if (!newValList.includes(validatorAddress)) {
+    die(`${label} was not added — council call may have failed`)
+  }
+  log(`${label} ✓ successfully added as bridge validator.`)
 }
 
 async function main () {
@@ -76,73 +142,23 @@ async function main () {
   const alice = keyring.addFromUri('//Alice')
   const bob = keyring.addFromUri('//Bob')
   const val2 = keyring.addFromUri(VAL2_SEED)
+  const val3 = keyring.addFromUri(VAL3_SEED)
 
-  // 1. Print current state
-  const validators = await api.query.tftBridgeModule.validators()
-  const valList = validators.toHuman()
-  log(`Current validators: ${JSON.stringify(valList)}`)
+  log(`Val2 address: ${val2.address}`)
+  log(`Val3 address: ${val3.address}`)
 
-  if (valList.includes(val2.address)) {
-    log(`Val2 (${val2.address}) already registered. Nothing to do.`)
-    await api.disconnect()
-    return
-  }
+  // Add val2 via council governance
+  await addValidatorViaCouncil(api, alice, bob, val2.address, 'Val2')
 
-  log(`Adding Val2 (${val2.address}) via council governance...`)
+  // Add val3 via council governance
+  await addValidatorViaCouncil(api, alice, bob, val3.address, 'Val3')
 
-  // 2. Build the addBridgeValidator call
-  const addVal2Call = api.tx.tftBridgeModule.addBridgeValidator(val2.address)
-  const encodedCall = addVal2Call.method.toHex()
-  const callLen = encodedCall.length / 2 - 1 // bytes
-
-  // 3. Alice proposes with threshold=2 (Alice + Bob must both vote)
-  log('Alice proposing addBridgeValidator(val2)...')
-  const { events: proposeEvents } = await signAndWait(
-    api,
-    api.tx.council.propose(2, addVal2Call, callLen),
-    alice
-  )
-
-  // Extract proposal hash and index from Proposed event
-  let proposalHash, proposalIndex
-  for (const { event } of proposeEvents) {
-    if (api.events.council.Proposed.is(event)) {
-      proposalHash = event.data[2].toHex() // hash is 3rd field
-      proposalIndex = event.data[1].toNumber() // index is 2nd field
-      break
-    }
-  }
-  if (!proposalHash) die('Could not extract proposal hash from Proposed event')
-  log(`Proposal created: hash=${proposalHash.slice(0, 10)}... index=${proposalIndex}`)
-
-  // 4. Bob votes yes
-  log('Bob voting yes...')
-  await signAndWait(api, api.tx.council.vote(proposalHash, proposalIndex, true), bob)
-  log('Bob voted yes.')
-
-  // 5. Alice votes yes (she didn't automatically vote by proposing in Substrate)
-  log('Alice voting yes...')
-  await signAndWait(api, api.tx.council.vote(proposalHash, proposalIndex, true), alice)
-  log('Alice voted yes.')
-
-  // 6. Close the proposal (executes the call)
-  log('Closing proposal...')
-  const maxWeight = { refTime: BigInt(1_000_000_000), proofSize: BigInt(1_000_000) }
-  await signAndWait(api, api.tx.council.close(proposalHash, proposalIndex, maxWeight, callLen), alice)
-  log('Proposal closed.')
-
-  // 7. Verify
-  await waitBlocks(api, 1)
-  const newValidators = await api.query.tftBridgeModule.validators()
-  const newValList = newValidators.toHuman()
-  log(`Updated validators: ${JSON.stringify(newValList)}`)
-
-  if (!newValList.includes(val2.address)) {
-    die('Val2 was not added — council call may have failed (check EnsureRootOrCouncilApproval)')
-  }
-  log('Val2 ✓ successfully added as bridge validator.')
+  // Final state
+  const finalValidators = await api.query.tftBridgeModule.validators()
+  log(`Final validators: ${JSON.stringify(finalValidators.toHuman())}`)
 
   await api.disconnect()
+  log('Setup complete.')
 }
 
 main().catch(e => die(e.message || String(e)))

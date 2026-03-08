@@ -3,15 +3,15 @@
  * bridge_mv_tests.js
  *
  * Multi-validator E2E test suite for the TFChain bridge.
- * Assumes 2 bridge daemons running (Val1=Bob //Bob, Val2=Charlie //Charlie),
- * bridge Stellar account configured as 2-of-2 multi-sig (threshold=2).
- * Bob and Charlie are pre-registered validators in the TFChain dev genesis.
+ * Assumes 3 bridge daemons running (Val1=genesis-key-1, Val2=genesis-key-2, Val3=genesis-key-3),
+ * bridge Stellar account configured as 2-of-3 multi-sig (threshold=2).
+ * Val2 and Val3 are added via council governance in bridge-mv-setup.
  *
  * Tests (run sequentially):
  *   MV1 — Normal withdraw: 3 validators, 2-of-3 signatures, 1 TFT delivered
  *   MV2 — Deposit/mint: send TFT with valid memo, all 3 propose mint, threshold met
  *   MV3 — Bad deposit: no memo, all 3 detect and propose refund, full refund delivered
- *   MV4 — Validator restart: kill Val2 after first proposal, restart, verify late-join completes flow
+ *   MV4 — Validator offline: kill Val3 before deposit, Val1+Val2 alone complete refund (2-of-3)
  *   MV5 — Batch withdraws: 3 simultaneous swaps, all 3 eventually delivered (may use expiry)
  *
  * Non-zero exit on any failure.
@@ -34,8 +34,8 @@ const ENV_FILE = process.env.BRIDGE_MV_ENV_FILE || '/tmp/bridge_mv_env.sh'
 const BRIDGE_BIN = process.env.BRIDGE_BIN || './bridge/tfchain_bridge/tfchain_bridge_local'
 const BRIDGE_DIR = process.env.BRIDGE_DIR || './bridge/tfchain_bridge'
 
-const VAL_PID_FILES = [1, 2].map(i => `/tmp/bridge_mv_${i}.pid`)
-const VAL_LOG_FILES = [1, 2].map(i => `/tmp/bridge_mv_${i}.log`)
+const VAL_PID_FILES = [1, 2, 3].map(i => `/tmp/bridge_mv_${i}.pid`)
+const VAL_LOG_FILES = [1, 2, 3].map(i => `/tmp/bridge_mv_${i}.log`)
 
 const WITHDRAW_FEE_TFT = 1
 const TFT_DECIMALS = 1e7
@@ -143,26 +143,31 @@ function killValidator (valIndex, signal = 'SIGKILL') {
 // Bridge validator dev seeds (from substrate-node/node/src/chain_spec.rs)
 const VAL_TFCHAIN_SEEDS = [
   'quarter between satisfy three sphere six soda boss cute decade old trend',
-  'employ split promote annual couple elder remain cricket company fitness senior fiscal'
+  'employ split promote annual couple elder remain cricket company fitness senior fiscal',
+  'remind bird banner word spread volume card keep want faith insect mind'
 ]
 
 function startValidator (valIndex) {
-  const secrets = ['VAL1_STELLAR_SECRET', 'VAL2_STELLAR_SECRET']
+  const secrets = ['VAL1_STELLAR_SECRET', 'VAL2_STELLAR_SECRET', 'VAL3_STELLAR_SECRET']
   const secret = getEnv(secrets[valIndex - 1])
   const seed = VAL_TFCHAIN_SEEDS[valIndex - 1]
   const persistency = `${BRIDGE_DIR}/signer_mv_${valIndex}.json`
   const logFile = VAL_LOG_FILES[valIndex - 1]
 
-  const child = spawn(BRIDGE_BIN, [
+  // Use shell exec redirect — direct fd inheritance is unreliable on macOS after child.unref()
+  const cmd = [
+    BRIDGE_BIN,
     '--secret', secret,
     '--tfchainurl', TFCHAIN_URL,
-    '--tfchainseed', seed,
+    '--tfchainseed', `"${seed}"`,
     '--bridgewallet', bridgeAddress,
     '--persistency', persistency,
     '--network', 'testnet'
-  ], {
+  ].join(' ')
+
+  const child = spawn('/bin/sh', ['-c', `exec ${cmd} >> ${logFile} 2>&1`], {
     detached: true,
-    stdio: ['ignore', fs.openSync(logFile, 'a'), fs.openSync(logFile, 'a')]
+    stdio: 'ignore'
   })
   child.unref()
   fs.writeFileSync(VAL_PID_FILES[valIndex - 1], String(child.pid))
@@ -274,46 +279,37 @@ async function testMV3_badDeposit () {
   } catch (e) { fail(name, e.message) }
 }
 
-async function testMV4_validatorRestart () {
-  console.log('\n── MV4: Validator restart — kill Val2 mid-flow, restart, verify late-join completes ──')
-  const name = 'MV4_validatorRestart'
+async function testMV4_validatorOffline () {
+  console.log('\n── MV4: Val3 offline — Val1+Val2 complete refund with 2-of-3 threshold ──')
+  const name = 'MV4_validatorOffline'
   const userAddress = getEnv('USER_ADDRESS')
 
   try {
-    // Kill Val2 (Charlie) before the bad deposit
-    killValidator(2)
+    // Kill Val3 before the deposit — threshold=2, so Val1+Val2 alone can complete
+    killValidator(3)
     await new Promise(r => setTimeout(r, 2000))
 
     const before = await stellarTFTBalance(userAddress)
-    log(`Val2 killed. User Stellar TFT before: ${before}`)
+    log(`Val3 killed. User Stellar TFT before: ${before}`)
 
-    // Send bad deposit — only Val1 (Bob) is running, threshold=2, Ready won't fire yet
+    // Send bad deposit (no memo) — Val1+Val2 detect it, propose refund, threshold=2 met
     const result = await sendStellarPayment(getEnv('USER_SECRET'), bridgeAddress, '4')
-    log(`Bad deposit sent: ${result.hash.slice(0, 16)} (no memo, Val2 offline)`)
+    log(`Bad deposit sent: ${result.hash.slice(0, 16)} (no memo, Val3 offline)`)
 
-    // Wait for Val1 to propose on TFChain (1 of 2 needed)
-    await waitUntil(async () => {
-      const refunds = await api.query.tftBridgeModule.refundTransactions.entries()
-      return refunds.some(([, v]) => {
-        const d = v.toJSON()
-        return d && d.signatures && d.signatures.length >= 1
-      })
-    }, { timeoutMs: 60_000, desc: 'Val1 refund proposal on TFChain' })
-    log('Val1 proposed refund (1 sig on TFChain). Restarting Val2...')
-
-    // Restart Val2 — it will catch up via Stellar cursor and propose refund
-    startValidator(2)
-    await waitForValReady(2)
-    log('Val2 back online. Waiting for refund to complete...')
-
-    // Now both validators are running — Ready should fire and refund complete
+    // Wait for refund to complete — Val1+Val2 have enough signatures (2-of-3)
     const after = await waitUntil(async () => {
       const bal = await stellarTFTBalance(userAddress)
       if (bal >= before - 1e-7) return bal
-    }, { timeoutMs: 180_000, desc: 'balance restored after Val2 rejoins' })
+    }, { timeoutMs: 180_000, desc: 'balance restored with Val3 offline' })
 
     const delta = Math.round((after - before) * TFT_DECIMALS) / TFT_DECIMALS
     log(`User Stellar TFT after: ${after} (delta: ${delta >= 0 ? '+' : ''}${delta})`)
+
+    // Restart Val3 so MV5 runs with all 3
+    log('Restarting Val3 for subsequent tests...')
+    startValidator(3)
+    await waitForValReady(3)
+    log('Val3 back online.')
 
     if (Math.abs(delta) < 1e-7) {
       pass(name)
@@ -321,8 +317,8 @@ async function testMV4_validatorRestart () {
       fail(name, `Expected net 0 (full refund), got ${delta >= 0 ? '+' : ''}${delta}`)
     }
   } catch (e) {
-    // Ensure Val2 is running for subsequent tests
-    try { if (!getValPid(2)) { startValidator(2); await waitForValReady(2) } } catch {}
+    // Ensure Val3 is running for subsequent tests
+    try { if (!getValPid(3)) { startValidator(3); await waitForValReady(3) } } catch {}
     fail(name, e.message)
   }
 }
@@ -380,7 +376,7 @@ async function main () {
   await testMV1_normalWithdraw()
   await testMV2_deposit()
   await testMV3_badDeposit()
-  await testMV4_validatorRestart()
+  await testMV4_validatorOffline()
   await testMV5_batchWithdraws()
 
   console.log(`\n${'─'.repeat(50)}`)
