@@ -87,7 +87,7 @@ bridge-start:
 	  nohup $(BRIDGE_BIN) \
 	    --secret "$$BRIDGE_SECRET" \
 	    --tfchainurl $(TFCHAIN_URL) \
-	    --tfchainseed "//Alice" \
+	    --tfchainseed "//Bob" \
 	    --bridgewallet "$$BRIDGE_ADDRESS" \
 	    --persistency $(BRIDGE_DIR)/signer_local.json \
 	    --network testnet \
@@ -157,30 +157,34 @@ bridge-mv-start:
 	@test -f $(BRIDGE_MV_ENV_FILE) || (echo "ERROR: $(BRIDGE_MV_ENV_FILE) not found. Run: make bridge-mv-accounts" && exit 1)
 	@pkill -f "$(notdir $(BRIDGE_BIN))" 2>/dev/null || true
 	@sleep 1
-	@. $(BRIDGE_MV_ENV_FILE) && for i in 1 2 3; do \
-	  secret_var="VAL$${i}_STELLAR_SECRET"; \
-	  seed_var="VAL$${i}_TFCHAIN_SEED"; \
-	  secret=$$(eval echo \$$$${secret_var}); \
-	  seed=$$([ $$i -eq 1 ] && echo "//Alice" || [ $$i -eq 2 ] && echo "//Bob" || echo "//Charlie"); \
+	@. $(BRIDGE_MV_ENV_FILE) && \
 	  nohup $(BRIDGE_BIN) \
-	    --secret "$$secret" \
+	    --secret "$$VAL1_STELLAR_SECRET" \
 	    --tfchainurl $(TFCHAIN_URL) \
-	    --tfchainseed "$$seed" \
+	    --tfchainseed "//Bob" \
 	    --bridgewallet "$$BRIDGE_ADDRESS" \
-	    --persistency $(BRIDGE_DIR)/signer_mv_$$i.json \
+	    --persistency $(BRIDGE_DIR)/signer_mv_1.json \
 	    --network testnet \
-	  > /tmp/bridge_mv_$$i.log 2>&1 & echo $$! > /tmp/bridge_mv_$$i.pid; \
-	  echo "==> Val$$i started (PID $$(cat /tmp/bridge_mv_$$i.pid))"; \
-	done
-	@echo "==> Waiting for all 3 validators to be ready..."
-	@for i in 1 2 3; do \
+	  > /tmp/bridge_mv_1.log 2>&1 & echo $$! > /tmp/bridge_mv_1.pid && \
+	  echo "==> Val1 (Bob) started (PID $$(cat /tmp/bridge_mv_1.pid))" && \
+	  nohup $(BRIDGE_BIN) \
+	    --secret "$$VAL2_STELLAR_SECRET" \
+	    --tfchainurl $(TFCHAIN_URL) \
+	    --tfchainseed "//Charlie" \
+	    --bridgewallet "$$BRIDGE_ADDRESS" \
+	    --persistency $(BRIDGE_DIR)/signer_mv_2.json \
+	    --network testnet \
+	  > /tmp/bridge_mv_2.log 2>&1 & echo $$! > /tmp/bridge_mv_2.pid && \
+	  echo "==> Val2 (Charlie) started (PID $$(cat /tmp/bridge_mv_2.pid))"
+	@echo "==> Waiting for both validators to be ready..."
+	@for i in 1 2; do \
 	  timeout 30 sh -c "until grep -q bridge_started /tmp/bridge_mv_$$i.log 2>/dev/null; do sleep 1; done" \
 	    && echo "==> Val$$i ready" || echo "==> Warning: Val$$i bridge_started not seen"; \
 	done
 
 ## bridge-mv-stop: Stop all 3 bridge daemons
 bridge-mv-stop:
-	@for i in 1 2 3; do \
+	@for i in 1 2; do \
 	  if [ -f /tmp/bridge_mv_$$i.pid ]; then \
 	    kill $$(cat /tmp/bridge_mv_$$i.pid) 2>/dev/null || true; \
 	    rm -f /tmp/bridge_mv_$$i.pid; \
