@@ -221,15 +221,15 @@ async function testMV2_deposit () {
   const aliceAddress = alice.address
 
   try {
-    // Get Alice's TFChain TFT balance (minted TFT, not native)
     // We check executed mints on TFChain instead of TFT balance
     const mintsBefore = await api.query.tftBridgeModule.executedMintTransactions.entries()
     log(`Executed mints before: ${mintsBefore.length}`)
 
     // Send 2 TFT from user to bridge with Alice's TFChain address as memo (twin ID)
-    // First, get Alice's twin ID
-    const twin = await api.query.tfgridModule.twinIdByAccountID(aliceAddress)
-    const twinId = twin.toNumber()
+    // First, get Alice's twin ID — twinIdByAccountID returns Option<u32>
+    const twinOpt = await api.query.tfgridModule.twinIdByAccountID(aliceAddress)
+    const twinId = twinOpt.isSome ? twinOpt.unwrap().toNumber() : twinOpt.toJSON()
+    if (!twinId) throw new Error('Alice has no twin on TFChain — is bridge-setup complete?')
     log(`Alice twin ID: ${twinId}`)
 
     const result = await sendStellarPayment(
