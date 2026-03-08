@@ -98,11 +98,55 @@ curl "https://friendbot.stellar.org/?addr=$ISSUER_ADDR"
 
 Add trustlines and issue TFT (Node.js with `stellar-sdk`):
 
+```bash
+npm install @stellar/stellar-sdk
+```
+
 ```javascript
-// See full setup script in /tmp/stellar_setup.mjs (used during original setup)
-// Key steps:
-// 1. Add trustlines from bridge + user to custom issuer
-// 2. Issue 10,000 TFT to bridge, 1,000 TFT to user from custom issuer
+// stellar_setup.mjs — run with: node stellar_setup.mjs
+import * as StellarSdk from "@stellar/stellar-sdk";
+
+const server = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
+const NETWORK_PASSPHRASE = StellarSdk.Networks.TESTNET;
+
+const ISSUER_SECRET  = "<your-issuer-secret>";
+const ISSUER_ADDRESS = "<your-issuer-address>";
+const BRIDGE_SECRET  = "<bridge-stellar-secret>";
+const BRIDGE_ADDRESS = "<bridge-stellar-address>";
+const USER_SECRET    = "<user-stellar-secret>";
+const USER_ADDRESS   = "<user-stellar-address>";
+
+const TFT = new StellarSdk.Asset("TFT", ISSUER_ADDRESS);
+
+async function submitTx(keypair, operations) {
+  const account = await server.loadAccount(keypair.publicKey());
+  const tx = new StellarSdk.TransactionBuilder(account, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  });
+  for (const op of operations) tx.addOperation(op);
+  const built = tx.setTimeout(30).build();
+  built.sign(keypair);
+  return server.submitTransaction(built);
+}
+
+const issuerKp = StellarSdk.Keypair.fromSecret(ISSUER_SECRET);
+const bridgeKp = StellarSdk.Keypair.fromSecret(BRIDGE_SECRET);
+const userKp   = StellarSdk.Keypair.fromSecret(USER_SECRET);
+
+// 1. Add TFT trustlines
+await submitTx(bridgeKp, [StellarSdk.Operation.changeTrust({ asset: TFT })]);
+await submitTx(userKp,   [StellarSdk.Operation.changeTrust({ asset: TFT })]);
+
+// 2. Issue TFT from custom issuer
+await submitTx(issuerKp, [
+  StellarSdk.Operation.payment({ destination: BRIDGE_ADDRESS, asset: TFT, amount: "10000" }),
+]);
+await submitTx(issuerKp, [
+  StellarSdk.Operation.payment({ destination: USER_ADDRESS, asset: TFT, amount: "1000" }),
+]);
+
+console.log("Done. Patch TFTTest in stellar.go to:", `TFT:${ISSUER_ADDRESS}`);
 ```
 
 > **Testnet only:** The custom issuer `GDPARZINMN52LJMVZSQPOEDHC2TWKJVFZSNHKDP4OUH6RI4PMXH4JA6Q`
