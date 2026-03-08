@@ -76,12 +76,18 @@ For example, if a customer is complaining that their deposit never bridged, you 
 - `withdraw_recovered`: The bridge found an existing Stellar tx for a PROCESSING withdraw (by memo
   or by sequence number for pre-upgrade txs) and completed the TFChain confirmation without
   re-submitting.
-- `withdraw_proposal_failed`: A specific proposal within a `force_batch` extrinsic failed
+- `withdraw_proposal_failed`: A specific burn proposal within a `force_batch` extrinsic failed
   (index known via `BatchInterrupted`). The remaining proposals in the batch were still executed.
-- `batch_proposal_started`: The bridge is processing multiple `BurnTransactionCreated` events
-  from the same block and will submit them as a single `Utility.force_batch` extrinsic.
-- `batch_proposal_completed`: The bridge submitted a batch of withdraw proposals in a single
-  extrinsic. Check `succeeded` and `failed` fields for counts.
+- `refund_proposal_failed`: A specific refund proposal within a `force_batch` extrinsic failed.
+  Analogous to `withdraw_proposal_failed`.
+- `batch_proposal_started`: The bridge is processing proposal events from the current block
+  (BurnTransactionCreated, BurnTransactionExpired, RefundTransactionCreated,
+  RefundTransactionExpired) and will submit them all as a single `Utility.force_batch` extrinsic.
+  Check `withdraws` and `refunds` fields for event counts.
+- `batch_proposal_completed`: The bridge submitted a unified batch of burn and refund proposals.
+  Check `succeeded` and `failed` fields for counts.
+- `event_refund_tx_created_received`: The bridge received a `RefundTransactionCreated` event
+  from TFChain. Other validators use this to add their signature without waiting for expiry.
 - `refund_crash_recovery`: The bridge detected a refund in `PROCESSING` state from a previous run.
 - `refund_recovered`: The bridge found an existing Stellar refund tx (by MemoReturn hash or by
   sequence number for pre-upgrade txs) and completed the TFChain confirmation without re-submitting.

@@ -170,7 +170,7 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 				return errors.Wrap(data.Err, "failed to get tfchain events")
 			}
 
-			// Process Ready events FIRST — they are time-sensitive (signatures expire in ~2 min)
+			// Process Ready events FIRST — they are time-sensitive (Stellar submissions).
 			for _, withdrawReadyEvent := range data.Events.WithdrawReadyEvents {
 				err := bridge.handleWithdrawReady(ctx, withdrawReadyEvent)
 				if err != nil {
@@ -190,24 +190,17 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 				}
 			}
 
-			// Then process expired events
-			for _, withdrawExpiredEvent := range data.Events.WithdrawExpiredEvents {
-				err := bridge.handleWithdrawExpired(ctx, withdrawExpiredEvent)
-				if err != nil {
-					return errors.Wrap(err, "an error occurred while handling WithdrawExpiredEvents")
-				}
-			}
-			for _, refundExpiredEvent := range data.Events.RefundExpiredEvents {
-				err := bridge.handleRefundExpired(ctx, refundExpiredEvent)
-				if err != nil {
-					return errors.Wrap(err, "an error occurred while handling RefundExpiredEvents")
-				}
-			}
-
-			// Finally, batch-process Created events (proposals) — these are
-			// the least time-sensitive and benefit most from batching
-			if err := bridge.handleWithdrawCreatedBatch(ctx, data.Events.WithdrawCreatedEvents); err != nil {
-				return errors.Wrap(err, "an error occurred while handling WithdrawCreatedEvents")
+			// Batch all proposal events (Created + Expired for both burns and refunds)
+			// into a single Utility.force_batch extrinsic. This drains backlogs from
+			// bridge outages in one block rather than N sequential blocks.
+			if err := bridge.handleProposalsBatch(
+				ctx,
+				data.Events.WithdrawCreatedEvents,
+				data.Events.WithdrawExpiredEvents,
+				data.Events.RefundCreatedEvents,
+				data.Events.RefundExpiredEvents,
+			); err != nil {
+				return errors.Wrap(err, "an error occurred while handling proposal events")
 			}
 		case data := <-stellarSub:
 			if data.Err != nil {

@@ -12,9 +12,13 @@ import (
 	subpkg "github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/substrate"
 )
 
-// refund handler for stellar
+// refund is called from mint.go when a bad Stellar deposit is detected (wrong memo,
+// insufficient amount, etc.). It proposes a refund directly — not via the batch —
+// so that all online validators propose at the same time with a consistent Stellar
+// sequence number. This is the sequence anchor: if one validator batched while another
+// called directly, they would sync at different times and produce incompatible signatures.
 func (bridge *Bridge) refund(ctx context.Context, destination string, amount int64, tx hProtocol.Transaction) error {
-	err := bridge.handleRefundExpired(ctx, subpkg.RefundTransactionExpiredEvent{
+	err := bridge.proposeRefundDirect(ctx, subpkg.RefundTransactionExpiredEvent{
 		Hash:   tx.Hash,
 		Amount: uint64(amount),
 		Target: destination,
@@ -30,7 +34,10 @@ func (bridge *Bridge) refund(ctx context.Context, destination string, amount int
 	return errors.Wrap(err, "an error occurred while saving stellar cursor")
 }
 
-func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEvent subpkg.RefundTransactionExpiredEvent) error {
+// proposeRefundDirect proposes a single refund transaction immediately (not via the batch).
+// Used by the deposit-triggered path (mint.go → refund()) where all validators detect
+// the same Stellar event at the same time and sync their Stellar sequence independently.
+func (bridge *Bridge) proposeRefundDirect(ctx context.Context, refundExpiredEvent subpkg.RefundTransactionExpiredEvent) error {
 	logger := log.Logger.With().Str("trace_id", refundExpiredEvent.Hash).Logger()
 
 	refunded, err := bridge.subClient.IsRefundedAlready(refundExpiredEvent.Hash)

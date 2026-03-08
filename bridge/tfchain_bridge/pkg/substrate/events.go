@@ -130,11 +130,26 @@ func (client *SubstrateClient) processEventsForHeight(height uint32) (Events, er
 }
 
 func (client *SubstrateClient) processEventRecords(events *substrate.EventRecords) Events {
+	var refundCreatedEvents []RefundTransactionCreatedEvent
 	var refundTransactionReadyEvents []RefundTransactionReadyEvent
 	var refundTransactionExpiredEvents []RefundTransactionExpiredEvent
 	var withdrawCreatedEvents []WithdrawCreatedEvent
 	var withdrawReadyEvents []WithdrawReadyEvent
 	var withdrawExpiredEvents []WithdrawExpiredEvent
+
+	for _, e := range events.TFTBridgeModule_RefundTransactionCreated {
+		log.Info().
+			Str("trace_id", string(e.RefundTransactionHash)).
+			Str("event_action", "event_refund_tx_created_received").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Msg("found RefundTransactionCreated event")
+		refundCreatedEvents = append(refundCreatedEvents, RefundTransactionCreatedEvent{
+			Hash:   string(e.RefundTransactionHash),
+			Target: string(e.Target),
+			Amount: uint64(e.Amount),
+		})
+	}
 
 	for _, e := range events.TFTBridgeModule_RefundTransactionReady {
 		log.Info().
@@ -233,6 +248,7 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 		WithdrawCreatedEvents: withdrawCreatedEvents,
 		WithdrawReadyEvents:   withdrawReadyEvents,
 		WithdrawExpiredEvents: withdrawExpiredEvents,
+		RefundCreatedEvents:   refundCreatedEvents,
 		RefundReadyEvents:     refundTransactionReadyEvents,
 		RefundExpiredEvents:   refundTransactionExpiredEvents,
 	}

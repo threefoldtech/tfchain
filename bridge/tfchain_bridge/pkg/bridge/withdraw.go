@@ -15,48 +15,98 @@ import (
 	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
 )
 
-// handleWithdrawCreatedBatch processes all WithdrawCreated events from a single block
-// by batching their proposal calls into a single Utility.batch extrinsic.
-// This reduces N×6s of sequential proposal submissions to 1×6s for N events.
-func (bridge *Bridge) handleWithdrawCreatedBatch(ctx context.Context, events []subpkg.WithdrawCreatedEvent) error {
-	if len(events) == 0 {
-		return nil
+// handleProposalsBatch processes all proposal events from a single TFChain block in one
+// Utility.force_batch extrinsic. This covers:
+//   - BurnTransactionCreated  → propose_burn_transaction_or_add_sig
+//   - BurnTransactionExpired  → same (re-sign with fresh Stellar sequence; pre-runtime-147 dropped)
+//   - RefundTransactionCreated → create_refund_transaction_or_add_sig (allows validators that
+//     missed the triggering Stellar deposit to add their signature without waiting for expiry)
+//   - RefundTransactionExpired → same (offline-validator recovery path)
+//
+// Ready events (BurnTransactionReady, RefundTransactionReady) are NOT handled here — they
+// involve actual Stellar submissions, not TFChain extrinsics, and remain sequential.
+// Deposit-triggered refunds (mint.go → refund()) are also NOT batched here; they call
+// handleRefundExpired directly so that all validators propose at the same time with a
+// consistent Stellar sequence number.
+func (bridge *Bridge) handleProposalsBatch(
+	ctx context.Context,
+	withdrawCreated []subpkg.WithdrawCreatedEvent,
+	withdrawExpired []subpkg.WithdrawExpiredEvent,
+	refundCreated []subpkg.RefundTransactionCreatedEvent,
+	refundExpired []subpkg.RefundTransactionExpiredEvent,
+) error {
+	// Step 1: Convert BurnTransactionExpired (≥runtime-147) to WithdrawCreatedEvent.
+	// Pre-runtime-147 events (no source address) are no longer supported and are dropped.
+	for _, e := range withdrawExpired {
+		ok, source := e.Source.Unwrap()
+		if !ok {
+			log.Warn().
+				Str("event_action", "withdraw_skipped").
+				Str("event_kind", "alert").
+				Str("category", "withdraw").
+				Uint64("tx_id", e.ID).
+				Msg("ignoring pre-runtime-147 expired withdraw (no source address); network should have no such transfers")
+			continue
+		}
+		withdrawCreated = append(withdrawCreated, subpkg.WithdrawCreatedEvent{
+			ID:     e.ID,
+			Source: source,
+			Target: e.Target,
+			Amount: e.Amount,
+		})
 	}
 
-	// For a single event, fall back to the non-batched path
-	if len(events) == 1 {
-		err := bridge.handleWithdrawCreated(ctx, events[0])
-		if err != nil && (errors.Is(err, pkg.ErrTransactionAlreadyBurned) || errors.Is(err, pkg.ErrTransactionAlreadyMinted)) {
-			return nil
-		}
-		return err
+	// Step 2: Normalise refund events — Created and Expired have identical fields.
+	type refundItem struct {
+		Hash   string
+		Target string
+		Amount uint64
+	}
+	var allRefunds []refundItem
+	for _, e := range refundCreated {
+		allRefunds = append(allRefunds, refundItem{e.Hash, e.Target, e.Amount})
+	}
+	for _, e := range refundExpired {
+		allRefunds = append(allRefunds, refundItem{e.Hash, e.Target, e.Amount})
+	}
+
+	// Step 3: Early return if nothing to do.
+	if len(withdrawCreated) == 0 && len(allRefunds) == 0 {
+		return nil
 	}
 
 	log.Info().
 		Str("event_action", "batch_proposal_started").
-		Int("count", len(events)).
-		Msg("batch processing WithdrawCreated events")
+		Str("event_kind", "event").
+		Str("category", "bridge").
+		Int("withdraws", len(withdrawCreated)).
+		Int("refunds", len(allRefunds)).
+		Msg("batch processing proposal events")
 
-	// Sync the Stellar sequence counter from the live account before signing.
-	// Ready event handlers set w.sequenceNumber to a historical value when submitting
-	// stored Stellar txs; if Created events follow in the same block without a sync,
-	// the incremented counter would be stale and produce tx_bad_seq on Stellar submission.
+	// Step 4: Sync the Stellar sequence counter ONCE before signing anything.
+	// All proposals in this batch get consecutive sequence numbers from this base.
+	// Syncing once (rather than per-proposal) is critical: proposals are TFChain
+	// extrinsics, not Stellar submissions — the Stellar account sequence does not
+	// advance between signing calls, so all signers of a given proposal must use
+	// the same sequence. A fresh sync here ensures we start from the current live
+	// account sequence, not a value that may have been advanced by a prior Ready event.
 	if err := bridge.wallet.SyncSequenceNumber(); err != nil {
 		return err
 	}
 
-	// Phase 1: Pre-check each event and generate Stellar signatures for valid ones
-	type validProposal struct {
-		event          subpkg.WithdrawCreatedEvent
-		signature      string
-		sequenceNumber uint64
+	// Step 5: Build burn proposals.
+	var burnProposals []subpkg.BurnProposal
+	// Track which WithdrawCreatedEvent each proposal came from (for logging).
+	type burnMeta struct {
+		event subpkg.WithdrawCreatedEvent
+		index int // index into burnProposals
 	}
-	var proposals []validProposal
+	var burnMetas []burnMeta
 
-	for _, withdraw := range events {
-		logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdraw.ID)).Logger()
+	for _, w := range withdrawCreated {
+		logger := log.Logger.With().Str("trace_id", fmt.Sprint(w.ID)).Logger()
 
-		burned, err := bridge.subClient.IsBurnedAlready(types.U64(withdraw.ID))
+		burned, err := bridge.subClient.IsBurnedAlready(types.U64(w.ID))
 		if err != nil {
 			return err
 		}
@@ -69,10 +119,9 @@ func (bridge *Bridge) handleWithdrawCreatedBatch(ctx context.Context, events []s
 			continue
 		}
 
-		// Check if the target Stellar account can receive TFT
-		if err := bridge.wallet.CheckAccount(withdraw.Target); err != nil {
+		if err := bridge.wallet.CheckAccount(w.Target); err != nil {
 			ctx := _logger.WithRefundReason(ctx, err.Error())
-			if err := bridge.handleBadWithdraw(ctx, withdraw); err != nil {
+			if err := bridge.handleBadWithdraw(ctx, w); err != nil {
 				if errors.Is(err, pkg.ErrTransactionAlreadyMinted) {
 					continue
 				}
@@ -81,219 +130,154 @@ func (bridge *Bridge) handleWithdrawCreatedBatch(ctx context.Context, events []s
 			continue
 		}
 
-		signature, sequenceNumber, err := bridge.wallet.CreatePaymentAndReturnSignature(ctx, withdraw.Target, withdraw.Amount, withdraw.ID)
+		sig, seqNum, err := bridge.wallet.CreatePaymentAndReturnSignature(ctx, w.Target, w.Amount, w.ID)
 		if err != nil {
-			// Skip this event rather than aborting the whole batch — a failure here
-			// (e.g. Stellar SDK error for one tx) should not prevent valid proposals
-			// for the remaining events. The skipped event will be retried via the
-			// BurnTransactionExpired path.
-			log.Warn().Err(err).Uint64("tx_id", withdraw.ID).Msg("failed to create Stellar signature for batch event, skipping")
+			logger.Warn().Err(err).Msg("failed to create Stellar signature for withdraw proposal, skipping")
 			continue
 		}
 
-		proposals = append(proposals, validProposal{
-			event:          withdraw,
-			signature:      signature,
-			sequenceNumber: sequenceNumber,
-		})
-	}
-
-	if len(proposals) == 0 {
-		return nil
-	}
-
-	// Phase 2: Build and submit all proposals as a single batch
-	batchProposals := make([]subpkg.BurnProposal, 0, len(proposals))
-	for _, p := range proposals {
-		batchProposals = append(batchProposals, subpkg.BurnProposal{
-			TxID:           p.event.ID,
-			Target:         p.event.Target,
-			Amount:         new(big.Int).SetUint64(p.event.Amount),
-			Signature:      p.signature,
+		burnMetas = append(burnMetas, burnMeta{event: w, index: len(burnProposals)})
+		burnProposals = append(burnProposals, subpkg.BurnProposal{
+			TxID:           w.ID,
+			Target:         w.Target,
+			Amount:         new(big.Int).SetUint64(w.Amount),
+			Signature:      sig,
 			StellarAddress: bridge.wallet.GetKeypair().Address(),
-			SequenceNumber: p.sequenceNumber,
+			SequenceNumber: seqNum,
 		})
 	}
 
-	result, err := bridge.subClient.BatchProposeWithdrawOrAddSig(ctx, batchProposals)
-	if err != nil {
-		// force_batch handles individual proposal failures internally (BurnSignatureExists,
-		// EnoughBurnSignaturesPresent, etc.). A wholesale batch RPC failure means the
-		// substrate node is unreachable — individual fallback calls would fail too. Let
-		// the on-chain BurnTransactionExpired mechanism re-emit events for unprocessed txs.
-		log.Warn().Err(err).Msg("force_batch proposal failed; proposals will be retried via BurnTransactionExpired")
+	// Step 6: Build refund proposals.
+	var refundProposals []subpkg.RefundProposal
+	type refundMeta struct {
+		item  refundItem
+		index int // index into refundProposals (offset by len(burnProposals) in the batch)
+	}
+	var refundMetas []refundMeta
+
+	for _, r := range allRefunds {
+		logger := log.Logger.With().Str("trace_id", r.Hash).Logger()
+
+		refunded, err := bridge.subClient.IsRefundedAlready(r.Hash)
+		if err != nil {
+			return err
+		}
+		if refunded {
+			logger.Info().
+				Str("event_action", "refund_skipped").
+				Str("event_kind", "event").
+				Str("category", "refund").
+				Msg("the transaction has already been refunded")
+			continue
+		}
+
+		sig, seqNum, err := bridge.wallet.CreateRefundAndReturnSignature(ctx, r.Target, r.Amount, r.Hash)
+		if err != nil {
+			logger.Warn().Err(err).Msg("failed to create Stellar signature for refund proposal, skipping")
+			continue
+		}
+
+		refundMetas = append(refundMetas, refundMeta{item: r, index: len(refundProposals)})
+		refundProposals = append(refundProposals, subpkg.RefundProposal{
+			TxHash:         r.Hash,
+			Target:         r.Target,
+			Amount:         int64(r.Amount),
+			Signature:      sig,
+			StellarAddress: bridge.wallet.GetKeypair().Address(),
+			SequenceNumber: seqNum,
+		})
+	}
+
+	// Step 7: Submit unified force_batch.
+	if len(burnProposals) == 0 && len(refundProposals) == 0 {
 		return nil
 	}
 
-	// Phase 3: Log results — only emit withdraw_proposed for proposals that succeeded.
-	// For BatchInterrupted (older runtimes) we know exact failed indices; for ItemFailed
-	// (newer runtimes) the event doesn't carry the call index, so we can only log that
-	// some proposals may have failed without knowing which ones.
+	result, err := bridge.subClient.BatchProposeAll(ctx, burnProposals, refundProposals)
+	if err != nil {
+		// Wholesale RPC failure — sequential fallback would also fail.
+		// BurnTransactionExpired / RefundTransactionExpired will re-emit and retry.
+		log.Warn().Err(err).Msg("force_batch proposal failed; proposals will be retried via expiry events")
+		return nil
+	}
+
+	// Step 8: Log per-proposal outcomes.
+	// Calls are ordered: burns[0..N-1], refunds[N..N+M-1].
+	// FailedIndexes is populated only for BatchInterrupted (older runtimes that use
+	// Utility.batch); with force_batch we get ItemFailed events without call indices,
+	// so FailedIndexes will be empty and we fall back to the FailedCount flag.
 	failedSet := make(map[int]bool, len(result.FailedIndexes))
 	for _, idx := range result.FailedIndexes {
 		failedSet[idx] = true
 	}
 	batchHadFailures := result.FailedCount > 0
+
 	if batchHadFailures {
 		log.Warn().
 			Int("failed", result.FailedCount).
-			Int("total", len(proposals)).
-			Bool("exact_indices_known", len(result.FailedIndexes) > 0).
+			Int("total", len(burnProposals)+len(refundProposals)).
 			Msg("some proposals failed within batch (may already be signed or expired)")
 	}
-	for i, p := range proposals {
-		if failedSet[i] {
-			// We know this specific proposal failed (BatchInterrupted case)
+
+	for _, m := range burnMetas {
+		if failedSet[m.index] {
 			log.Warn().
 				Str("event_action", "withdraw_proposal_failed").
-				Str("event_kind", "event").
+				Str("event_kind", "alert").
 				Str("category", "withdraw").
-				Uint64("tx_id", p.event.ID).
+				Uint64("tx_id", m.event.ID).
 				Msg("withdraw proposal failed within batch")
 			continue
 		}
 		log.Info().
-			Str("trace_id", fmt.Sprint(p.event.ID)).
+			Str("trace_id", fmt.Sprint(m.event.ID)).
 			Str("event_action", "withdraw_proposed").
 			Str("event_kind", "event").
 			Str("category", "withdraw").
 			Bool("batch_had_failures", batchHadFailures && len(result.FailedIndexes) == 0).
 			Dict("metadata", zerolog.Dict().
-				Uint64("amount", p.event.Amount).
-				Str("tx_id", fmt.Sprint(p.event.ID)).
-				Str("to", p.event.Target)).
-			Msgf("a withdraw has proposed with the target stellar address of %s", p.event.Target)
+				Uint64("amount", m.event.Amount).
+				Str("tx_id", fmt.Sprint(m.event.ID)).
+				Str("to", m.event.Target)).
+			Msgf("a withdraw has proposed with the target stellar address of %s", m.event.Target)
+	}
+
+	// Refund indices in the batch are offset by the number of burn proposals.
+	burnOffset := len(burnProposals)
+	for _, m := range refundMetas {
+		batchIdx := burnOffset + m.index
+		if failedSet[batchIdx] {
+			log.Warn().
+				Str("event_action", "refund_proposal_failed").
+				Str("event_kind", "alert").
+				Str("category", "refund").
+				Str("tx_hash", m.item.Hash).
+				Msg("refund proposal failed within batch")
+			continue
+		}
+		log.Info().
+			Str("trace_id", m.item.Hash).
+			Str("event_action", "refund_proposed").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Bool("batch_had_failures", batchHadFailures && len(result.FailedIndexes) == 0).
+			Dict("metadata", zerolog.Dict().
+				Uint64("amount", m.item.Amount).
+				Str("tx_hash", m.item.Hash).
+				Str("to", m.item.Target)).
+			Msgf("a refund has proposed for target stellar address %s", m.item.Target)
 	}
 
 	log.Info().
 		Str("event_action", "batch_proposal_completed").
-		Int("total", len(proposals)).
+		Str("event_kind", "event").
+		Str("category", "bridge").
+		Int("total", len(burnProposals)+len(refundProposals)).
 		Int("succeeded", result.SuccessCount).
 		Int("failed", result.FailedCount).
 		Msg("batch proposal completed")
 
 	return nil
-}
-
-func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg.WithdrawCreatedEvent) error {
-	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdraw.ID)).Logger()
-
-	burned, err := bridge.subClient.IsBurnedAlready(types.U64(withdraw.ID))
-	if err != nil {
-		return err
-	}
-
-	if burned {
-		logger.Info().
-			Str("event_action", "withdraw_skipped").
-			Str("event_kind", "event").
-			Str("category", "withdraw").
-			Msg("the withdraw transaction has already been processed")
-		return pkg.ErrTransactionAlreadyBurned
-	}
-
-	logger.Info().
-		Str("event_action", "transfer_initiated").
-		Str("event_kind", "event").
-		Str("category", "transfer").
-		Dict("metadata", zerolog.Dict().
-			Str("type", "burn")).
-		Msg("a transfer has initiated")
-
-	// check if it can hold tft : TODO check trust line TFT limit if it can receive the amount
-	if err := bridge.wallet.CheckAccount(withdraw.Target); err != nil {
-		ctx = _logger.WithRefundReason(ctx, err.Error())
-		return bridge.handleBadWithdraw(ctx, withdraw)
-	}
-
-	// Sync sequence counter before signing (see SyncSequenceNumber for rationale).
-	if err := bridge.wallet.SyncSequenceNumber(); err != nil {
-		return err
-	}
-	signature, sequenceNumber, err := bridge.wallet.CreatePaymentAndReturnSignature(ctx, withdraw.Target, withdraw.Amount, withdraw.ID)
-	if err != nil {
-		return err
-	}
-	log.Debug().Msgf("stellar account sequence number: %d", sequenceNumber)
-
-	err = bridge.subClient.RetryProposeWithdrawOrAddSig(ctx, withdraw.ID, withdraw.Target, big.NewInt(int64(withdraw.Amount)), signature, bridge.wallet.GetKeypair().Address(), sequenceNumber)
-	if err != nil {
-		return nil
-	}
-
-	logger.Info().
-		Str("event_action", "withdraw_proposed").
-		Str("event_kind", "event").
-		Str("category", "withdraw").
-		Dict("metadata", zerolog.Dict().
-			Uint64("amount", withdraw.Amount).
-			Str("tx_id", fmt.Sprint(withdraw.ID)).
-			Str("to", withdraw.Target)).
-		Msgf("a withdraw has proposed with the target stellar address of %s", withdraw.Target)
-	return nil
-}
-
-func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired subpkg.WithdrawExpiredEvent) error {
-	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdrawExpired.ID)).Logger()
-
-	ok, source := withdrawExpired.Source.Unwrap() // transfers from the previous runtime before 147 has no source address
-
-	if !ok {
-		// This path is intended solely for processing transfers that lack a source address
-		// and should be retained until the network has been verified to have no transfers from the previous runtime before 147.
-
-		if err := bridge.wallet.CheckAccount(withdrawExpired.Target); err != nil {
-			logger.Warn().
-				Str("event_action", "transfer_failed").
-				Str("event_kind", "alert").
-				Str("category", "transfer").
-				Dict("metadata", zerolog.Dict().
-					Str("reason", err.Error())).
-				Str("type", "burn").
-				Msg("a withdraw failed with no way to refund!")
-			return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdrawExpired.ID)
-		}
-
-		// Sync sequence counter before signing (see SyncSequenceNumber for rationale).
-		if err := bridge.wallet.SyncSequenceNumber(); err != nil {
-			return err
-		}
-		signature, sequenceNumber, err := bridge.wallet.CreatePaymentAndReturnSignature(ctx, withdrawExpired.Target, withdrawExpired.Amount, withdrawExpired.ID)
-		if err != nil {
-			return err
-		}
-		log.Debug().Msgf("stellar account sequence number: %d", sequenceNumber)
-
-		err = bridge.subClient.RetryProposeWithdrawOrAddSig(ctx, withdrawExpired.ID, withdrawExpired.Target, big.NewInt(int64(withdrawExpired.Amount)), signature, bridge.wallet.GetKeypair().Address(), sequenceNumber)
-		if err != nil {
-			return err
-		}
-		logger.Info().
-			Str("event_action", "transfer_initiated").
-			Str("event_kind", "event").
-			Str("category", "transfer").
-			Dict("metadata", zerolog.Dict().
-				Str("type", "burn")).
-			Msg("a transfer has initiated")
-		logger.Info().
-			Str("event_action", "withdraw_proposed").
-			Str("event_kind", "event").
-			Str("category", "withdraw").
-			Dict("metadata", zerolog.Dict().
-				Uint64("amount", withdrawExpired.Amount).
-				Str("tx_id", fmt.Sprint(withdrawExpired.ID)).
-				Str("to", withdrawExpired.Target)).
-			Msgf("a withdraw has proposed with the target stellar address of %s", withdrawExpired.Target)
-		return nil
-	}
-
-	// refundable path (starting from tfchain runtime 147)
-	return bridge.handleWithdrawCreated(ctx, subpkg.WithdrawCreatedEvent{
-		ID:     withdrawExpired.ID,
-		Source: source,
-		Target: withdrawExpired.Target,
-		Amount: withdrawExpired.Amount,
-	})
 }
 
 func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady subpkg.WithdrawReadyEvent) error {

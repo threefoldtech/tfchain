@@ -161,7 +161,7 @@ func (s *SubstrateClient) RetrySetRefundTransactionExecutedTx(ctx context.Contex
 	return nil
 }
 
-// BurnProposal holds the parameters for a single ProposeBurnTransactionOrAddSig call.
+// BurnProposal holds the parameters for a single propose_burn_transaction_or_add_sig call.
 type BurnProposal struct {
 	TxID           uint64
 	Target         string
@@ -171,10 +171,22 @@ type BurnProposal struct {
 	SequenceNumber uint64
 }
 
-// BatchProposeWithdrawOrAddSig submits multiple ProposeBurnTransactionOrAddSig calls
-// as a single Utility.batch extrinsic. Individual failures do not abort the batch.
-func (s *SubstrateClient) BatchProposeWithdrawOrAddSig(ctx context.Context, proposals []BurnProposal) (*substrate.BatchResult, error) {
-	if len(proposals) == 0 {
+// RefundProposal holds the parameters for a single create_refund_transaction_or_add_sig call.
+type RefundProposal struct {
+	TxHash         string
+	Target         string
+	Amount         int64
+	Signature      string
+	StellarAddress string
+	SequenceNumber uint64
+}
+
+// BatchProposeAll submits all burn and refund proposal calls as a single
+// Utility.force_batch extrinsic. Burns are submitted first, then refunds.
+// Individual call failures do not abort the batch.
+func (s *SubstrateClient) BatchProposeAll(ctx context.Context, burnProposals []BurnProposal, refundProposals []RefundProposal) (*substrate.BatchResult, error) {
+	total := len(burnProposals) + len(refundProposals)
+	if total == 0 {
 		return &substrate.BatchResult{}, nil
 	}
 
@@ -183,10 +195,19 @@ func (s *SubstrateClient) BatchProposeWithdrawOrAddSig(ctx context.Context, prop
 		return nil, err
 	}
 
-	calls := make([]types.Call, 0, len(proposals))
-	for _, p := range proposals {
+	calls := make([]types.Call, 0, total)
+	for _, p := range burnProposals {
 		c, err := types.NewCall(meta, "TFTBridgeModule.propose_burn_transaction_or_add_sig",
 			p.TxID, p.Target, types.U64(p.Amount.Uint64()), p.Signature, p.StellarAddress, p.SequenceNumber,
+		)
+		if err != nil {
+			return nil, err
+		}
+		calls = append(calls, c)
+	}
+	for _, p := range refundProposals {
+		c, err := types.NewCall(meta, "TFTBridgeModule.create_refund_transaction_or_add_sig",
+			p.TxHash, p.Target, types.U64(uint64(p.Amount)), p.Signature, p.StellarAddress, p.SequenceNumber,
 		)
 		if err != nil {
 			return nil, err
@@ -196,6 +217,8 @@ func (s *SubstrateClient) BatchProposeWithdrawOrAddSig(ctx context.Context, prop
 
 	return s.BatchCalls(s.identity, calls)
 }
+
+
 
 func (s *SubstrateClient) RetryProposeMintOrVote(ctx context.Context, txID string, target substrate.AccountID, amount *big.Int) error {
 	err := s.ProposeOrVoteMintTransaction(s.identity, txID, target, amount)
