@@ -196,9 +196,18 @@ grep "MintCompleted\|mint" /tmp/bridge.log | tail -5
 
 **Expected:** Alice receives 49 TFT (50 TFT sent - 1 TFT deposit fee).
 
-> **Fee note:** TFT uses 7 decimal places on both TFChain and Stellar
-> (1 TFT = 10,000,000 base units). The genesis `deposit_fee` and
-> `withdraw_fee` are both 10,000,000 units = **1 TFT** each.
+> **Fee mechanics (deposit — Stellar → TFChain):**
+> TFT uses 7 decimal places on both TFChain and Stellar (1 TFT = 10,000,000 base units).
+> The genesis `deposit_fee` = 10,000,000 units = **1 TFT**.
+> This fee is enforced at **two layers**:
+>
+> 1. **Bridge code** (`mint.go`): if the incoming Stellar amount ≤ `DepositFee` (read from
+>    TFChain storage at startup), the bridge refunds the sender on Stellar without proposing
+>    a mint — to avoid an on-chain transaction that would fail anyway.
+> 2. **Pallet** (`execute_mint_transaction`): deducts `DepositFee` from the proposed amount
+>    and mints the remainder (`amount - deposit_fee`) to the user's TFChain account.
+>
+> Both layers read from the same `TFTBridgeModule.DepositFee` storage value.
 
 **Result: ✅ PASSED**
 
@@ -234,7 +243,19 @@ grep "withdraw_completed\|the withdraw has proceed" /tmp/bridge.log
 curl -s "https://horizon-testnet.stellar.org/accounts/GBXIQP76.../payments?order=desc&limit=5"
 ```
 
-**Expected:** User receives 2 TFT (3 TFT sent - 1 TFT withdraw fee). Stellar tx has `memo_type=text` with the burn tx ID.
+**Expected:** User receives 2 TFT (3 TFT sent - 1 TFT withdraw fee). Stellar tx has
+`memo_type=text` with the burn tx ID.
+
+> **Fee mechanics (withdraw — TFChain → Stellar):**
+> The genesis `withdraw_fee` = 10,000,000 units = **1 TFT**.
+> This fee is enforced at **one layer only** — the pallet:
+>
+> - **Pallet** (`swap_to_stellar`): rejects the call if `amount ≤ WithdrawFee`
+>   (`AmountIsLessThanWithdrawFee`). If valid, deducts `WithdrawFee` and stores
+>   `burn_amount = amount - withdraw_fee` in the BurnTransaction event.
+> - **Bridge code**: reads `burn_amount` from the event (already post-fee) and sends
+>   exactly that amount to the user's Stellar address. The bridge does **not** read
+>   `WithdrawFee` separately and applies no additional fee of its own.
 
 **Result: ✅ PASSED**
 
