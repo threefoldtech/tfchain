@@ -14,10 +14,13 @@ type BatchResult struct {
 	FailedIndexes []int
 }
 
-// BatchCalls submits multiple calls in a single Utility.batch extrinsic.
-// Unlike Utility.batch_all, individual call failures do NOT abort the entire batch
-// (on newer runtimes that emit ItemFailed). On older runtimes, BatchInterrupted
-// stops at the first failure.
+// BatchCalls submits multiple calls in a single Utility.force_batch extrinsic.
+// Unlike Utility.batch_all (aborts + reverts on first failure) and Utility.batch
+// (stops at first failure, remaining calls not executed), Utility.force_batch
+// continues through all calls regardless of individual failures. Failed calls emit
+// Utility.ItemFailed events; the overall batch always completes.
+// This is the correct choice for bridge proposals: a BurnSignatureExists error on
+// one proposal must not prevent the remaining proposals from being submitted.
 func (s *Substrate) BatchCalls(identity Identity, calls []types.Call) (*BatchResult, error) {
 	if len(calls) == 0 {
 		return &BatchResult{}, nil
@@ -28,14 +31,14 @@ func (s *Substrate) BatchCalls(identity Identity, calls []types.Call) (*BatchRes
 		return nil, err
 	}
 
-	batchCall, err := types.NewCall(meta, "Utility.batch", calls)
+	batchCall, err := types.NewCall(meta, "Utility.force_batch", calls)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create batch call")
+		return nil, errors.Wrap(err, "failed to create force_batch call")
 	}
 
 	resp, err := s.Call(cl, meta, identity, batchCall)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to execute batch call")
+		return nil, errors.Wrap(err, "failed to execute force_batch call")
 	}
 
 	result := &BatchResult{
@@ -43,28 +46,13 @@ func (s *Substrate) BatchCalls(identity Identity, calls []types.Call) (*BatchRes
 	}
 
 	if resp.Events != nil {
-		// ItemFailed events tell us how many calls failed, but the event payload
-		// does not carry the batch-call index — only a DispatchError. We count
-		// failures but cannot reliably map them to specific call positions.
+		// ItemFailed events are emitted by force_batch for each failed call.
+		// The event payload does not carry the batch-call index — only a DispatchError.
+		// We count failures but cannot reliably map them to specific call positions.
 		failedCount := len(resp.Events.Utility_ItemFailed)
 		if failedCount > 0 {
 			result.FailedCount = failedCount
 			result.SuccessCount = len(calls) - failedCount
-		}
-
-		// BatchInterrupted (older runtimes): stops at the first failure.
-		// The Index field tells us exactly which call failed.
-		if len(resp.Events.Utility_BatchInterrupted) > 0 {
-			interruptedIdx := int(resp.Events.Utility_BatchInterrupted[0].Index)
-			// Everything from interruptedIdx onward was not executed
-			notExecuted := len(calls) - interruptedIdx
-			if notExecuted > result.FailedCount {
-				result.FailedCount = notExecuted
-				result.SuccessCount = interruptedIdx
-			}
-			for i := interruptedIdx; i < len(calls); i++ {
-				result.FailedIndexes = append(result.FailedIndexes, i)
-			}
 		}
 	}
 

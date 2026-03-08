@@ -274,9 +274,18 @@ func (w *StellarWallet) FindPaymentByMemoInPage(page hProtocol.TransactionsPage,
 }
 
 // FindRefundByReturnHashInPage scans a pre-fetched transactions page for a MemoReturn hash match.
+// Horizon encodes MemoReturn as base64 in its JSON API, while txHash from TFChain is hex-encoded.
+// This function decodes the hex hash to raw bytes and re-encodes as base64 before comparing.
 func (w *StellarWallet) FindRefundByReturnHashInPage(page hProtocol.TransactionsPage, txHash string) *hProtocol.Transaction {
+	hashBytes, err := hex.DecodeString(txHash)
+	if err != nil {
+		log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to hex-decode refund tx hash for memo comparison")
+		return nil
+	}
+	hashBase64 := base64.StdEncoding.EncodeToString(hashBytes)
+
 	for _, tx := range page.Embedded.Records {
-		if tx.MemoType == "return" && tx.Memo == txHash {
+		if tx.MemoType == "return" && tx.Memo == hashBase64 {
 			txCopy := tx
 			return &txCopy
 		}
@@ -482,6 +491,26 @@ type MintEvent struct {
 }
 
 // getAccountDetails gets account details based an a Stellar address
+// SyncSequenceNumber resets the internal sequence counter to the current Stellar account
+// sequence. Call this at the start of each Created event handler (before signing any new
+// transactions) to ensure the counter is not stale from a preceding Ready event handler,
+// which sets w.sequenceNumber to a historical value when submitting a stored Stellar tx.
+// For a batch of N proposals, call this once — subsequent generatePaymentOperation(0) calls
+// will increment normally, producing unique consecutive sequences.
+func (w *StellarWallet) SyncSequenceNumber() error {
+	acc, err := w.getAccountDetails(w.config.StellarBridgeAccount)
+	if err != nil {
+		return errors.Wrap(err, "failed to get bridge account details for sequence sync")
+	}
+	seq, err := acc.GetSequenceNumber()
+	if err != nil {
+		return errors.Wrap(err, "failed to parse account sequence number")
+	}
+	w.sequenceNumber = seq
+	log.Debug().Int64("sequence", w.sequenceNumber).Msg("synced Stellar sequence number from account")
+	return nil
+}
+
 func (w *StellarWallet) getAccountDetails(address string) (account hProtocol.Account, err error) {
 	client, err := w.getHorizonClient()
 	if err != nil {

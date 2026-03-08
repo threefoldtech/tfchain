@@ -70,9 +70,21 @@ For example, if a customer is complaining that their deposit never bridged, you 
 - `withdraw_proposed`: a withdraw has proposed or signed by the bridge instance.
 - `withdraw_postponed`: a withdraw has postponed due to a problem in sending this transaction to the stellar network and will be retried later.
 - `withdraw_completed`: a withdraw has completed and received on the target stellar account.
-- `withdraw_crash_recovery`: The bridge detected a withdraw in `PROCESSING` state from a previous run (possible crash between Stellar submission and TFChain confirmation). The bridge queries Horizon to determine if the Stellar tx was already submitted before deciding whether to retry.
-- `batch_proposal_started`: The bridge is processing multiple `BurnTransactionCreated` events from the same block and will submit them as a single `Utility.batch` extrinsic.
-- `batch_proposal_completed`: The bridge successfully submitted a batch of withdraw proposals in a single extrinsic.
+- `withdraw_crash_recovery`: The bridge detected a withdraw in `PROCESSING` state from a previous
+  run (possible crash between Stellar submission and TFChain confirmation). The bridge queries
+  Horizon to determine if the Stellar tx was already submitted before deciding whether to retry.
+- `withdraw_recovered`: The bridge found an existing Stellar tx for a PROCESSING withdraw (by memo
+  or by sequence number for pre-upgrade txs) and completed the TFChain confirmation without
+  re-submitting.
+- `withdraw_proposal_failed`: A specific proposal within a `force_batch` extrinsic failed
+  (index known via `BatchInterrupted`). The remaining proposals in the batch were still executed.
+- `batch_proposal_started`: The bridge is processing multiple `BurnTransactionCreated` events
+  from the same block and will submit them as a single `Utility.force_batch` extrinsic.
+- `batch_proposal_completed`: The bridge submitted a batch of withdraw proposals in a single
+  extrinsic. Check `succeeded` and `failed` fields for counts.
+- `refund_crash_recovery`: The bridge detected a refund in `PROCESSING` state from a previous run.
+- `refund_recovered`: The bridge found an existing Stellar refund tx (by MemoReturn hash or by
+  sequence number for pre-upgrade txs) and completed the TFChain confirmation without re-submitting.
 
 ##### Bridge vault account related
 - `payment_received` : This event represents successful payment to the bridge account (a deposit).

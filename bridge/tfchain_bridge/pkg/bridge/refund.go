@@ -47,6 +47,10 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 		return nil
 	}
 
+	// Sync sequence counter before signing (see SyncSequenceNumber for rationale).
+	if err := bridge.wallet.SyncSequenceNumber(); err != nil {
+		return err
+	}
 	signature, sequenceNumber, err := bridge.wallet.CreateRefundAndReturnSignature(ctx, refundExpiredEvent.Target, refundExpiredEvent.Amount, refundExpiredEvent.Hash)
 	if err != nil {
 		return err
@@ -94,11 +98,14 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 			Str("category", "refund").
 			Msg("idempotency: refund in PROCESSING state (possible crash recovery)")
 
-		// Fetch the outgoing transactions page once and reuse it for both lookups
-		// to avoid redundant Horizon HTTP round-trips.
+		// Fetch the outgoing transactions page once and reuse it for both lookups.
+		// Non-fatal on error: match the reconciler's behavior. Leave tx as PROCESSING;
+		// the next RefundTransactionReady event will retry the Horizon lookup.
 		outgoingPage, err := bridge.wallet.FetchOutgoingTransactionsPage(ctx)
 		if err != nil {
-			return err
+			logger.Warn().Err(err).Str("tx_hash", txHash).
+				Msg("failed to fetch Horizon transactions for PROCESSING check; will retry on next event")
+			return nil
 		}
 
 		// Primary check: look for a refund tx with matching MemoReturn hash (current bridge behaviour)

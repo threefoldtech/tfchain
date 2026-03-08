@@ -32,7 +32,18 @@ func (bridge *Bridge) handleWithdrawCreatedBatch(ctx context.Context, events []s
 		return err
 	}
 
-	log.Info().Int("count", len(events)).Msg("batch processing WithdrawCreated events")
+	log.Info().
+		Str("event_action", "batch_proposal_started").
+		Int("count", len(events)).
+		Msg("batch processing WithdrawCreated events")
+
+	// Sync the Stellar sequence counter from the live account before signing.
+	// Ready event handlers set w.sequenceNumber to a historical value when submitting
+	// stored Stellar txs; if Created events follow in the same block without a sync,
+	// the incremented counter would be stale and produce tx_bad_seq on Stellar submission.
+	if err := bridge.wallet.SyncSequenceNumber(); err != nil {
+		return err
+	}
 
 	// Phase 1: Pre-check each event and generate Stellar signatures for valid ones
 	type validProposal struct {
@@ -106,13 +117,11 @@ func (bridge *Bridge) handleWithdrawCreatedBatch(ctx context.Context, events []s
 
 	result, err := bridge.subClient.BatchProposeWithdrawOrAddSig(ctx, batchProposals)
 	if err != nil {
-		// On batch failure, fall back to individual submissions
-		log.Warn().Err(err).Msg("batch proposal failed, falling back to individual submissions")
-		for _, p := range proposals {
-			if err := bridge.subClient.RetryProposeWithdrawOrAddSig(ctx, p.event.ID, p.event.Target, new(big.Int).SetUint64(p.event.Amount), p.signature, bridge.wallet.GetKeypair().Address(), p.sequenceNumber); err != nil {
-				log.Warn().Err(err).Uint64("tx_id", p.event.ID).Msg("individual proposal also failed")
-			}
-		}
+		// force_batch handles individual proposal failures internally (BurnSignatureExists,
+		// EnoughBurnSignaturesPresent, etc.). A wholesale batch RPC failure means the
+		// substrate node is unreachable — individual fallback calls would fail too. Let
+		// the on-chain BurnTransactionExpired mechanism re-emit events for unprocessed txs.
+		log.Warn().Err(err).Msg("force_batch proposal failed; proposals will be retried via BurnTransactionExpired")
 		return nil
 	}
 
@@ -197,6 +206,10 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 		return bridge.handleBadWithdraw(ctx, withdraw)
 	}
 
+	// Sync sequence counter before signing (see SyncSequenceNumber for rationale).
+	if err := bridge.wallet.SyncSequenceNumber(); err != nil {
+		return err
+	}
 	signature, sequenceNumber, err := bridge.wallet.CreatePaymentAndReturnSignature(ctx, withdraw.Target, withdraw.Amount, withdraw.ID)
 	if err != nil {
 		return err
@@ -241,6 +254,10 @@ func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired
 			return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdrawExpired.ID)
 		}
 
+		// Sync sequence counter before signing (see SyncSequenceNumber for rationale).
+		if err := bridge.wallet.SyncSequenceNumber(); err != nil {
+			return err
+		}
 		signature, sequenceNumber, err := bridge.wallet.CreatePaymentAndReturnSignature(ctx, withdrawExpired.Target, withdrawExpired.Amount, withdrawExpired.ID)
 		if err != nil {
 			return err
@@ -306,11 +323,16 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 			Str("category", "withdraw").
 			Msg("idempotency: withdraw in PROCESSING state (possible crash recovery)")
 
-		// Fetch the outgoing transactions page once and reuse it for both lookups
-		// to avoid redundant Horizon HTTP round-trips.
+		// Fetch the outgoing transactions page once and reuse it for both lookups.
+		// Non-fatal on error: match the reconciler's behavior. Leave tx as PROCESSING;
+		// the next BurnTransactionReady event will retry the Horizon lookup.
+		// Returning an error here would crash the bridge on every PROCESSING event
+		// during a Horizon outage, which is worse than gracefully skipping.
 		outgoingPage, err := bridge.wallet.FetchOutgoingTransactionsPage(ctx)
 		if err != nil {
-			return err
+			logger.Warn().Err(err).Uint64("tx_id", txID).
+				Msg("failed to fetch Horizon transactions for PROCESSING check; will retry on next event")
+			return nil
 		}
 
 		// Primary check: look for a tx with matching memo (current bridge behaviour)
@@ -400,6 +422,17 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 		return nil // leave as PROCESSING, will reconcile on next attempt
 	}
 
+	// 7. Mark executed on TFChain — must complete before logging withdraw_completed
+	// so that ops logs accurately reflect the full transaction lifecycle.
+	if err := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); err != nil {
+		return err
+	}
+
+	// 8. Mark COMPLETED in idempotency store
+	if err := bridge.idempotency.MarkWithdrawCompleted(txID); err != nil {
+		return err
+	}
+
 	logger.Info().
 		Str("event_action", "withdraw_completed").
 		Str("event_kind", "event").
@@ -413,13 +446,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 			Str("outcome", "bridged")).
 		Msg("the transfer has completed")
 
-	// 7. Mark executed on TFChain
-	if err := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); err != nil {
-		return err
-	}
-
-	// 8. Mark COMPLETED
-	return bridge.idempotency.MarkWithdrawCompleted(txID)
+	return nil
 }
 
 func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.WithdrawCreatedEvent) error {
