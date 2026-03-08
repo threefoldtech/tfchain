@@ -117,6 +117,7 @@ bridge-test:
 	BRIDGE_PID_FILE=$(BRIDGE_PID_FILE) \
 	BRIDGE_LOG_FILE=$(BRIDGE_LOG) \
 	BRIDGE_BIN=$(BRIDGE_BIN) \
+	VAL1_TFCHAIN_SEED="quarter between satisfy three sphere six soda boss cute decade old trend" \
 	node $(SCRIPTS_DIR)/bridge_tests.js
 
 ## bridge-clean: Stop everything and delete all local state

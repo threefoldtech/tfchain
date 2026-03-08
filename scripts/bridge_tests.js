@@ -130,7 +130,9 @@ function killBridge (signal = 'SIGKILL') {
 
 function startBridge () {
   const bridgeSecret = getEnv('BRIDGE_SECRET')
-  const tfchainSeed = process.env.VAL1_TFCHAIN_SEED || '//Alice'
+  // Genesis validator dev key 1 (from substrate-node/node/src/chain_spec.rs)
+  const tfchainSeed = process.env.VAL1_TFCHAIN_SEED ||
+    'quarter between satisfy three sphere six soda boss cute decade old trend'
 
   const child = spawn(BRIDGE_BIN, [
     '--secret', bridgeSecret,
