@@ -44,6 +44,11 @@ type StellarWallet struct {
 	config         *pkg.StellarConfig
 	signatureCount int
 	sequenceNumber int64
+	// resolvedAsset caches the TFT asset code and issuer actually held by the
+	// bridge wallet. Normally matches the network-configured default, but may
+	// differ in test/dev environments that use a custom issuer.
+	resolvedAssetCode   string
+	resolvedAssetIssuer string
 }
 
 type TraceIdKey struct{}
@@ -78,6 +83,27 @@ func NewStellarWallet(ctx context.Context, config *pkg.StellarConfig) (*StellarW
 		return nil, err
 	}
 	log.Info().Msgf("account %s loaded with sequence number %d", account.AccountID, w.sequenceNumber)
+
+	// Discover the TFT asset actually held by the bridge wallet.
+	// The network-configured issuer is the expected default; if the wallet holds
+	// TFT from a different issuer (e.g. a custom issuer in a dev/test environment),
+	// use the actual issuer so payments succeed.
+	configuredAsset := w.getAssetCodeAndIssuer()
+	w.resolvedAssetCode = configuredAsset[0]
+	w.resolvedAssetIssuer = configuredAsset[1]
+	for _, balance := range account.Balances {
+		if balance.Code == "TFT" {
+			if balance.Issuer != w.resolvedAssetIssuer {
+				log.Warn().
+					Str("configured_issuer", w.resolvedAssetIssuer).
+					Str("actual_issuer", balance.Issuer).
+					Msg("bridge wallet holds TFT from a different issuer than the network default; using actual issuer for all payments")
+				w.resolvedAssetIssuer = balance.Issuer
+			}
+			break
+		}
+	}
+	log.Info().Str("asset_code", w.resolvedAssetCode).Str("asset_issuer", w.resolvedAssetIssuer).Msg("bridge wallet TFT asset resolved")
 
 	return w, nil
 }
@@ -760,6 +786,14 @@ func (w *StellarWallet) getNetworkPassPhrase() string {
 }
 
 func (w *StellarWallet) getAssetCodeAndIssuer() []string {
+	// If the wallet has been initialised with a resolved asset (discovered from
+	// the bridge account's actual balance), use that. This handles dev/test
+	// environments that use a custom TFT issuer.
+	if w.resolvedAssetCode != "" {
+		return []string{w.resolvedAssetCode, w.resolvedAssetIssuer}
+	}
+	// Pre-init fallback: derive from network config (used only during NewStellarWallet
+	// before resolvedAsset is populated).
 	switch w.config.StellarNetwork {
 	case "testnet":
 		return strings.Split(TFTTest, ":")
