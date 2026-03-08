@@ -232,13 +232,14 @@ async function testMV2_deposit () {
     if (!twinId) throw new Error('Alice has no twin on TFChain — is bridge-setup complete?')
     log(`Alice twin ID: ${twinId}`)
 
+    // Memo format must be "twin_<id>" (bridge parses "object_objectID")
     const result = await sendStellarPayment(
       getEnv('USER_SECRET'),
       bridgeAddress,
       '2',
-      String(twinId)
+      `twin_${twinId}`
     )
-    log(`Deposit sent: ${result.hash.slice(0, 16)} (memo: twin ${twinId})`)
+    log(`Deposit sent: ${result.hash.slice(0, 16)} (memo: twin_${twinId})`)
 
     // Wait for mint to be executed on TFChain
     const mintsAfter = await waitUntil(async () => {

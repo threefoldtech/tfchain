@@ -154,10 +154,12 @@ async function main () {
   await addValidatorViaCouncil(api, alice, bob, val3.address, 'Val3')
 
   // Create Alice's twin (needed for MV2 deposit test)
+  // Alice must accept T&C before creating a twin
   const aliceTwinOpt = await api.query.tfgridModule.twinIdByAccountID(alice.address)
   const aliceTwinId = aliceTwinOpt.toJSON()
   if (!aliceTwinId) {
-    log('Creating Alice twin for deposit tests...')
+    log('Accepting T&C and creating Alice twin for deposit tests...')
+    await signAndWait(api, api.tx.tfgridModule.userAcceptTc('https://localhost/tc', 'deadbeef'), alice)
     await signAndWait(api, api.tx.tfgridModule.createTwin(null, null), alice)
     const newTwin = await api.query.tfgridModule.twinIdByAccountID(alice.address)
     log(`Alice twin created (ID: ${newTwin.toJSON()})`)
