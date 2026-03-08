@@ -194,12 +194,16 @@ grep "MintCompleted\|mint" /tmp/bridge.log | tail -5
 # api.query.tftBridgeModule.executeByTransferHash(txHash)
 ```
 
-**Expected:** Alice receives 40 TFT (50 TFT sent - 10 TFT deposit fee).
+**Expected:** Alice receives 49 TFT (50 TFT sent - 1 TFT deposit fee).
+
+> **Fee note:** TFT uses 7 decimal places on both TFChain and Stellar
+> (1 TFT = 10,000,000 base units). The genesis `deposit_fee` and
+> `withdraw_fee` are both 10,000,000 units = **1 TFT** each.
 
 **Result: ✅ PASSED**
 
 - Tx hash: `2aeaf9811dc7e4fbe340fd1df92c62cd0d4baf2e2562d366c1e2013c90e6910e`
-- Amount minted: 500,000,000 muTFT (50 TFT gross, 40 TFT net after 10 TFT fee)
+- Amount minted: 500,000,000 muTFT (50 TFT gross, 49 TFT net after 1 TFT fee)
 
 ---
 
@@ -213,7 +217,7 @@ grep "MintCompleted\|mint" /tmp/bridge.log | tail -5
    ```javascript
    api.tx.tftBridgeModule.swapToStellar(USER_STELLAR_ADDR, 30_000_000)
      .signAndSend(alice);
-   // amount: 30,000,000 muTFT (30 TFT)
+   // amount: 30,000,000 muTFT (3 TFT — 7 decimal places, 1 TFT = 10,000,000 units)
    ```
 2. `BurnTransactionCreated` event emitted on TFChain
 3. Bridge picks up event, signs a Stellar payment, submits `proposeBurnTransactionOrAddSig`
@@ -230,11 +234,11 @@ grep "withdraw_completed\|the withdraw has proceed" /tmp/bridge.log
 curl -s "https://horizon-testnet.stellar.org/accounts/GBXIQP76.../payments?order=desc&limit=5"
 ```
 
-**Expected:** User receives 20 TFT (30 TFT sent - 10 TFT withdraw fee). Stellar tx has `memo_type=text` with the burn tx ID.
+**Expected:** User receives 2 TFT (3 TFT sent - 1 TFT withdraw fee). Stellar tx has `memo_type=text` with the burn tx ID.
 
 **Result: ✅ PASSED**
 
-- User TFT balance: 950 → 952 TFT (net +2 TFT after fee on second run; initial balance was 950 after deposit fee)
+- User Stellar TFT balance: 950 → 952 TFT (net +2 TFT; 3 TFT burned on TFChain, 1 TFT fee, 2 TFT received on Stellar)
 - Stellar tx confirmed on Horizon with text memo matching burn tx ID
 
 ---
