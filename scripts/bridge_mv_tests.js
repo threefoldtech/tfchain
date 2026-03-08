@@ -305,21 +305,29 @@ async function testMV4_validatorOffline () {
     const delta = Math.round((after - before) * TFT_DECIMALS) / TFT_DECIMALS
     log(`User Stellar TFT after: ${after} (delta: ${delta >= 0 ? '+' : ''}${delta})`)
 
-    // Restart Val3 so MV5 runs with all 3
-    log('Restarting Val3 for subsequent tests...')
-    startValidator(3)
-    await waitForValReady(3)
-    log('Val3 back online.')
+    // Evaluate result NOW — before restart attempt (restart is cleanup, not part of the test)
+    const testPassed = Math.abs(delta) < 1e-7
 
-    if (Math.abs(delta) < 1e-7) {
+    // Restart Val3 for MV5 — best effort with fixed startup window.
+    // Log-based readiness detection is unreliable on macOS for restarted processes.
+    try {
+      log('Restarting Val3 for subsequent tests...')
+      startValidator(3)
+      await new Promise(r => setTimeout(r, 8000)) // fixed startup window
+      log('Val3 restarted.')
+    } catch (restartErr) {
+      log(`Warning: Val3 restart failed: ${restartErr.message}`)
+    }
+
+    if (testPassed) {
       pass(name)
     } else {
       fail(name, `Expected net 0 (full refund), got ${delta >= 0 ? '+' : ''}${delta}`)
     }
   } catch (e) {
-    // Ensure Val3 is running for subsequent tests
-    try { if (!getValPid(3)) { startValidator(3); await waitForValReady(3) } } catch {}
     fail(name, e.message)
+    // Best-effort Val3 restart so MV5 still runs
+    try { startValidator(3); await new Promise(r => setTimeout(r, 5000)) } catch {}
   }
 }
 

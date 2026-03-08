@@ -153,6 +153,18 @@ async function main () {
   // Add val3 via council governance
   await addValidatorViaCouncil(api, alice, bob, val3.address, 'Val3')
 
+  // Create Alice's twin (needed for MV2 deposit test)
+  const aliceTwinOpt = await api.query.tfgridModule.twinIdByAccountID(alice.address)
+  const aliceTwinId = aliceTwinOpt.toJSON()
+  if (!aliceTwinId) {
+    log('Creating Alice twin for deposit tests...')
+    await signAndWait(api, api.tx.tfgridModule.createTwin(null, null), alice)
+    const newTwin = await api.query.tfgridModule.twinIdByAccountID(alice.address)
+    log(`Alice twin created (ID: ${newTwin.toJSON()})`)
+  } else {
+    log(`Alice twin already exists (ID: ${aliceTwinId})`)
+  }
+
   // Final state
   const finalValidators = await api.query.tftBridgeModule.validators()
   log(`Final validators: ${JSON.stringify(finalValidators.toHuman())}`)
