@@ -134,16 +134,26 @@ function startBridge () {
   const tfchainSeed = process.env.VAL1_TFCHAIN_SEED ||
     'quarter between satisfy three sphere six soda boss cute decade old trend'
 
-  const child = spawn(BRIDGE_BIN, [
-    '--secret', bridgeSecret,
+  // Use shell exec + append redirect instead of fd inheritance.
+  // On macOS, passing a numeric fd to a detached child's stdio is unreliable:
+  // the fd silently becomes invalid after child.unref(), so the bridge writes nothing
+  // to the log. Shell exec replaces sh with the bridge binary (same PID), and
+  // >> redirect is handled by the shell before exec, so it works cross-platform.
+  const shellCmd = [
+    'exec',
+    `"${BRIDGE_BIN}"`,
+    '--secret', `"${bridgeSecret}"`,
     '--tfchainurl', TFCHAIN_URL,
-    '--tfchainseed', tfchainSeed,
+    '--tfchainseed', `"${tfchainSeed}"`,
     '--bridgewallet', bridgeAddress,
     '--persistency', BRIDGE_PERSISTENCY,
-    '--network', 'testnet'
-  ], {
+    '--network', 'testnet',
+    `>>"${BRIDGE_LOG_FILE}"`, '2>&1'
+  ].join(' ')
+
+  const child = spawn('/bin/sh', ['-c', shellCmd], {
     detached: true,
-    stdio: ['ignore', fs.openSync(BRIDGE_LOG_FILE, 'a'), fs.openSync(BRIDGE_LOG_FILE, 'a')]
+    stdio: 'ignore'
   })
   child.unref()
   fs.writeFileSync(BRIDGE_PID_FILE, String(child.pid))
