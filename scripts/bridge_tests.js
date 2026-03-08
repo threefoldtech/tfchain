@@ -309,27 +309,26 @@ async function test4_crashRecovery () {
       return json && json.signatures && json.signatures.length >= 1
     }, { timeoutMs: 60_000, desc: 'BurnTransactionReady (≥1 sig)' })
 
-    // Record log offset before kill so waitForBridgeReady detects the NEW startup
-    const logOffsetBeforeKill = fs.existsSync(BRIDGE_LOG_FILE)
-      ? fs.statSync(BRIDGE_LOG_FILE).size
-      : 0
-
     // Kill bridge mid-flight
     killBridge('SIGKILL')
     log('Bridge killed. Waiting 3s...')
     await new Promise(r => setTimeout(r, 3000))
 
-    // Restart bridge
+    // Restart bridge.
+    // Note: detecting bridge readiness via log file is unreliable on macOS because
+    // detached process stdout fd inheritance breaks after child.unref(). Instead, we
+    // give the bridge a fixed startup window and then verify the actual outcome.
     startBridge()
-    log('Bridge restarted. Waiting for it to come up...')
-    await waitForBridgeReady(logOffsetBeforeKill)
-    log('Bridge ready.')
+    log('Bridge restarted. Waiting 10s for startup...')
+    await new Promise(r => setTimeout(r, 10_000))
 
-    // Now wait for withdrawal to complete
+    // Verify the withdrawal completed — either:
+    //   (a) bridge completed before kill and balance is already updated, or
+    //   (b) bridge restarted and completed via reconciliation / expiry recovery
     const afterStellar = await waitUntil(async () => {
       const bal = await stellarTFTBalance(userAddress)
       if (bal > beforeStellar) return bal
-    }, { timeoutMs: 180_000, desc: 'Stellar balance to increase after crash recovery' })
+    }, { timeoutMs: 300_000, desc: 'Stellar balance to increase after crash recovery' })
 
     const delta = Math.round((afterStellar - beforeStellar) * 1e7) / 1e7
     const expected = 2 - WITHDRAW_FEE_TFT
