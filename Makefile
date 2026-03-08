@@ -130,6 +130,87 @@ bridge-clean: bridge-stop bridge-tfchain-stop
 bridge-dev: bridge-clean bridge-build $(TFCHAIN_BIN) bridge-accounts \
             bridge-tfchain-start bridge-setup bridge-start bridge-test
 
+# ── Multi-validator targets ───────────────────────────────────────────────────
+
+BRIDGE_MV_ENV_FILE ?= /tmp/bridge_mv_env.sh
+
+.PHONY: bridge-mv-accounts bridge-mv-setup bridge-mv-start bridge-mv-stop \
+        bridge-mv-test bridge-mv-clean bridge-mv-dev
+
+## bridge-mv-accounts: Generate 3-validator Stellar accounts + 2-of-3 multi-sig
+bridge-mv-accounts:
+	@echo "==> Installing npm dependencies..."
+	cd $(SCRIPTS_DIR) && npm install --silent
+	@echo "==> Generating multi-validator Stellar accounts..."
+	BRIDGE_MV_ENV_FILE=$(BRIDGE_MV_ENV_FILE) node $(SCRIPTS_DIR)/bridge_mv_accounts.js
+
+## bridge-mv-setup: Configure TFChain for 3 validators (Alice, Bob, Charlie)
+bridge-mv-setup:
+	@test -f $(BRIDGE_MV_ENV_FILE) || (echo "ERROR: $(BRIDGE_MV_ENV_FILE) not found. Run: make bridge-mv-accounts" && exit 1)
+	@echo "==> Configuring TFChain for multi-validator bridge..."
+	TFCHAIN_URL=$(TFCHAIN_URL) BRIDGE_MV_ENV_FILE=$(BRIDGE_MV_ENV_FILE) \
+	  node $(SCRIPTS_DIR)/bridge_mv_setup.js
+
+## bridge-mv-start: Start 3 bridge daemons (Val1=Alice, Val2=Bob, Val3=Charlie)
+bridge-mv-start:
+	@test -f $(BRIDGE_BIN) || (echo "ERROR: Bridge binary not found. Run: make bridge-build" && exit 1)
+	@test -f $(BRIDGE_MV_ENV_FILE) || (echo "ERROR: $(BRIDGE_MV_ENV_FILE) not found. Run: make bridge-mv-accounts" && exit 1)
+	@pkill -f "$(notdir $(BRIDGE_BIN))" 2>/dev/null || true
+	@sleep 1
+	@. $(BRIDGE_MV_ENV_FILE) && for i in 1 2 3; do \
+	  secret_var="VAL$${i}_STELLAR_SECRET"; \
+	  seed_var="VAL$${i}_TFCHAIN_SEED"; \
+	  secret=$$(eval echo \$$$${secret_var}); \
+	  seed=$$([ $$i -eq 1 ] && echo "//Alice" || [ $$i -eq 2 ] && echo "//Bob" || echo "//Charlie"); \
+	  nohup $(BRIDGE_BIN) \
+	    --secret "$$secret" \
+	    --tfchainurl $(TFCHAIN_URL) \
+	    --tfchainseed "$$seed" \
+	    --bridgewallet "$$BRIDGE_ADDRESS" \
+	    --persistency $(BRIDGE_DIR)/signer_mv_$$i.json \
+	    --network testnet \
+	  > /tmp/bridge_mv_$$i.log 2>&1 & echo $$! > /tmp/bridge_mv_$$i.pid; \
+	  echo "==> Val$$i started (PID $$(cat /tmp/bridge_mv_$$i.pid))"; \
+	done
+	@echo "==> Waiting for all 3 validators to be ready..."
+	@for i in 1 2 3; do \
+	  timeout 30 sh -c "until grep -q bridge_started /tmp/bridge_mv_$$i.log 2>/dev/null; do sleep 1; done" \
+	    && echo "==> Val$$i ready" || echo "==> Warning: Val$$i bridge_started not seen"; \
+	done
+
+## bridge-mv-stop: Stop all 3 bridge daemons
+bridge-mv-stop:
+	@for i in 1 2 3; do \
+	  if [ -f /tmp/bridge_mv_$$i.pid ]; then \
+	    kill $$(cat /tmp/bridge_mv_$$i.pid) 2>/dev/null || true; \
+	    rm -f /tmp/bridge_mv_$$i.pid; \
+	    echo "==> Val$$i stopped"; \
+	  fi; \
+	done
+	@pkill -f "$(notdir $(BRIDGE_BIN))" 2>/dev/null || true
+
+## bridge-mv-test: Run multi-validator E2E test suite
+bridge-mv-test:
+	@test -f $(BRIDGE_MV_ENV_FILE) || (echo "ERROR: $(BRIDGE_MV_ENV_FILE) not found. Run: make bridge-mv-accounts" && exit 1)
+	@echo "==> Running multi-validator E2E tests..."
+	TFCHAIN_URL=$(TFCHAIN_URL) \
+	BRIDGE_MV_ENV_FILE=$(BRIDGE_MV_ENV_FILE) \
+	BRIDGE_BIN=$(BRIDGE_BIN) \
+	BRIDGE_DIR=$(BRIDGE_DIR) \
+	node $(SCRIPTS_DIR)/bridge_mv_tests.js
+
+## bridge-mv-clean: Stop MV validators and delete MV state files
+bridge-mv-clean: bridge-mv-stop
+	@echo "==> Cleaning multi-validator bridge state..."
+	rm -f $(BRIDGE_DIR)/signer_mv_*.json
+	rm -f $(BRIDGE_DIR)/signer_mv_*.json.idem.db
+	rm -f /tmp/bridge_mv_*.log /tmp/bridge_mv_*.pid
+	@echo "==> MV clean done."
+
+## bridge-mv-dev: Full one-shot multi-validator dev environment
+bridge-mv-dev: bridge-mv-clean bridge-build $(TFCHAIN_BIN) bridge-mv-accounts \
+               bridge-tfchain-start bridge-mv-setup bridge-mv-start bridge-mv-test
+
 # Build TFChain only if binary doesn't exist (expensive Rust build)
 $(TFCHAIN_BIN):
 	@$(MAKE) bridge-build-tfchain
