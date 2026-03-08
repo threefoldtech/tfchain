@@ -63,13 +63,24 @@ func NewSubstrateClient(url string, seed string) (*SubstrateClient, error) {
 func (s *SubstrateClient) RetrySetWithdrawExecuted(ctx context.Context, tixd uint64) error {
 	err := s.SetBurnTransactionExecuted(s.identity, tixd)
 	for err != nil {
-		log.Err(err).Msg("error while setting refund transaction as executed")
+		// BurnTransactionAlreadyExecuted is expected in multi-validator: another validator
+		// won the submission race. Check immediately before sleeping.
+		burnedAlready, bErr := s.IsBurnedAlready(types.U64(tixd))
+		if bErr != nil {
+			return bErr
+		}
+		if burnedAlready {
+			log.Warn().Err(err).Msg("burn transaction already executed by another validator; skipping")
+			return nil
+		}
+
+		log.Err(err).Msg("error while setting burn transaction as executed")
 
 		select {
 		case <-ctx.Done():
 			return err
 		case <-time.After(10 * time.Second):
-			burnedAlready, bErr := s.IsBurnedAlready(types.U64(tixd))
+			burnedAlready, bErr = s.IsBurnedAlready(types.U64(tixd))
 			if bErr != nil {
 				return bErr
 			}
@@ -113,13 +124,24 @@ func (s *SubstrateClient) RetryProposeWithdrawOrAddSig(ctx context.Context, txID
 func (s *SubstrateClient) RetryCreateRefundTransactionOrAddSig(ctx context.Context, txHash string, target string, amount int64, signature string, stellarAddress string, sequence_number uint64) error {
 	err := s.CreateRefundTransactionOrAddSig(s.identity, txHash, target, amount, signature, stellarAddress, sequence_number)
 	for err != nil {
+		// EnoughRefundSignaturesPresent / RefundTransactionAlreadyExecuted are expected in
+		// multi-validator: threshold already met by other validators. Check immediately.
+		refundedAlready, rErr := s.IsRefundedAlready(txHash)
+		if rErr != nil {
+			return rErr
+		}
+		if refundedAlready {
+			log.Warn().Err(err).Msg("refund already handled by another validator; skipping")
+			return nil
+		}
+
 		log.Err(err).Msg("error while creating refund tx or adding signature")
 
 		select {
 		case <-ctx.Done():
 			return err
 		case <-time.After(10 * time.Second):
-			refundedAlready, rErr := s.IsRefundedAlready(txHash)
+			refundedAlready, rErr = s.IsRefundedAlready(txHash)
 			if rErr != nil {
 				return rErr
 			}
@@ -129,7 +151,6 @@ func (s *SubstrateClient) RetryCreateRefundTransactionOrAddSig(ctx context.Conte
 			} else {
 				err = nil
 			}
-
 		}
 	}
 
@@ -139,13 +160,24 @@ func (s *SubstrateClient) RetryCreateRefundTransactionOrAddSig(ctx context.Conte
 func (s *SubstrateClient) RetrySetRefundTransactionExecutedTx(ctx context.Context, txHash string) error {
 	err := s.SetRefundTransactionExecuted(s.identity, txHash)
 	for err != nil {
+		// RefundTransactionAlreadyExecuted is expected in multi-validator: another validator
+		// won the submission race. Check immediately before sleeping.
+		refundedAlready, rErr := s.IsRefundedAlready(txHash)
+		if rErr != nil {
+			return rErr
+		}
+		if refundedAlready {
+			log.Warn().Err(err).Msg("refund transaction already executed by another validator; skipping")
+			return nil
+		}
+
 		log.Err(err).Msg("error while setting refund transaction as executed")
 
 		select {
 		case <-ctx.Done():
 			return err
 		case <-time.After(10 * time.Second):
-			refundedAlready, rErr := s.IsRefundedAlready(txHash)
+			refundedAlready, rErr = s.IsRefundedAlready(txHash)
 			if rErr != nil {
 				return rErr
 			}
