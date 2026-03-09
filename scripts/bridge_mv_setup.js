@@ -25,9 +25,9 @@ const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api')
 
 const TFCHAIN_URL = process.env.TFCHAIN_URL || 'ws://localhost:9944'
 
-// Bridge validator dev seeds (from substrate-node/node/src/chain_spec.rs)
-const VAL2_SEED = 'employ split promote annual couple elder remain cricket company fitness senior fiscal'
-const VAL3_SEED = 'remind bird banner word spread volume card keep want faith insect mind'
+// Bridge validator dev seeds — read from env (set by Makefile) with hardcoded defaults as fallback
+const VAL2_SEED = process.env.VAL2_TFCHAIN_SEED || 'employ split promote annual couple elder remain cricket company fitness senior fiscal'
+const VAL3_SEED = process.env.VAL3_TFCHAIN_SEED || 'remind bird banner word spread volume card keep want faith insect mind'
 
 function log (msg) { console.log(`[mv-setup] ${msg}`) }
 function die (msg) { console.error(`[mv-setup] FATAL: ${msg}`); process.exit(1) }
@@ -60,9 +60,12 @@ function signAndWait (api, tx, signer) {
 async function waitBlocks (api, n = 1) {
   return new Promise((resolve) => {
     let count = 0
-    api.rpc.chain.subscribeNewHeads(header => {
+    const unsubPromise = api.rpc.chain.subscribeNewHeads(() => {
       count++
-      if (count >= n) resolve()
+      if (count >= n) {
+        unsubPromise.then(unsub => unsub())
+        resolve()
+      }
     })
   })
 }
@@ -137,42 +140,46 @@ async function addValidatorViaCouncil (api, alice, bob, validatorAddress, label)
 async function main () {
   log(`Connecting to TFChain at ${TFCHAIN_URL}...`)
   const api = await ApiPromise.create({ provider: new WsProvider(TFCHAIN_URL) })
-  const keyring = new Keyring({ type: 'sr25519' })
 
-  const alice = keyring.addFromUri('//Alice')
-  const bob = keyring.addFromUri('//Bob')
-  const val2 = keyring.addFromUri(VAL2_SEED)
-  const val3 = keyring.addFromUri(VAL3_SEED)
+  try {
+    const keyring = new Keyring({ type: 'sr25519' })
 
-  log(`Val2 address: ${val2.address}`)
-  log(`Val3 address: ${val3.address}`)
+    const alice = keyring.addFromUri('//Alice')
+    const bob = keyring.addFromUri('//Bob')
+    const val2 = keyring.addFromUri(VAL2_SEED)
+    const val3 = keyring.addFromUri(VAL3_SEED)
 
-  // Add val2 via council governance
-  await addValidatorViaCouncil(api, alice, bob, val2.address, 'Val2')
+    log(`Val2 address: ${val2.address}`)
+    log(`Val3 address: ${val3.address}`)
 
-  // Add val3 via council governance
-  await addValidatorViaCouncil(api, alice, bob, val3.address, 'Val3')
+    // Add val2 via council governance
+    await addValidatorViaCouncil(api, alice, bob, val2.address, 'Val2')
 
-  // Create Alice's twin (needed for MV2 deposit test)
-  // Alice must accept T&C before creating a twin
-  const aliceTwinOpt = await api.query.tfgridModule.twinIdByAccountID(alice.address)
-  const aliceTwinId = aliceTwinOpt.toJSON()
-  if (!aliceTwinId) {
-    log('Accepting T&C and creating Alice twin for deposit tests...')
-    await signAndWait(api, api.tx.tfgridModule.userAcceptTc('https://localhost/tc', 'deadbeef'), alice)
-    await signAndWait(api, api.tx.tfgridModule.createTwin(null, null), alice)
-    const newTwin = await api.query.tfgridModule.twinIdByAccountID(alice.address)
-    log(`Alice twin created (ID: ${newTwin.toJSON()})`)
-  } else {
-    log(`Alice twin already exists (ID: ${aliceTwinId})`)
+    // Add val3 via council governance
+    await addValidatorViaCouncil(api, alice, bob, val3.address, 'Val3')
+
+    // Create Alice's twin (needed for MV2 deposit test)
+    // Alice must accept T&C before creating a twin
+    const aliceTwinOpt = await api.query.tfgridModule.twinIdByAccountID(alice.address)
+    const aliceTwinId = aliceTwinOpt.toJSON()
+    if (!aliceTwinId) {
+      log('Accepting T&C and creating Alice twin for deposit tests...')
+      await signAndWait(api, api.tx.tfgridModule.userAcceptTc('https://localhost/tc', 'deadbeef'), alice)
+      await signAndWait(api, api.tx.tfgridModule.createTwin(null, null), alice)
+      const newTwin = await api.query.tfgridModule.twinIdByAccountID(alice.address)
+      log(`Alice twin created (ID: ${newTwin.toJSON()})`)
+    } else {
+      log(`Alice twin already exists (ID: ${aliceTwinId})`)
+    }
+
+    // Final state
+    const finalValidators = await api.query.tftBridgeModule.validators()
+    log(`Final validators: ${JSON.stringify(finalValidators.toHuman())}`)
+
+    log('Setup complete.')
+  } finally {
+    await api.disconnect()
   }
-
-  // Final state
-  const finalValidators = await api.query.tftBridgeModule.validators()
-  log(`Final validators: ${JSON.stringify(finalValidators.toHuman())}`)
-
-  await api.disconnect()
-  log('Setup complete.')
 }
 
 main().catch(e => die(e.message || String(e)))

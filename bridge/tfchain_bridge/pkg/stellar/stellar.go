@@ -85,22 +85,24 @@ func NewStellarWallet(ctx context.Context, config *pkg.StellarConfig) (*StellarW
 	log.Info().Msgf("account %s loaded with sequence number %d", account.AccountID, w.sequenceNumber)
 
 	// Discover the TFT asset actually held by the bridge wallet.
-	// The network-configured issuer is the expected default; if the wallet holds
-	// TFT from a different issuer (e.g. a custom issuer in a dev/test environment),
-	// use the actual issuer so payments succeed.
+	// On production and testnet, the issuer is always the hardcoded constant.
+	// On local dev (--network local), resolve from the wallet's actual balance
+	// to support custom TFT issuers created per dev session.
 	configuredAsset := w.getAssetCodeAndIssuer()
 	w.resolvedAssetCode = configuredAsset[0]
 	w.resolvedAssetIssuer = configuredAsset[1]
-	for _, balance := range account.Balances {
-		if balance.Code == "TFT" {
-			if balance.Issuer != w.resolvedAssetIssuer {
-				log.Warn().
-					Str("configured_issuer", w.resolvedAssetIssuer).
-					Str("actual_issuer", balance.Issuer).
-					Msg("bridge wallet holds TFT from a different issuer than the network default; using actual issuer for all payments")
-				w.resolvedAssetIssuer = balance.Issuer
+	if w.config.StellarNetwork == "local" {
+		for _, balance := range account.Balances {
+			if balance.Code == "TFT" {
+				if balance.Issuer != w.resolvedAssetIssuer {
+					log.Warn().
+						Str("configured_issuer", w.resolvedAssetIssuer).
+						Str("actual_issuer", balance.Issuer).
+						Msg("local dev: bridge wallet holds TFT from a different issuer than the network default; using actual issuer for all payments")
+					w.resolvedAssetIssuer = balance.Issuer
+				}
+				break
 			}
-			break
 		}
 	}
 	log.Info().Str("asset_code", w.resolvedAssetCode).Str("asset_issuer", w.resolvedAssetIssuer).Msg("bridge wallet TFT asset resolved")
@@ -476,7 +478,7 @@ func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Tra
 		return errors.Wrap(err, "an error occurred while submitting the transaction")
 	}
 	log.Info().
-		Str("trace_id", fmt.Sprint(ctx.Value("trace_id"))).
+		Str("trace_id", fmt.Sprint(ctx.Value(TraceIdKey{}))).
 		Str("event_action", "stellar_transaction_submitted").
 		Str("event_kind", "event").
 		Str("category", "vault").
@@ -729,21 +731,23 @@ func (w *StellarWallet) getOperationEffect(txHash string) (ops operations.Operat
 	return ops, nil
 }
 
-// getHorizonClient gets the horizon client based on the wallet's network
+// getHorizonClient gets the horizon client based on the wallet's network.
+// If StellarHorizonUrl is set, it takes precedence over the network default.
 func (w *StellarWallet) getHorizonClient() (*horizonclient.Client, error) {
 	var client *horizonclient.Client
 
-	if w.config.StellarHorizonUrl != "" {
-		client = &horizonclient.Client{HorizonURL: w.config.StellarHorizonUrl}
-	}
-
 	switch w.config.StellarNetwork {
-	case "testnet":
+	case "testnet", "local":
 		client = horizonclient.DefaultTestNetClient
 	case "production":
 		client = horizonclient.DefaultPublicNetClient
 	default:
 		return nil, errors.New("network is not supported")
+	}
+
+	// Custom Horizon URL takes precedence over network defaults
+	if w.config.StellarHorizonUrl != "" {
+		client = &horizonclient.Client{HorizonURL: w.config.StellarHorizonUrl}
 	}
 
 	// custom HTTP client with retry logic
@@ -776,7 +780,7 @@ func (w *StellarWallet) getHorizonClient() (*horizonclient.Client, error) {
 // getNetworkPassPhrase gets the Stellar network passphrase based on the wallet's network
 func (w *StellarWallet) getNetworkPassPhrase() string {
 	switch w.config.StellarNetwork {
-	case "testnet":
+	case "testnet", "local":
 		return network.TestNetworkPassphrase
 	case "production":
 		return network.PublicNetworkPassphrase
@@ -795,7 +799,7 @@ func (w *StellarWallet) getAssetCodeAndIssuer() []string {
 	// Pre-init fallback: derive from network config (used only during NewStellarWallet
 	// before resolvedAsset is populated).
 	switch w.config.StellarNetwork {
-	case "testnet":
+	case "testnet", "local":
 		return strings.Split(TFTTest, ":")
 	case "production":
 		return strings.Split(TFTMainnet, ":")

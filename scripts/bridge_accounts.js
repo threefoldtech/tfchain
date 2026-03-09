@@ -26,12 +26,11 @@
 'use strict'
 
 const StellarSdk = require('@stellar/stellar-sdk')
-const https = require('https')
 const fs = require('fs')
+const { friendbot, waitForAccount } = require('./bridge_helpers')
 
 const HORIZON_URL = process.env.STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
 const NETWORK_PASSPHRASE = StellarSdk.Networks.TESTNET
-const FRIENDBOT_URL = 'https://friendbot.stellar.org'
 const ENV_FILE = process.env.BRIDGE_ENV_FILE || '/tmp/bridge_local_env.sh'
 
 const BRIDGE_TFT_FLOAT = process.env.BRIDGE_TFT_FLOAT || '20000'
@@ -42,37 +41,6 @@ const server = new StellarSdk.Horizon.Server(HORIZON_URL)
 
 function log (msg) { console.log(`[accounts] ${msg}`) }
 function err (msg) { console.error(`[accounts] ERROR: ${msg}`); process.exit(1) }
-
-async function friendbot (address) {
-  return new Promise((resolve, reject) => {
-    const url = `${FRIENDBOT_URL}?addr=${address}`
-    https.get(url, (res) => {
-      let data = ''
-      res.on('data', chunk => { data += chunk })
-      res.on('end', () => {
-        if (res.statusCode === 200 || res.statusCode === 400) {
-          // 400 = already funded — treat as success
-          resolve()
-        } else {
-          reject(new Error(`Friendbot returned ${res.statusCode}: ${data}`))
-        }
-      })
-    }).on('error', reject)
-  })
-}
-
-async function waitForAccount (address, retries = 10) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await server.loadAccount(address)
-    } catch (e) {
-      if (i < retries - 1) {
-        await new Promise(r => setTimeout(r, 2000))
-      }
-    }
-  }
-  err(`account ${address} did not appear after ${retries} attempts`)
-}
 
 async function main () {
   // 1. Generate or reuse keypairs
@@ -104,9 +72,9 @@ async function main () {
   log('Friendbot done. Waiting for accounts to appear on Horizon...')
 
   const [, bridgeAcc, userAcc] = await Promise.all([
-    waitForAccount(issuerKp.publicKey()),
-    waitForAccount(bridgeKp.publicKey()),
-    waitForAccount(userKp.publicKey())
+    waitForAccount(issuerKp.publicKey(), server),
+    waitForAccount(bridgeKp.publicKey(), server),
+    waitForAccount(userKp.publicKey(), server)
   ])
 
   // 3. Create TFT trustlines on bridge and user
@@ -131,10 +99,10 @@ async function main () {
   log('Trustlines created.')
 
   // Reload accounts after trustline txs
-  const [issuerAcc2, bridgeAcc2, userAcc2] = await Promise.all([
-    waitForAccount(issuerKp.publicKey()),
-    waitForAccount(bridgeKp.publicKey()),
-    waitForAccount(userKp.publicKey())
+  const [issuerAcc2] = await Promise.all([
+    waitForAccount(issuerKp.publicKey(), server),
+    waitForAccount(bridgeKp.publicKey(), server),
+    waitForAccount(userKp.publicKey(), server)
   ])
 
   // 4. Fund bridge via path_payment_strict_send (invisible to bridge deposit monitor)
@@ -158,7 +126,7 @@ async function main () {
   log(`Bridge funded with ${BRIDGE_TFT_FLOAT} TFT.`)
 
   // Reload issuer after bridge funding tx
-  const issuerAcc3 = await waitForAccount(issuerKp.publicKey())
+  const issuerAcc3 = await waitForAccount(issuerKp.publicKey(), server)
 
   // 5. Fund user via regular payment (user account is not monitored by bridge)
   log(`Issuing ${USER_TFT_AMOUNT} TFT to user...`)

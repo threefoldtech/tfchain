@@ -15,6 +15,8 @@ SHELL := /bin/bash
 #   BRIDGE_MV_ENV_FILE  MV env file            (default: /tmp/bridge_mv_env.sh)
 #   TFCHAIN_BIN         TFChain binary path    (default: release; use debug to skip 30-min build)
 #                       e.g. TFCHAIN_BIN=substrate-node/target/debug/tfchain make bridge-dev
+#   BRIDGE_NETWORK      Bridge --network flag  (default: local)
+#   TFCHAIN_PORT        TFChain WS port        (default: 9944)
 
 BRIDGE_DIR        := bridge/tfchain_bridge
 BRIDGE_BIN        := $(BRIDGE_DIR)/tfchain_bridge_local
@@ -25,11 +27,18 @@ BRIDGE_LOG        := /tmp/bridge_local.log
 BRIDGE_PID_FILE   := /tmp/bridge_local.pid
 TFCHAIN_LOG       := /tmp/tfchain_local.log
 TFCHAIN_PID_FILE  := /tmp/tfchain_local.pid
-TFCHAIN_BASEPATH  := /tmp/tfchain-local
 
 BRIDGE_ENV_FILE    ?= /tmp/bridge_local_env.sh
 BRIDGE_MV_ENV_FILE ?= /tmp/bridge_mv_env.sh
 TFCHAIN_URL        ?= ws://localhost:9944
+BRIDGE_NETWORK     ?= local
+TFCHAIN_PORT       ?= 9944
+
+# Bridge validator dev seeds (from substrate-node/node/src/chain_spec.rs)
+# Single source of truth — passed as env vars to scripts via Makefile recipes.
+VAL1_TFCHAIN_SEED ?= quarter between satisfy three sphere six soda boss cute decade old trend
+VAL2_TFCHAIN_SEED ?= employ split promote annual couple elder remain cricket company fitness senior fiscal
+VAL3_TFCHAIN_SEED ?= remind bird banner word spread volume card keep want faith insect mind
 
 .PHONY: bridge-help bridge-build bridge-build-tfchain \
         bridge-accounts bridge-mv-accounts \
@@ -59,10 +68,20 @@ endef
 
 # Like start_daemon but sources an env file first (in the same shell as nohup,
 # so exported variables are inherited by the child process).
+#
+# IMPORTANT: uses ";" not "&&" between the source and nohup commands.
+# With "&&", bash backgrounds the entire compound command as a subshell,
+# so $! captures the subshell PID — not the bridge PID. When stop_daemon
+# later kills that (already-exited) subshell PID, the bridge process
+# becomes an orphan and keeps running.  With ";", the source runs in the
+# foreground shell and only "nohup cmd &" is backgrounded, so $! is the
+# actual bridge PID.  set -e (from .SHELLFLAGS) still ensures a failed
+# source aborts before nohup runs.
+#
 # Usage: $(call start_daemon_with_env,Name,envfile,command,logfile,pidfile)
 define start_daemon_with_env
 	@echo "==> Starting $(1)..."
-	@. $(2) && nohup $(3) > $(4) 2>&1 & echo $$! > $(5)
+	@. $(2); nohup $(3) > $(4) 2>&1 & echo $$! > $(5)
 	@sleep 1
 	@PID=$$(cat $(5)); \
 	if kill -0 $$PID 2>/dev/null; then \
@@ -140,14 +159,14 @@ bridge-mv-accounts:
 bridge-tfchain-start:
 	@test -f $(TFCHAIN_BIN) || { echo "Run: make bridge-build-tfchain"; exit 1; }
 	$(call stop_daemon,TFChain,$(TFCHAIN_PID_FILE))
-	@lsof -ti tcp:9944 | xargs kill 2>/dev/null && sleep 1 || true
-	$(call start_daemon,TFChain,$(TFCHAIN_BIN) --dev --base-path $(TFCHAIN_BASEPATH),$(TFCHAIN_LOG),$(TFCHAIN_PID_FILE))
+	@lsof -ti tcp:$(TFCHAIN_PORT) | xargs kill 2>/dev/null && sleep 1 || true
+	$(call start_daemon,TFChain,$(TFCHAIN_BIN) --dev --tmp,$(TFCHAIN_LOG),$(TFCHAIN_PID_FILE))
 	@echo "==> Waiting for node..."
 	TFCHAIN_URL=$(TFCHAIN_URL) node $(SCRIPTS_DIR)/wait_for_node.js
 
 bridge-tfchain-stop:
 	$(call stop_daemon,TFChain,$(TFCHAIN_PID_FILE))
-	@lsof -ti tcp:9944 | xargs kill 2>/dev/null && sleep 1 || true
+	@lsof -ti tcp:$(TFCHAIN_PORT) | xargs kill 2>/dev/null && sleep 1 || true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Bridge setup
@@ -163,6 +182,8 @@ bridge-mv-setup:
 	@test -f $(BRIDGE_MV_ENV_FILE) || { echo "Run: make bridge-mv-accounts"; exit 1; }
 	TFCHAIN_URL=$(TFCHAIN_URL) \
 	BRIDGE_MV_ENV_FILE=$(BRIDGE_MV_ENV_FILE) \
+	VAL2_TFCHAIN_SEED="$(VAL2_TFCHAIN_SEED)" \
+	VAL3_TFCHAIN_SEED="$(VAL3_TFCHAIN_SEED)" \
 	node $(SCRIPTS_DIR)/bridge_mv_setup.js
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -180,10 +201,10 @@ bridge-start:
 	$(call start_daemon_with_env,Bridge,$(BRIDGE_ENV_FILE),$(BRIDGE_BIN) \
 	  --secret "$$BRIDGE_SECRET" \
 	  --tfchainurl $(TFCHAIN_URL) \
-	  --tfchainseed "quarter between satisfy three sphere six soda boss cute decade old trend" \
+	  --tfchainseed "$(VAL1_TFCHAIN_SEED)" \
 	  --bridgewallet "$$BRIDGE_ADDRESS" \
 	  --persistency $(BRIDGE_DIR)/signer_local.json \
-	  --network testnet,$(BRIDGE_LOG),$(BRIDGE_PID_FILE))
+	  --network $(BRIDGE_NETWORK),$(BRIDGE_LOG),$(BRIDGE_PID_FILE))
 	@echo "==> Waiting for bridge to be ready..."
 	@i=0; \
 	while [ $$i -lt 30 ] && ! grep -q "bridge_started" $(BRIDGE_LOG) 2>/dev/null; do \
@@ -206,7 +227,7 @@ bridge-test:
 	BRIDGE_PID_FILE=$(BRIDGE_PID_FILE) \
 	BRIDGE_LOG_FILE=$(BRIDGE_LOG) \
 	BRIDGE_BIN=$(BRIDGE_BIN) \
-	VAL1_TFCHAIN_SEED="quarter between satisfy three sphere six soda boss cute decade old trend" \
+	VAL1_TFCHAIN_SEED="$(VAL1_TFCHAIN_SEED)" \
 	node $(SCRIPTS_DIR)/bridge_tests.js
 
 bridge-clean: bridge-stop bridge-tfchain-stop
@@ -214,7 +235,7 @@ bridge-clean: bridge-stop bridge-tfchain-stop
 	rm -f $(BRIDGE_DIR)/signer_local.json.idem.db
 	rm -f $(BRIDGE_LOG) $(TFCHAIN_LOG)
 	rm -f $(BRIDGE_PID_FILE) $(TFCHAIN_PID_FILE)
-	rm -rf $(TFCHAIN_BASEPATH)
+	rm -f $(BRIDGE_ENV_FILE)
 
 bridge-dev: bridge-clean bridge-build $(TFCHAIN_BIN) bridge-accounts \
             bridge-tfchain-start bridge-setup bridge-start bridge-test
@@ -222,44 +243,31 @@ bridge-dev: bridge-clean bridge-build $(TFCHAIN_BIN) bridge-accounts \
 # ─────────────────────────────────────────────────────────────────────────────
 # Multi-validator bridge
 # ─────────────────────────────────────────────────────────────────────────────
-#
-# Each validator is started in its own @-line so that $! captures the correct
-# PID for each process. Validators source BRIDGE_MV_ENV_FILE in the same shell
-# as nohup so env vars are inherited.
 
 bridge-mv-start:
 	@test -f $(BRIDGE_BIN) || { echo "Run: make bridge-build"; exit 1; }
 	@test -f $(BRIDGE_MV_ENV_FILE) || { echo "Run: make bridge-mv-accounts"; exit 1; }
-	@. $(BRIDGE_MV_ENV_FILE) && \
-	  nohup $(BRIDGE_BIN) \
-	    --secret "$$VAL1_STELLAR_SECRET" \
-	    --tfchainurl $(TFCHAIN_URL) \
-	    --tfchainseed "quarter between satisfy three sphere six soda boss cute decade old trend" \
-	    --bridgewallet "$$BRIDGE_ADDRESS" \
-	    --persistency $(BRIDGE_DIR)/signer_mv_1.json \
-	    --network testnet \
-	  > /tmp/bridge_mv_1.log 2>&1 & echo $$! > /tmp/bridge_mv_1.pid
-	@echo "==> Val1 started (PID $$(cat /tmp/bridge_mv_1.pid))"
-	@. $(BRIDGE_MV_ENV_FILE) && \
-	  nohup $(BRIDGE_BIN) \
-	    --secret "$$VAL2_STELLAR_SECRET" \
-	    --tfchainurl $(TFCHAIN_URL) \
-	    --tfchainseed "employ split promote annual couple elder remain cricket company fitness senior fiscal" \
-	    --bridgewallet "$$BRIDGE_ADDRESS" \
-	    --persistency $(BRIDGE_DIR)/signer_mv_2.json \
-	    --network testnet \
-	  > /tmp/bridge_mv_2.log 2>&1 & echo $$! > /tmp/bridge_mv_2.pid
-	@echo "==> Val2 started (PID $$(cat /tmp/bridge_mv_2.pid))"
-	@. $(BRIDGE_MV_ENV_FILE) && \
-	  nohup $(BRIDGE_BIN) \
-	    --secret "$$VAL3_STELLAR_SECRET" \
-	    --tfchainurl $(TFCHAIN_URL) \
-	    --tfchainseed "remind bird banner word spread volume card keep want faith insect mind" \
-	    --bridgewallet "$$BRIDGE_ADDRESS" \
-	    --persistency $(BRIDGE_DIR)/signer_mv_3.json \
-	    --network testnet \
-	  > /tmp/bridge_mv_3.log 2>&1 & echo $$! > /tmp/bridge_mv_3.pid
-	@echo "==> Val3 started (PID $$(cat /tmp/bridge_mv_3.pid))"
+	$(call start_daemon_with_env,Val1,$(BRIDGE_MV_ENV_FILE),$(BRIDGE_BIN) \
+	  --secret "$$VAL1_STELLAR_SECRET" \
+	  --tfchainurl $(TFCHAIN_URL) \
+	  --tfchainseed "$(VAL1_TFCHAIN_SEED)" \
+	  --bridgewallet "$$BRIDGE_ADDRESS" \
+	  --persistency $(BRIDGE_DIR)/signer_mv_1.json \
+	  --network $(BRIDGE_NETWORK),/tmp/bridge_mv_1.log,/tmp/bridge_mv_1.pid)
+	$(call start_daemon_with_env,Val2,$(BRIDGE_MV_ENV_FILE),$(BRIDGE_BIN) \
+	  --secret "$$VAL2_STELLAR_SECRET" \
+	  --tfchainurl $(TFCHAIN_URL) \
+	  --tfchainseed "$(VAL2_TFCHAIN_SEED)" \
+	  --bridgewallet "$$BRIDGE_ADDRESS" \
+	  --persistency $(BRIDGE_DIR)/signer_mv_2.json \
+	  --network $(BRIDGE_NETWORK),/tmp/bridge_mv_2.log,/tmp/bridge_mv_2.pid)
+	$(call start_daemon_with_env,Val3,$(BRIDGE_MV_ENV_FILE),$(BRIDGE_BIN) \
+	  --secret "$$VAL3_STELLAR_SECRET" \
+	  --tfchainurl $(TFCHAIN_URL) \
+	  --tfchainseed "$(VAL3_TFCHAIN_SEED)" \
+	  --bridgewallet "$$BRIDGE_ADDRESS" \
+	  --persistency $(BRIDGE_DIR)/signer_mv_3.json \
+	  --network $(BRIDGE_NETWORK),/tmp/bridge_mv_3.log,/tmp/bridge_mv_3.pid)
 	@echo "==> Waiting for validators to be ready..."
 	@for i in 1 2 3; do \
 	  j=0; \
@@ -275,26 +283,9 @@ bridge-mv-start:
 	done
 
 bridge-mv-stop:
-	@for i in 1 2 3; do \
-	  PID_FILE=/tmp/bridge_mv_$$i.pid; \
-	  if [ -f $$PID_FILE ]; then \
-	    PID=$$(cat $$PID_FILE); \
-	    if kill -0 $$PID 2>/dev/null; then \
-	      kill $$PID; \
-	      j=0; \
-	      while kill -0 $$PID 2>/dev/null && [ $$j -lt 10 ]; do \
-	        sleep 1; j=$$((j+1)); \
-	      done; \
-	      if kill -0 $$PID 2>/dev/null; then kill -9 $$PID 2>/dev/null || true; fi; \
-	      echo "==> Val$$i stopped (PID $$PID)"; \
-	    else \
-	      echo "==> Val$$i process not running (stale PID $$PID)"; \
-	    fi; \
-	    rm -f $$PID_FILE; \
-	  else \
-	    echo "==> Val$$i not running (no PID file)"; \
-	  fi; \
-	done
+	$(call stop_daemon,Val1,/tmp/bridge_mv_1.pid)
+	$(call stop_daemon,Val2,/tmp/bridge_mv_2.pid)
+	$(call stop_daemon,Val3,/tmp/bridge_mv_3.pid)
 
 bridge-mv-test:
 	@test -f $(BRIDGE_MV_ENV_FILE) || { echo "Run: make bridge-mv-accounts"; exit 1; }
@@ -303,6 +294,9 @@ bridge-mv-test:
 	BRIDGE_MV_ENV_FILE=$(BRIDGE_MV_ENV_FILE) \
 	BRIDGE_BIN=$(BRIDGE_BIN) \
 	BRIDGE_DIR=$(BRIDGE_DIR) \
+	VAL1_TFCHAIN_SEED="$(VAL1_TFCHAIN_SEED)" \
+	VAL2_TFCHAIN_SEED="$(VAL2_TFCHAIN_SEED)" \
+	VAL3_TFCHAIN_SEED="$(VAL3_TFCHAIN_SEED)" \
 	node $(SCRIPTS_DIR)/bridge_mv_tests.js
 
 bridge-mv-clean: bridge-mv-stop bridge-tfchain-stop
@@ -311,7 +305,7 @@ bridge-mv-clean: bridge-mv-stop bridge-tfchain-stop
 	rm -f /tmp/bridge_mv_*.log
 	rm -f /tmp/bridge_mv_*.pid
 	rm -f $(TFCHAIN_LOG) $(TFCHAIN_PID_FILE)
-	rm -rf $(TFCHAIN_BASEPATH)
+	rm -f $(BRIDGE_MV_ENV_FILE)
 
 bridge-mv-dev: bridge-mv-clean bridge-build $(TFCHAIN_BIN) bridge-mv-accounts \
                bridge-tfchain-start bridge-mv-setup bridge-mv-start bridge-mv-test

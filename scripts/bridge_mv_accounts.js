@@ -31,12 +31,11 @@
 'use strict'
 
 const StellarSdk = require('@stellar/stellar-sdk')
-const https = require('https')
 const fs = require('fs')
+const { friendbot, waitForAccount } = require('./bridge_helpers')
 
 const HORIZON_URL = process.env.STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
 const NETWORK_PASSPHRASE = StellarSdk.Networks.TESTNET
-const FRIENDBOT_URL = 'https://friendbot.stellar.org'
 const ENV_FILE = process.env.BRIDGE_MV_ENV_FILE || '/tmp/bridge_mv_env.sh'
 
 const BRIDGE_TFT_FLOAT = process.env.BRIDGE_TFT_FLOAT || '20000'
@@ -47,27 +46,6 @@ const server = new StellarSdk.Horizon.Server(HORIZON_URL)
 
 function log (msg) { console.log(`[mv-accounts] ${msg}`) }
 function die (msg) { console.error(`[mv-accounts] ERROR: ${msg}`); process.exit(1) }
-
-async function friendbot (address) {
-  return new Promise((resolve, reject) => {
-    https.get(`${FRIENDBOT_URL}?addr=${address}`, (res) => {
-      let data = ''
-      res.on('data', c => { data += c })
-      res.on('end', () => {
-        if (res.statusCode === 200 || res.statusCode === 400) resolve()
-        else reject(new Error(`Friendbot ${res.statusCode}: ${data.slice(0, 200)}`))
-      })
-    }).on('error', reject)
-  })
-}
-
-async function waitForAccount (address, retries = 12) {
-  for (let i = 0; i < retries; i++) {
-    try { return await server.loadAccount(address) } catch {}
-    await new Promise(r => setTimeout(r, 2000))
-  }
-  die(`Account ${address} not found after ${retries} attempts`)
-}
 
 async function submitTx (kp, acc, ops) {
   const builder = new StellarSdk.TransactionBuilder(acc, {
@@ -124,11 +102,11 @@ async function main () {
   log('Friendbot done. Waiting for accounts...')
 
   const [, bridgeAcc, , , userAcc] = await Promise.all([
-    waitForAccount(issuerKp.publicKey()),
-    waitForAccount(val1Kp.publicKey()),
-    waitForAccount(val2Kp.publicKey()),
-    waitForAccount(val3Kp.publicKey()),
-    waitForAccount(userKp.publicKey())
+    waitForAccount(issuerKp.publicKey(), server),
+    waitForAccount(val1Kp.publicKey(), server),
+    waitForAccount(val2Kp.publicKey(), server),
+    waitForAccount(val3Kp.publicKey(), server),
+    waitForAccount(userKp.publicKey(), server)
   ])
 
   // 3. TFT trustlines on bridge and user only (val2/val3 are signers, not holders)
@@ -139,12 +117,12 @@ async function main () {
   ])
   log('Trustlines created.')
 
-  const [issuerAcc2, bridgeAcc2, , , userAcc2] = await Promise.all([
-    waitForAccount(issuerKp.publicKey()),
-    waitForAccount(val1Kp.publicKey()),
-    waitForAccount(val2Kp.publicKey()),
-    waitForAccount(val3Kp.publicKey()),
-    waitForAccount(userKp.publicKey())
+  const [issuerAcc2] = await Promise.all([
+    waitForAccount(issuerKp.publicKey(), server),
+    waitForAccount(val1Kp.publicKey(), server),
+    waitForAccount(val2Kp.publicKey(), server),
+    waitForAccount(val3Kp.publicKey(), server),
+    waitForAccount(userKp.publicKey(), server)
   ])
 
   // 4. Fund bridge via path_payment_strict_send (invisible to deposit monitor)
@@ -162,7 +140,7 @@ async function main () {
   log(`Bridge funded with ${BRIDGE_TFT_FLOAT} TFT.`)
 
   // 5. Fund user
-  const issuerAcc3 = await waitForAccount(issuerKp.publicKey())
+  const issuerAcc3 = await waitForAccount(issuerKp.publicKey(), server)
   log(`Issuing ${USER_TFT_AMOUNT} TFT to user...`)
   await submitTx(issuerKp, issuerAcc3, [
     StellarSdk.Operation.payment({
@@ -176,7 +154,7 @@ async function main () {
   // 6. Configure bridge as 2-of-3 multi-sig
   // Val1 is master (weight=1), val2 and val3 added as signers (weight=1 each)
   // Any 2 of 3 signers needed for med ops (TFT payments)
-  const bridgeAcc3 = await waitForAccount(val1Kp.publicKey())
+  const bridgeAcc3 = await waitForAccount(val1Kp.publicKey(), server)
   log('Configuring bridge as 2-of-3 multi-sig (low=1, med=2, high=2)...')
   await submitTx(val1Kp, bridgeAcc3, [
     StellarSdk.Operation.setOptions({
@@ -192,7 +170,7 @@ async function main () {
     })
   ])
 
-  const finalAcc = await waitForAccount(bridgeAddress)
+  const finalAcc = await waitForAccount(bridgeAddress, server)
   log(`Bridge thresholds: low=${finalAcc.thresholds.low_threshold} med=${finalAcc.thresholds.med_threshold} high=${finalAcc.thresholds.high_threshold}`)
   log(`Bridge signers: ${finalAcc.signers.length} (expected 3: val1 master + val2 + val3)`)
 

@@ -30,49 +30,53 @@ function die (msg) { console.error(`[setup] ERROR: ${msg}`); process.exit(1) }
 async function main () {
   log(`Connecting to TFChain at ${TFCHAIN_URL}...`)
   const api = await ApiPromise.create({ provider: new WsProvider(TFCHAIN_URL) })
-  const keyring = new Keyring({ type: 'sr25519' })
 
-  const bob = keyring.addFromUri('//Bob')
-  const charlie = keyring.addFromUri('//Charlie')
-  const ferdie = keyring.addFromUri('//Ferdie')
+  try {
+    const keyring = new Keyring({ type: 'sr25519' })
 
-  const validators = await api.query.tftBridgeModule.validators()
-  const valList = validators.toHuman()
-  const feeAccount = await api.query.tftBridgeModule.feeAccount()
-  const depositFee = await api.query.tftBridgeModule.depositFee()
-  const withdrawFee = await api.query.tftBridgeModule.withdrawFee()
+    const bob = keyring.addFromUri('//Bob')
+    const charlie = keyring.addFromUri('//Charlie')
+    const ferdie = keyring.addFromUri('//Ferdie')
 
-  log('=== TFChain Bridge Genesis Configuration ===')
-  log(`  Validators:   ${JSON.stringify(valList)}`)
-  log(`  Fee account:  ${feeAccount.toHuman()}`)
-  log(`  Deposit fee:  ${Number(depositFee.toString()) / 1e7} TFT`)
-  log(`  Withdraw fee: ${Number(withdrawFee.toString()) / 1e7} TFT`)
+    const validators = await api.query.tftBridgeModule.validators()
+    const valList = validators.toHuman()
+    const feeAccount = await api.query.tftBridgeModule.feeAccount()
+    const depositFee = await api.query.tftBridgeModule.depositFee()
+    const withdrawFee = await api.query.tftBridgeModule.withdrawFee()
 
-  // Verify expected validators are present
-  if (!valList.includes(bob.address)) {
-    warn(`Bob (${bob.address}) is not a genesis validator — bridge daemon using //Bob will be rejected`)
-  } else {
-    log(`  Bob (//Bob) ✓ is a registered validator`)
+    log('=== TFChain Bridge Genesis Configuration ===')
+    log(`  Validators:   ${JSON.stringify(valList)}`)
+    log(`  Fee account:  ${feeAccount.toHuman()}`)
+    log(`  Deposit fee:  ${Number(depositFee.toString()) / 1e7} TFT`)
+    log(`  Withdraw fee: ${Number(withdrawFee.toString()) / 1e7} TFT`)
+
+    // Verify expected validators are present
+    if (!valList.includes(bob.address)) {
+      warn(`Bob (${bob.address}) is not a genesis validator — bridge daemon using //Bob will be rejected`)
+    } else {
+      log(`  Bob (//Bob) ✓ is a registered validator`)
+    }
+
+    if (!valList.includes(charlie.address)) {
+      warn(`Charlie (${charlie.address}) is not a genesis validator`)
+    } else {
+      log(`  Charlie (//Charlie) ✓ is a registered validator`)
+    }
+
+    if (feeAccount.toHuman() !== ferdie.address) {
+      warn(`Fee account is ${feeAccount.toHuman()}, expected Ferdie (${ferdie.address})`)
+    } else {
+      log(`  Fee account ✓ is Ferdie`)
+    }
+
+    if (Number(depositFee.toString()) === 0) {
+      warn('Deposit fee is 0 — bridge may not charge fees')
+    }
+
+    log('Setup verification complete.')
+  } finally {
+    await api.disconnect()
   }
-
-  if (!valList.includes(charlie.address)) {
-    warn(`Charlie (${charlie.address}) is not a genesis validator`)
-  } else {
-    log(`  Charlie (//Charlie) ✓ is a registered validator`)
-  }
-
-  if (feeAccount.toHuman() !== ferdie.address) {
-    warn(`Fee account is ${feeAccount.toHuman()}, expected Ferdie (${ferdie.address})`)
-  } else {
-    log(`  Fee account ✓ is Ferdie`)
-  }
-
-  if (Number(depositFee.toString()) === 0) {
-    warn('Deposit fee is 0 — bridge may not charge fees')
-  }
-
-  log('Setup verification complete.')
-  await api.disconnect()
 }
 
 main().catch(e => {
