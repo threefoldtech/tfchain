@@ -11,6 +11,8 @@
  *   5. Deposit/mint      — send TFT to bridge with twin memo, verify TFChain balance
  *   6. Below-minimum     — swap below fee, expect dispatch error
  *   4. Crash recovery    — SIGKILL bridge mid-withdraw, restart, verify delivery completes
+ *   8. Lost cursor       — wipe persistency (BoltDB), restart, verify no double-spend
+ *   9. Expired batch     — 50 swaps while bridge offline, wait for expiry, restart, all delivered
  *   7. Clean state       — verify no orphaned active transactions on-chain
  *
  * All tests assert exact TFT balances (Stellar + TFChain) and on-chain state.
@@ -428,6 +430,140 @@ async function test4_crashRecovery () {
   }
 }
 
+async function test8_lostCursor () {
+  console.log('\n── TEST 8: Lost cursor (wipe persistency → no double-spend) ──')
+  const name = 'test8_lostCursor'
+  const userAddress = getEnv('USER_ADDRESS')
+
+  try {
+    // Bridge is running (restarted by T4). Kill it.
+    killBridge('SIGKILL')
+    await new Promise(r => setTimeout(r, 2000))
+
+    // Wipe the persistency file (BoltDB/JSON cursor).
+    // Without the cursor, the PROCESSING guard is gone.
+    // Only protection: IsBurnedAlready (queries ExecutedBurnTransactions on-chain).
+    if (fs.existsSync(BRIDGE_PERSISTENCY)) {
+      fs.unlinkSync(BRIDGE_PERSISTENCY)
+      log(`Persistency wiped: ${BRIDGE_PERSISTENCY}`)
+    } else {
+      log('Persistency file not found (nothing to wipe)')
+    }
+
+    // Snapshot Stellar balance — should NOT change after restart
+    const beforeStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    log(`User Stellar TFT before restart: ${beforeStellar}`)
+
+    // Restart bridge — it rescans with no local state
+    startBridge()
+    log('Bridge restarted with wiped cursor. Waiting 15s for rescan...')
+    await new Promise(r => setTimeout(r, 15_000))
+
+    // Verify no double-spend — balance must be unchanged
+    const afterStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    const delta = Math.round((afterStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`User Stellar TFT after rescan: ${afterStellar} (delta: ${delta >= 0 ? '+' : ''}${delta})`)
+    if (Math.abs(delta) > 1e-7) {
+      fail(name, `DOUBLE-SPEND: balance changed by ${delta} TFT after cursor wipe`, counter); return
+    }
+    log('No double-spend — IsBurnedAlready (ExecutedBurnTransactions) held')
+
+    // Prove bridge is still functional with a fresh withdraw
+    log('Running fresh withdraw to verify bridge functionality...')
+    const burnId = await swapToStellar(api, alice, 2, { userAddress })
+    log(`Fresh burn ID: ${burnId}`)
+
+    const finalStellar = await waitUntil(async () => {
+      const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+      if (bal > afterStellar) return bal
+    }, { timeoutMs: 180_000, desc: 'fresh withdraw to complete' })
+
+    const freshDelta = Math.round((finalStellar - afterStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    const expected = 2 - WITHDRAW_FEE_TFT
+    log(`Fresh withdraw delivered: +${freshDelta} TFT`)
+    if (Math.abs(freshDelta - expected) > 1e-7) {
+      fail(name, `Fresh withdraw: expected +${expected}, got +${freshDelta}`, counter); return
+    }
+
+    if (!(await assertBurnExecuted(name, burnId))) return
+
+    pass(name, counter)
+  } catch (e) {
+    fail(name, e.message, counter)
+  }
+}
+
+async function test9_expiredBatchRecovery () {
+  console.log('\n── TEST 9: Expired batch recovery (50 swaps offline → expiry → restart) ──')
+  const name = 'test9_expiredBatchRecovery'
+  const userAddress = getEnv('USER_ADDRESS')
+  const N = 50
+
+  try {
+    // Kill bridge before submitting swaps
+    killBridge('SIGKILL')
+    await new Promise(r => setTimeout(r, 2000))
+    log('Bridge killed')
+
+    const beforeStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    log(`User Stellar TFT before: ${beforeStellar}`)
+
+    // Submit N swaps in one block using sequential nonces
+    log(`Submitting ${N} swaps (bridge offline)...`)
+    const nonce = await api.rpc.system.accountNextIndex(alice.address)
+    const burnIds = await Promise.all(
+      Array.from({ length: N }, (_, i) =>
+        swapToStellar(api, alice, 2, { userAddress, nonce: nonce.toNumber() + i })
+      )
+    )
+    log(`${N} burns created on-chain: IDs ${burnIds[0]}..${burnIds[burnIds.length - 1]}`)
+
+    // Wait for all burns to expire (on_finalize clears signatures after RetryInterval=20 blocks ≈ 120s)
+    log('Waiting for burns to expire on-chain (RetryInterval=20 blocks)...')
+    await waitUntil(async () => {
+      const burn = (await api.query.tftBridgeModule.burnTransactions(burnIds[0])).toJSON()
+      return burn && burn.signatures && burn.signatures.length === 0
+    }, { timeoutMs: 180_000, intervalMs: 6000, desc: 'first burn to expire (signatures cleared)' })
+    log('All burns expired (signatures cleared, sequence_number reset to 0)')
+
+    // Start bridge — it subscribes to new blocks and catches the next BurnTransactionExpired events.
+    // handleProposalsBatch re-proposes all expired burns in a single force_batch tx.
+    // Due to Stellar sequence number constraints, only ~1 burn succeeds per expiry cycle (~120s).
+    startBridge()
+    log('Bridge restarted. Recovering expired burns via batch re-proposal...')
+    log(`Expected: each expiry cycle re-proposes all remaining in 1 force_batch, ~1 succeeds per cycle`)
+
+    const expectedNet = N * (2 - WITHDRAW_FEE_TFT)
+    let lastReported = 0
+
+    const finalStellar = await waitUntil(async () => {
+      const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+      const delivered = Math.round((bal - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+      const count = Math.round(delivered / (2 - WITHDRAW_FEE_TFT))
+      if (count > lastReported) {
+        log(`  Progress: ${count}/${N} burns delivered (+${delivered} TFT)`)
+        lastReported = count
+      }
+      if (bal >= beforeStellar + expectedNet - 1e-7) return bal
+    }, { timeoutMs: 7_200_000, intervalMs: 10_000, desc: `all ${N} burns delivered (+${expectedNet} TFT)` })
+
+    const delta = Math.round((finalStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`All ${N} burns delivered: +${delta} TFT (expected +${expectedNet})`)
+    if (Math.abs(delta - expectedNet) > 1e-7) {
+      fail(name, `Expected +${expectedNet}, got +${delta}`, counter); return
+    }
+
+    // Assert on-chain: all burns executed
+    for (const burnId of burnIds) {
+      if (!(await assertBurnExecuted(name, burnId))) return
+    }
+
+    pass(name, counter)
+  } catch (e) {
+    fail(name, e.message, counter)
+  }
+}
+
 async function test7_cleanState () {
   console.log('\n── TEST 7: Clean state (no orphaned active transactions) ──')
   const name = 'test7_cleanState'
@@ -473,7 +609,9 @@ async function main () {
     await test3_badDeposit()
     await test5_deposit()
     await test6_belowMinimum()
-    await test4_crashRecovery()  // always last — kills bridge
+    await test4_crashRecovery()            // kills/restarts bridge
+    await test8_lostCursor()               // kills/restarts bridge with wiped cursor
+    await test9_expiredBatchRecovery()     // kills bridge, 50 swaps, expiry, restart (long)
     await test7_cleanState()
 
     console.log(`\n${'─'.repeat(50)}`)

@@ -14,6 +14,8 @@
  *   MV4 — Validator offline: kill Val3 before deposit, Val1+Val2 alone complete refund (2-of-3)
  *   MV5 — Batch withdraws: 3 simultaneous swaps, all 3 eventually delivered (may use expiry)
  *   MV6 — Crash recovery: kill Val2 mid-withdraw, restart, verify delivery completes
+ *   MV8 — Lost cursor: wipe all 3 persistency files, restart, verify no double-spend
+ *   MV9 — Expired batch: 50 swaps while all validators offline, wait for expiry, restart, all delivered
  *   MV7 — Clean state: verify no orphaned active transactions on-chain
  *
  * All tests assert exact TFT balances (Stellar + TFChain) and on-chain state.
@@ -442,6 +444,141 @@ async function testMV6_crashRecovery () {
   } catch (e) { fail(name, e.message, counter) }
 }
 
+async function testMV8_lostCursor () {
+  console.log('\n── MV8: Lost cursor (wipe all 3 persistency files → no double-spend) ──')
+  const name = 'MV8_lostCursor'
+  const userAddress = getEnv('USER_ADDRESS')
+
+  try {
+    // Kill all 3 validators
+    for (let i = 1; i <= 3; i++) killValidator(i)
+    await new Promise(r => setTimeout(r, 2000))
+
+    // Wipe all 3 persistency files.
+    // Without the cursor, the PROCESSING guard is gone.
+    // Only protection: IsBurnedAlready (queries ExecutedBurnTransactions on-chain).
+    for (let i = 1; i <= 3; i++) {
+      const p = `${BRIDGE_DIR}/signer_mv_${i}.json`
+      if (fs.existsSync(p)) {
+        fs.unlinkSync(p)
+        log(`Wiped: ${p}`)
+      }
+    }
+
+    // Snapshot Stellar balance — should NOT change after restart
+    const beforeStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    log(`User Stellar TFT before restart: ${beforeStellar}`)
+
+    // Restart all 3 validators — they rescan with no local state
+    for (let i = 1; i <= 3; i++) startValidator(i)
+    log('All 3 validators restarted with wiped cursors. Waiting 15s for rescan...')
+    await new Promise(r => setTimeout(r, 15_000))
+
+    // Verify no double-spend — balance must be unchanged
+    const afterStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    const delta = Math.round((afterStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`User Stellar TFT after rescan: ${afterStellar} (delta: ${delta >= 0 ? '+' : ''}${delta})`)
+    if (Math.abs(delta) > 1e-7) {
+      fail(name, `DOUBLE-SPEND: balance changed by ${delta} TFT after cursor wipe`, counter); return
+    }
+    log('No double-spend — IsBurnedAlready (ExecutedBurnTransactions) held')
+
+    // Prove bridge is still functional with a fresh withdraw
+    log('Running fresh withdraw to verify bridge functionality...')
+    const burnId = await swapToStellar(api, alice, 2, { userAddress })
+    log(`Fresh burn ID: ${burnId}`)
+
+    const finalStellar = await waitUntil(async () => {
+      const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+      if (bal > afterStellar) return bal
+    }, { timeoutMs: 300_000, intervalMs: 4000, desc: 'fresh withdraw to complete' })
+
+    const freshDelta = Math.round((finalStellar - afterStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    const expected = 2 - WITHDRAW_FEE_TFT
+    log(`Fresh withdraw delivered: +${freshDelta} TFT`)
+    if (Math.abs(freshDelta - expected) > 1e-7) {
+      fail(name, `Fresh withdraw: expected +${expected}, got +${freshDelta}`, counter); return
+    }
+
+    if (!(await assertBurnExecuted(name, burnId))) return
+
+    pass(name, counter)
+  } catch (e) {
+    fail(name, e.message, counter)
+  }
+}
+
+async function testMV9_expiredBatchRecovery () {
+  console.log('\n── MV9: Expired batch recovery (50 swaps offline → expiry → restart) ──')
+  const name = 'MV9_expiredBatchRecovery'
+  const userAddress = getEnv('USER_ADDRESS')
+  const N = 50
+
+  try {
+    // Kill all 3 validators
+    for (let i = 1; i <= 3; i++) killValidator(i)
+    await new Promise(r => setTimeout(r, 2000))
+    log('All 3 validators killed')
+
+    const beforeStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    log(`User Stellar TFT before: ${beforeStellar}`)
+
+    // Submit N swaps in one block using sequential nonces
+    log(`Submitting ${N} swaps (all validators offline)...`)
+    const nonce = await api.rpc.system.accountNextIndex(alice.address)
+    const burnIds = await Promise.all(
+      Array.from({ length: N }, (_, i) =>
+        swapToStellar(api, alice, 2, { userAddress, nonce: nonce.toNumber() + i })
+      )
+    )
+    log(`${N} burns created on-chain: IDs ${burnIds[0]}..${burnIds[burnIds.length - 1]}`)
+
+    // Wait for all burns to expire (on_finalize clears signatures after RetryInterval=20 blocks ≈ 120s)
+    log('Waiting for burns to expire on-chain (RetryInterval=20 blocks)...')
+    await waitUntil(async () => {
+      const burn = (await api.query.tftBridgeModule.burnTransactions(burnIds[0])).toJSON()
+      return burn && burn.signatures && burn.signatures.length === 0
+    }, { timeoutMs: 180_000, intervalMs: 6000, desc: 'first burn to expire (signatures cleared)' })
+    log('All burns expired (signatures cleared, sequence_number reset to 0)')
+
+    // Start all 3 validators — they catch the next BurnTransactionExpired events.
+    // handleProposalsBatch re-proposes all expired burns in a single force_batch tx.
+    // Due to Stellar sequence number constraints, only ~1 burn succeeds per expiry cycle (~120s).
+    for (let i = 1; i <= 3; i++) startValidator(i)
+    log('All 3 validators restarted. Recovering expired burns via batch re-proposal...')
+    log(`Expected: each expiry cycle re-proposes all remaining in 1 force_batch, ~1 succeeds per cycle`)
+
+    const expectedNet = N * (2 - WITHDRAW_FEE_TFT)
+    let lastReported = 0
+
+    const finalStellar = await waitUntil(async () => {
+      const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+      const delivered = Math.round((bal - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+      const count = Math.round(delivered / (2 - WITHDRAW_FEE_TFT))
+      if (count > lastReported) {
+        log(`  Progress: ${count}/${N} burns delivered (+${delivered} TFT)`)
+        lastReported = count
+      }
+      if (bal >= beforeStellar + expectedNet - 1e-7) return bal
+    }, { timeoutMs: 7_200_000, intervalMs: 10_000, desc: `all ${N} burns delivered (+${expectedNet} TFT)` })
+
+    const delta = Math.round((finalStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`All ${N} burns delivered: +${delta} TFT (expected +${expectedNet})`)
+    if (Math.abs(delta - expectedNet) > 1e-7) {
+      fail(name, `Expected +${expectedNet}, got +${delta}`, counter); return
+    }
+
+    // Assert on-chain: all burns executed
+    for (const burnId of burnIds) {
+      if (!(await assertBurnExecuted(name, burnId))) return
+    }
+
+    pass(name, counter)
+  } catch (e) {
+    fail(name, e.message, counter)
+  }
+}
+
 async function testMV7_cleanState () {
   console.log('\n── MV7: Clean state (no orphaned active transactions) ──')
   const name = 'MV7_cleanState'
@@ -486,7 +623,9 @@ async function main () {
     await testMV3_badDeposit()
     await testMV4_validatorOffline()  // kills/restarts Val3
     await testMV5_batchWithdraws()
-    await testMV6_crashRecovery()     // kills/restarts Val2
+    await testMV6_crashRecovery()           // kills/restarts Val2
+    await testMV8_lostCursor()              // kills/restarts all 3 with wiped cursors
+    await testMV9_expiredBatchRecovery()   // kills all 3, 50 swaps, expiry, restart (long)
     await testMV7_cleanState()
 
     console.log(`\n${'─'.repeat(50)}`)
