@@ -333,35 +333,25 @@ async function testMV4_validatorOffline () {
     const delta = Math.round((afterStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
     log(`User Stellar TFT after: ${afterStellar} (delta: ${delta >= 0 ? '+' : ''}${delta})`)
 
-    // Evaluate result NOW — before restart attempt (restart is cleanup, not part of the test)
-    const balancePassed = Math.abs(delta) < 1e-7
-    const refundPassed = await (async () => {
-      const afterRefunds = await api.query.tftBridgeModule.executedRefundTransactions.entries()
-      return afterRefunds.length > refundsBefore
-    })()
-
-    // Restart Val3 for subsequent tests — best effort with fixed startup window.
-    // Log-based readiness detection is unreliable on macOS for restarted processes.
-    try {
-      log('Restarting Val3 for subsequent tests...')
-      startValidator(3)
-      await new Promise(r => setTimeout(r, 8000)) // fixed startup window
-      log('Val3 restarted.')
-    } catch (restartErr) {
-      log(`Warning: Val3 restart failed: ${restartErr.message}`)
-    }
-
-    if (!balancePassed) {
+    if (Math.abs(delta) > 1e-7) {
       fail(name, `Expected net 0 (full refund), got ${delta >= 0 ? '+' : ''}${delta}`, counter)
-    } else if (!refundPassed) {
-      fail(name, `Stellar balance correct but no new refund in ExecutedRefundTransactions`, counter)
+    } else if (!(await assertRefundExecuted(name, refundsBefore))) {
+      // assertRefundExecuted polls for 30s and logs failure itself
     } else {
       pass(name, counter)
     }
   } catch (e) {
     fail(name, e.message, counter)
-    // Best-effort Val3 restart so subsequent tests still run
-    try { startValidator(3); await new Promise(r => setTimeout(r, 5000)) } catch {}
+  } finally {
+    // Restart Val3 for subsequent tests — best effort with fixed startup window.
+    try {
+      log('Restarting Val3 for subsequent tests...')
+      startValidator(3)
+      await new Promise(r => setTimeout(r, 8000))
+      log('Val3 restarted.')
+    } catch (restartErr) {
+      log(`Warning: Val3 restart failed: ${restartErr.message}`)
+    }
   }
 }
 
