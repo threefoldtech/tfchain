@@ -25,6 +25,7 @@ BRIDGE_LOG        := /tmp/bridge_local.log
 BRIDGE_PID_FILE   := /tmp/bridge_local.pid
 TFCHAIN_LOG       := /tmp/tfchain_local.log
 TFCHAIN_PID_FILE  := /tmp/tfchain_local.pid
+TFCHAIN_BASEPATH  := /tmp/tfchain-local
 
 BRIDGE_ENV_FILE    ?= /tmp/bridge_local_env.sh
 BRIDGE_MV_ENV_FILE ?= /tmp/bridge_mv_env.sh
@@ -72,13 +73,23 @@ define start_daemon_with_env
 	fi
 endef
 
-# Stop a daemon via its PID file. No pkill — avoids terminating the make shell.
+# Stop a daemon via its PID file and wait for it to fully exit.
+# Sends SIGTERM, waits up to 10s, then SIGKILL if still alive.
+# No pkill — avoids terminating the make shell.
 # Usage: $(call stop_daemon,Name,pidfile)
 define stop_daemon
 	@if [ -f $(2) ]; then \
 	  PID=$$(cat $(2)); \
 	  if kill -0 $$PID 2>/dev/null; then \
 	    kill $$PID; \
+	    i=0; \
+	    while kill -0 $$PID 2>/dev/null && [ $$i -lt 10 ]; do \
+	      sleep 1; i=$$((i+1)); \
+	    done; \
+	    if kill -0 $$PID 2>/dev/null; then \
+	      echo "==> $(1): SIGTERM ignored, sending SIGKILL..."; \
+	      kill -9 $$PID 2>/dev/null || true; \
+	    fi; \
 	    echo "==> $(1) stopped (PID $$PID)"; \
 	  else \
 	    echo "==> $(1) process not running (stale PID $$PID)"; \
@@ -129,12 +140,14 @@ bridge-mv-accounts:
 bridge-tfchain-start:
 	@test -f $(TFCHAIN_BIN) || { echo "Run: make bridge-build-tfchain"; exit 1; }
 	$(call stop_daemon,TFChain,$(TFCHAIN_PID_FILE))
-	$(call start_daemon,TFChain,$(TFCHAIN_BIN) --dev --tmp,$(TFCHAIN_LOG),$(TFCHAIN_PID_FILE))
+	@lsof -ti tcp:9944 | xargs kill 2>/dev/null && sleep 1 || true
+	$(call start_daemon,TFChain,$(TFCHAIN_BIN) --dev --base-path $(TFCHAIN_BASEPATH),$(TFCHAIN_LOG),$(TFCHAIN_PID_FILE))
 	@echo "==> Waiting for node..."
 	TFCHAIN_URL=$(TFCHAIN_URL) node $(SCRIPTS_DIR)/wait_for_node.js
 
 bridge-tfchain-stop:
 	$(call stop_daemon,TFChain,$(TFCHAIN_PID_FILE))
+	@lsof -ti tcp:9944 | xargs kill 2>/dev/null && sleep 1 || true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Bridge setup
@@ -201,6 +214,7 @@ bridge-clean: bridge-stop bridge-tfchain-stop
 	rm -f $(BRIDGE_DIR)/signer_local.json.idem.db
 	rm -f $(BRIDGE_LOG) $(TFCHAIN_LOG)
 	rm -f $(BRIDGE_PID_FILE) $(TFCHAIN_PID_FILE)
+	rm -rf $(TFCHAIN_BASEPATH)
 
 bridge-dev: bridge-clean bridge-build $(TFCHAIN_BIN) bridge-accounts \
             bridge-tfchain-start bridge-setup bridge-start bridge-test
@@ -267,6 +281,11 @@ bridge-mv-stop:
 	    PID=$$(cat $$PID_FILE); \
 	    if kill -0 $$PID 2>/dev/null; then \
 	      kill $$PID; \
+	      j=0; \
+	      while kill -0 $$PID 2>/dev/null && [ $$j -lt 10 ]; do \
+	        sleep 1; j=$$((j+1)); \
+	      done; \
+	      if kill -0 $$PID 2>/dev/null; then kill -9 $$PID 2>/dev/null || true; fi; \
 	      echo "==> Val$$i stopped (PID $$PID)"; \
 	    else \
 	      echo "==> Val$$i process not running (stale PID $$PID)"; \
@@ -286,11 +305,13 @@ bridge-mv-test:
 	BRIDGE_DIR=$(BRIDGE_DIR) \
 	node $(SCRIPTS_DIR)/bridge_mv_tests.js
 
-bridge-mv-clean: bridge-mv-stop
+bridge-mv-clean: bridge-mv-stop bridge-tfchain-stop
 	rm -f $(BRIDGE_DIR)/signer_mv_*.json
 	rm -f $(BRIDGE_DIR)/signer_mv_*.json.idem.db
 	rm -f /tmp/bridge_mv_*.log
 	rm -f /tmp/bridge_mv_*.pid
+	rm -f $(TFCHAIN_LOG) $(TFCHAIN_PID_FILE)
+	rm -rf $(TFCHAIN_BASEPATH)
 
 bridge-mv-dev: bridge-mv-clean bridge-build $(TFCHAIN_BIN) bridge-mv-accounts \
                bridge-tfchain-start bridge-mv-setup bridge-mv-start bridge-mv-test
