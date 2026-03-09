@@ -119,6 +119,16 @@ const TFT_DECIMALS = 1e7
 const TFT = (amount) => Math.round(amount * TFT_DECIMALS)
 
 /**
+ * Get free TFT balance for a TFChain address (returns float in TFT units).
+ * @param {object} api - ApiPromise instance
+ * @param {string} address - TFChain SS58 address
+ */
+async function tfchainBalance (api, address) {
+  const { data } = await api.query.system.account(address)
+  return Number(data.free) / TFT_DECIMALS
+}
+
+/**
  * Submit a swapToStellar extrinsic on TFChain.
  * @param {object} api - ApiPromise instance
  * @param {object} signer - Keyring pair (e.g. alice)
@@ -155,6 +165,7 @@ module.exports = {
   loadEnv,
   getEnv,
   stellarTFTBalance,
+  tfchainBalance,
   friendbot,
   waitForAccount,
   waitUntil,

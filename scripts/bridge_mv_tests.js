@@ -13,7 +13,10 @@
  *   MV3 — Bad deposit: no memo, all 3 detect and propose refund, full refund delivered
  *   MV4 — Validator offline: kill Val3 before deposit, Val1+Val2 alone complete refund (2-of-3)
  *   MV5 — Batch withdraws: 3 simultaneous swaps, all 3 eventually delivered (may use expiry)
+ *   MV6 — Crash recovery: kill Val2 mid-withdraw, restart, verify delivery completes
+ *   MV7 — Clean state: verify no orphaned active transactions on-chain
  *
+ * All tests assert exact TFT balances (Stellar + TFChain) and on-chain state.
  * Non-zero exit on any failure.
  *
  * Usage:
@@ -30,6 +33,7 @@ const {
   log, pass, fail,
   loadEnv, getEnv,
   stellarTFTBalance,
+  tfchainBalance,
   waitUntil,
   swapToStellar,
   TFT_DECIMALS
@@ -130,34 +134,80 @@ async function waitForValReady (valIndex) {
   }, { timeoutMs: 30_000, desc: `Val${valIndex} bridge_started` })
 }
 
+// ─── On-chain assertion helpers ─────────────────────────────────────────────
+
+/**
+ * Verify a burn tx moved to ExecutedBurnTransactions and is not stuck in active map.
+ * Returns true if all checks pass, false otherwise (failures logged via fail()).
+ */
+async function assertBurnExecuted (name, burnId) {
+  const active = (await api.query.tftBridgeModule.burnTransactions(burnId)).toJSON()
+  if (active && active.target) {
+    fail(name, `burn ${burnId} still in active BurnTransactions`, counter)
+    return false
+  }
+  const executed = (await api.query.tftBridgeModule.executedBurnTransactions(burnId)).toJSON()
+  if (!executed || !executed.target) {
+    fail(name, `burn ${burnId} not in ExecutedBurnTransactions`, counter)
+    return false
+  }
+  return true
+}
+
+/**
+ * Verify at least one new refund reached ExecutedRefundTransactions since `countBefore`.
+ */
+async function assertRefundExecuted (name, countBefore) {
+  const after = await api.query.tftBridgeModule.executedRefundTransactions.entries()
+  if (after.length <= countBefore) {
+    fail(name, `no new refund in ExecutedRefundTransactions (before: ${countBefore}, after: ${after.length})`, counter)
+    return false
+  }
+  return true
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 async function testMV1_normalWithdraw () {
   console.log('\n── MV1: Normal withdraw (3 validators, threshold=2) ──')
   const name = 'MV1_normalWithdraw'
   const userAddress = getEnv('USER_ADDRESS')
+  const swapAmount = 2
 
   try {
-    const before = await stellarTFTBalance(userAddress, horizon, issuerAddress)
-    log(`User Stellar TFT before: ${before}`)
+    const beforeStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    const beforeTFChain = await tfchainBalance(api, alice.address)
+    log(`User Stellar TFT before: ${beforeStellar}`)
+    log(`Alice TFChain TFT before: ${beforeTFChain}`)
 
-    const burnId = await swapToStellar(api, alice, 2, { userAddress })
+    const burnId = await swapToStellar(api, alice, swapAmount, { userAddress })
     log(`Burn ID: ${burnId}`)
 
-    const after = await waitUntil(async () => {
+    const afterStellar = await waitUntil(async () => {
       const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
-      if (bal > before) return bal
+      if (bal > beforeStellar) return bal
     }, { timeoutMs: 300_000, intervalMs: 4000, desc: 'Stellar balance to increase' })
 
-    const delta = Math.round((after - before) * TFT_DECIMALS) / TFT_DECIMALS
-    const expected = 2 - WITHDRAW_FEE_TFT
-    log(`User Stellar TFT after: ${after} (+${delta})`)
-
-    if (Math.abs(delta - expected) < 1e-7) {
-      pass(name, counter)
-    } else {
-      fail(name, `Expected +${expected}, got +${delta}`, counter)
+    // Assert Stellar balance delta
+    const delta = Math.round((afterStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    const expected = swapAmount - WITHDRAW_FEE_TFT
+    log(`User Stellar TFT after: ${afterStellar} (+${delta} TFT)`)
+    if (Math.abs(delta - expected) > 1e-7) {
+      fail(name, `Expected Stellar +${expected} TFT, got +${delta}`, counter); return
     }
+
+    // Assert TFChain balance decreased by swap amount
+    const afterTFChain = await tfchainBalance(api, alice.address)
+    const tfDelta = Math.round((beforeTFChain - afterTFChain) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`Alice TFChain TFT after: ${afterTFChain} (-${tfDelta} TFT)`)
+    if (Math.abs(tfDelta - swapAmount) > 1e-7) {
+      fail(name, `TFChain balance should decrease by ${swapAmount}, decreased by ${tfDelta}`, counter); return
+    }
+
+    // Assert on-chain: burn executed
+    if (!(await assertBurnExecuted(name, burnId))) return
+
+    pass(name, counter)
   } catch (e) { fail(name, e.message, counter) }
 }
 
@@ -167,22 +217,26 @@ async function testMV2_deposit () {
   const aliceAddress = alice.address
 
   try {
-    // We check executed mints on TFChain instead of TFT balance
-    const mintsBefore = await api.query.tftBridgeModule.executedMintTransactions.entries()
-    log(`Executed mints before: ${mintsBefore.length}`)
-
-    // Send 2 TFT from user to bridge with Alice's TFChain address as memo (twin ID)
-    // First, get Alice's twin ID — twinIdByAccountID returns Option<u32>
+    // Get Alice's twin ID — twinIdByAccountID returns Option<u32>
     const twinOpt = await api.query.tfgridModule.twinIdByAccountID(aliceAddress)
     const twinId = twinOpt.isSome ? twinOpt.unwrap().toNumber() : twinOpt.toJSON()
     if (!twinId) throw new Error('Alice has no twin on TFChain — is bridge-setup complete?')
     log(`Alice twin ID: ${twinId}`)
 
+    const depositAmount = '2'
+    const depositFee = Number(await api.query.tftBridgeModule.depositFee()) / TFT_DECIMALS
+    const expectedMint = parseFloat(depositAmount) - depositFee
+    log(`Deposit fee: ${depositFee} TFT, expected mint: ${expectedMint} TFT`)
+
+    const aliceBalBefore = await tfchainBalance(api, aliceAddress)
+    const mintsBefore = (await api.query.tftBridgeModule.executedMintTransactions.entries()).length
+    log(`Alice TFChain TFT before: ${aliceBalBefore}, executed mints: ${mintsBefore}`)
+
     // Memo format must be "twin_<id>" (bridge parses "object_objectID")
     const result = await sendStellarPayment(
       getEnv('USER_SECRET'),
       bridgeAddress,
-      '2',
+      depositAmount,
       `twin_${twinId}`
     )
     log(`Deposit sent: ${result.hash.slice(0, 16)} (memo: twin_${twinId})`)
@@ -190,39 +244,52 @@ async function testMV2_deposit () {
     // Wait for mint to be executed on TFChain
     const mintsAfter = await waitUntil(async () => {
       const mints = await api.query.tftBridgeModule.executedMintTransactions.entries()
-      if (mints.length > mintsBefore.length) return mints
+      if (mints.length > mintsBefore) return mints
     }, { timeoutMs: 120_000, intervalMs: 4000, desc: 'executed mint count to increase' })
 
     log(`Executed mints after: ${mintsAfter.length}`)
+
+    // Assert Alice's TFChain balance increased by (deposit - depositFee)
+    const aliceBalAfter = await tfchainBalance(api, aliceAddress)
+    const balDelta = Math.round((aliceBalAfter - aliceBalBefore) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`Alice TFChain TFT after: ${aliceBalAfter} (+${balDelta} TFT)`)
+    if (Math.abs(balDelta - expectedMint) > 1e-7) {
+      fail(name, `Expected TFChain +${expectedMint} TFT, got +${balDelta}`, counter); return
+    }
+
     pass(name, counter)
   } catch (e) { fail(name, e.message, counter) }
 }
 
 async function testMV3_badDeposit () {
-  console.log('\n── MV3: Bad deposit (no memo → full refund, 3 validators) ──')
+  console.log('\n── MV3: Bad deposit (no memo -> full refund, 3 validators) ──')
   const name = 'MV3_badDeposit'
   const userAddress = getEnv('USER_ADDRESS')
 
   try {
-    const before = await stellarTFTBalance(userAddress, horizon, issuerAddress)
-    log(`User Stellar TFT before: ${before}`)
+    const beforeStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    const refundsBefore = (await api.query.tftBridgeModule.executedRefundTransactions.entries()).length
+    log(`User Stellar TFT before: ${beforeStellar}`)
 
     const result = await sendStellarPayment(getEnv('USER_SECRET'), bridgeAddress, '3')
     log(`Bad deposit sent: ${result.hash.slice(0, 16)} (no memo)`)
 
-    const after = await waitUntil(async () => {
+    const afterStellar = await waitUntil(async () => {
       const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
-      if (bal >= before - 1e-7) return bal
+      if (bal >= beforeStellar - 1e-7) return bal
     }, { timeoutMs: 180_000, intervalMs: 4000, desc: 'balance restored after refund' })
 
-    const delta = Math.round((after - before) * TFT_DECIMALS) / TFT_DECIMALS
-    log(`User Stellar TFT after: ${after} (delta: ${delta >= 0 ? '+' : ''}${delta})`)
+    const delta = Math.round((afterStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`User Stellar TFT after: ${afterStellar} (delta: ${delta >= 0 ? '+' : ''}${delta})`)
 
-    if (Math.abs(delta) < 1e-7) {
-      pass(name, counter)
-    } else {
-      fail(name, `Expected net 0 (full refund), got ${delta >= 0 ? '+' : ''}${delta}`, counter)
+    if (Math.abs(delta) > 1e-7) {
+      fail(name, `Expected net 0 (full refund), got ${delta >= 0 ? '+' : ''}${delta}`, counter); return
     }
+
+    // Assert on-chain: refund executed
+    if (!(await assertRefundExecuted(name, refundsBefore))) return
+
+    pass(name, counter)
   } catch (e) { fail(name, e.message, counter) }
 }
 
@@ -236,26 +303,31 @@ async function testMV4_validatorOffline () {
     killValidator(3)
     await new Promise(r => setTimeout(r, 2000))
 
-    const before = await stellarTFTBalance(userAddress, horizon, issuerAddress)
-    log(`Val3 killed. User Stellar TFT before: ${before}`)
+    const beforeStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    const refundsBefore = (await api.query.tftBridgeModule.executedRefundTransactions.entries()).length
+    log(`Val3 killed. User Stellar TFT before: ${beforeStellar}`)
 
     // Send bad deposit (no memo) — Val1+Val2 detect it, propose refund, threshold=2 met
     const result = await sendStellarPayment(getEnv('USER_SECRET'), bridgeAddress, '4')
     log(`Bad deposit sent: ${result.hash.slice(0, 16)} (no memo, Val3 offline)`)
 
     // Wait for refund to complete — Val1+Val2 have enough signatures (2-of-3)
-    const after = await waitUntil(async () => {
+    const afterStellar = await waitUntil(async () => {
       const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
-      if (bal >= before - 1e-7) return bal
+      if (bal >= beforeStellar - 1e-7) return bal
     }, { timeoutMs: 180_000, intervalMs: 4000, desc: 'balance restored with Val3 offline' })
 
-    const delta = Math.round((after - before) * TFT_DECIMALS) / TFT_DECIMALS
-    log(`User Stellar TFT after: ${after} (delta: ${delta >= 0 ? '+' : ''}${delta})`)
+    const delta = Math.round((afterStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`User Stellar TFT after: ${afterStellar} (delta: ${delta >= 0 ? '+' : ''}${delta})`)
 
     // Evaluate result NOW — before restart attempt (restart is cleanup, not part of the test)
-    const testPassed = Math.abs(delta) < 1e-7
+    const balancePassed = Math.abs(delta) < 1e-7
+    const refundPassed = await (async () => {
+      const afterRefunds = await api.query.tftBridgeModule.executedRefundTransactions.entries()
+      return afterRefunds.length > refundsBefore
+    })()
 
-    // Restart Val3 for MV5 — best effort with fixed startup window.
+    // Restart Val3 for subsequent tests — best effort with fixed startup window.
     // Log-based readiness detection is unreliable on macOS for restarted processes.
     try {
       log('Restarting Val3 for subsequent tests...')
@@ -266,26 +338,28 @@ async function testMV4_validatorOffline () {
       log(`Warning: Val3 restart failed: ${restartErr.message}`)
     }
 
-    if (testPassed) {
-      pass(name, counter)
-    } else {
+    if (!balancePassed) {
       fail(name, `Expected net 0 (full refund), got ${delta >= 0 ? '+' : ''}${delta}`, counter)
+    } else if (!refundPassed) {
+      fail(name, `Stellar balance correct but no new refund in ExecutedRefundTransactions`, counter)
+    } else {
+      pass(name, counter)
     }
   } catch (e) {
     fail(name, e.message, counter)
-    // Best-effort Val3 restart so MV5 still runs
+    // Best-effort Val3 restart so subsequent tests still run
     try { startValidator(3); await new Promise(r => setTimeout(r, 5000)) } catch {}
   }
 }
 
 async function testMV5_batchWithdraws () {
-  console.log('\n── MV5: Batch withdraws (3 simultaneous, both validators) ──')
+  console.log('\n── MV5: Batch withdraws (3 simultaneous, all validators) ──')
   const name = 'MV5_batchWithdraws'
   const userAddress = getEnv('USER_ADDRESS')
 
   try {
-    const before = await stellarTFTBalance(userAddress, horizon, issuerAddress)
-    log(`User Stellar TFT before: ${before}`)
+    const beforeStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    log(`User Stellar TFT before: ${beforeStellar}`)
 
     const nonce = await api.rpc.system.accountNextIndex(alice.address)
     const burnIds = await Promise.all(
@@ -296,20 +370,95 @@ async function testMV5_batchWithdraws () {
     const expectedNet = 3 * (2 - WITHDRAW_FEE_TFT)
 
     // Use longer timeout — sequence collisions may require expiry cycle (~2 min each)
-    const after = await waitUntil(async () => {
+    const afterStellar = await waitUntil(async () => {
       const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
-      if (bal >= before + expectedNet - 1e-7) return bal
-    }, { timeoutMs: 600_000, intervalMs: 4000, desc: `balance ≥ ${before + expectedNet} (may need expiry cycles)` })
+      if (bal >= beforeStellar + expectedNet - 1e-7) return bal
+    }, { timeoutMs: 600_000, intervalMs: 4000, desc: `balance >= ${beforeStellar + expectedNet} (may need expiry cycles)` })
 
-    const delta = Math.round((after - before) * TFT_DECIMALS) / TFT_DECIMALS
-    log(`User Stellar TFT after: ${after} (+${delta}, expected +${expectedNet})`)
-
-    if (Math.abs(delta - expectedNet) < 1e-7) {
-      pass(name, counter)
-    } else {
-      fail(name, `Expected +${expectedNet}, got +${delta}`, counter)
+    const delta = Math.round((afterStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`User Stellar TFT after: ${afterStellar} (+${delta}, expected +${expectedNet})`)
+    if (Math.abs(delta - expectedNet) > 1e-7) {
+      fail(name, `Expected +${expectedNet}, got +${delta}`, counter); return
     }
+
+    // Assert on-chain: all burns executed
+    for (const burnId of burnIds) {
+      if (!(await assertBurnExecuted(name, burnId))) return
+    }
+
+    pass(name, counter)
   } catch (e) { fail(name, e.message, counter) }
+}
+
+async function testMV6_crashRecovery () {
+  console.log('\n── MV6: Crash recovery (kill Val2 mid-withdraw, restart, verify delivery) ──')
+  const name = 'MV6_crashRecovery'
+  const userAddress = getEnv('USER_ADDRESS')
+
+  try {
+    const beforeStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+    log(`User Stellar TFT before: ${beforeStellar}`)
+
+    const burnId = await swapToStellar(api, alice, 2, { userAddress })
+    log(`Burn ID: ${burnId}`)
+
+    // Wait for at least 1 signature (proposals submitted)
+    await waitUntil(async () => {
+      const burn = (await api.query.tftBridgeModule.burnTransactions(burnId)).toJSON()
+      return burn && burn.signatures && burn.signatures.length >= 1
+    }, { timeoutMs: 60_000, desc: 'BurnTransactionReady (>=1 sig)' })
+
+    // Kill Val2 mid-flight
+    killValidator(2, 'SIGKILL')
+    log('Val2 killed. Waiting 3s...')
+    await new Promise(r => setTimeout(r, 3000))
+
+    // Restart Val2
+    startValidator(2)
+    log('Val2 restarted. Waiting 10s for startup...')
+    await new Promise(r => setTimeout(r, 10_000))
+
+    // Val1+Val3 should complete it (2-of-3), or Val2 reconciles after restart
+    const afterStellar = await waitUntil(async () => {
+      const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
+      if (bal > beforeStellar) return bal
+    }, { timeoutMs: 300_000, intervalMs: 4000, desc: 'Stellar balance to increase after crash' })
+
+    const delta = Math.round((afterStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
+    const expected = 2 - WITHDRAW_FEE_TFT
+    log(`User Stellar TFT after: ${afterStellar} (+${delta} TFT)`)
+
+    if (Math.abs(delta - expected) > 1e-7) {
+      fail(name, `Expected +${expected} TFT after recovery, got +${delta}`, counter); return
+    }
+
+    // Assert on-chain: burn executed
+    if (!(await assertBurnExecuted(name, burnId))) return
+
+    pass(name, counter)
+  } catch (e) { fail(name, e.message, counter) }
+}
+
+async function testMV7_cleanState () {
+  console.log('\n── MV7: Clean state (no orphaned active transactions) ──')
+  const name = 'MV7_cleanState'
+
+  try {
+    // Wait for all active transaction maps to drain (tolerates in-flight processing)
+    await waitUntil(async () => {
+      const burns = await api.query.tftBridgeModule.burnTransactions.entries()
+      const refunds = await api.query.tftBridgeModule.refundTransactions.entries()
+      const mints = await api.query.tftBridgeModule.mintTransactions.entries()
+      return burns.length === 0 && refunds.length === 0 && mints.length === 0
+    }, { timeoutMs: 60_000, intervalMs: 5000, desc: 'all active tx maps to drain' })
+    pass(name, counter)
+  } catch (e) {
+    // On timeout, report what's left
+    const burns = await api.query.tftBridgeModule.burnTransactions.entries()
+    const refunds = await api.query.tftBridgeModule.refundTransactions.entries()
+    const mints = await api.query.tftBridgeModule.mintTransactions.entries()
+    fail(name, `Orphaned: ${burns.length} burns, ${refunds.length} refunds, ${mints.length} mints`, counter)
+  }
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -332,8 +481,10 @@ async function main () {
     await testMV1_normalWithdraw()
     await testMV2_deposit()
     await testMV3_badDeposit()
-    await testMV4_validatorOffline()
+    await testMV4_validatorOffline()  // kills/restarts Val3
     await testMV5_batchWithdraws()
+    await testMV6_crashRecovery()     // kills/restarts Val2
+    await testMV7_cleanState()
 
     console.log(`\n${'─'.repeat(50)}`)
     console.log(`Results: ${counter.passed} passed, ${counter.failed} failed`)
