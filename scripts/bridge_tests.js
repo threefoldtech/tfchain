@@ -178,13 +178,12 @@ async function test1_normalWithdraw () {
     }
     log(`User Stellar TFT after: ${afterStellar} (+${delta} TFT)`)
 
-    // Assert TFChain balance decreased by at least swapAmount.
-    // The small excess (~0.003 TFT) is the substrate extrinsic fee for swapToStellar.
+    // Assert TFChain balance decreased by ~swapAmount (± 0.1 TFT for extrinsic fee).
     const afterTFChain = await tfchainBalance(api, alice.address)
     const tfDelta = Math.round((beforeTFChain - afterTFChain) * TFT_DECIMALS) / TFT_DECIMALS
     log(`Alice TFChain TFT after: ${afterTFChain} (-${tfDelta} TFT)`)
-    if (tfDelta < swapAmount - 1e-7) {
-      fail(name, `TFChain balance should decrease by at least ${swapAmount}, decreased by ${tfDelta}`, counter); return
+    if (Math.abs(tfDelta - swapAmount) > 0.1) {
+      fail(name, `TFChain balance should decrease by ~${swapAmount} (±0.1), decreased by ${tfDelta}`, counter); return
     }
 
     // Assert on-chain: burn executed
@@ -336,13 +335,12 @@ async function test5_deposit () {
       if (mints.length > mintsBefore) return true
     }, { timeoutMs: 120_000, desc: 'executed mint count to increase' })
 
-    // Assert Alice's TFChain balance increased by at least (deposit - depositFee).
-    // Slight excess possible from block author rewards (Alice is the dev chain authority).
+    // Assert Alice's TFChain balance increased by ~expectedMint (± 0.1 TFT for block author rewards).
     const aliceBalAfter = await tfchainBalance(api, alice.address)
     const balDelta = Math.round((aliceBalAfter - aliceBalBefore) * TFT_DECIMALS) / TFT_DECIMALS
     log(`Alice TFChain TFT after: ${aliceBalAfter} (+${balDelta} TFT)`)
-    if (balDelta < expectedMint - 1e-7) {
-      fail(name, `Expected TFChain at least +${expectedMint} TFT, got +${balDelta}`, counter); return
+    if (Math.abs(balDelta - expectedMint) > 0.1) {
+      fail(name, `Expected TFChain ~+${expectedMint} TFT (±0.1), got +${balDelta}`, counter); return
     }
 
     pass(name, counter)
