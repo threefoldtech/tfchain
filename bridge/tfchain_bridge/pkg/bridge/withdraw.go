@@ -283,7 +283,7 @@ func (bridge *Bridge) handleProposalsBatch(
 	return nil
 }
 
-func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady subpkg.WithdrawReadyEvent) error {
+func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady subpkg.WithdrawReadyEvent) (uint64, error) {
 	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdrawReady.ID)).Logger()
 	txID := withdrawReady.ID
 	txKey := fmt.Sprint(txID)
@@ -291,7 +291,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 	// 1. Check idempotency store
 	state, err := bridge.idempotency.GetWithdrawState(txID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if state == pkg.TxStateCompleted {
 		logger.Info().
@@ -299,7 +299,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 			Str("event_kind", "event").
 			Str("category", "withdraw").
 			Msg("idempotency: withdraw already completed, skipping")
-		return pkg.ErrTransactionAlreadyBurned
+		return 0, pkg.ErrTransactionAlreadyBurned
 	}
 
 	// 2. If PROCESSING, check if Stellar tx was already submitted (crash recovery)
@@ -319,7 +319,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 		if err != nil {
 			logger.Warn().Err(err).Uint64("tx_id", txID).
 				Msg("failed to fetch Horizon transactions for PROCESSING check; will retry on next event")
-			return nil
+			return 0, nil
 		}
 
 		// Primary check: look for a tx with matching memo (current bridge behaviour)
@@ -328,11 +328,8 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 				Str("event_action", "withdraw_recovered").
 				Str("event_kind", "event").
 				Str("category", "withdraw").
-				Msg("idempotency: found existing Stellar tx by memo, completing TFChain confirmation")
-			if err := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); err != nil {
-				return err
-			}
-			return bridge.idempotency.MarkWithdrawCompleted(txID)
+				Msg("idempotency: found existing Stellar tx by memo, deferring TFChain confirmation to batch")
+			return txID, nil
 		}
 
 		// Fallback: look for a tx by sequence number, covering pre-upgrade submissions
@@ -344,7 +341,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 		// upgraded together. A mixed-version cluster will produce invalid signature sets.
 		burnTxForSeq, err := bridge.subClient.GetBurnTransaction(types.U64(txID))
 		if err != nil {
-			return err
+			return 0, err
 		}
 		if stellarTxBySeq := bridge.wallet.FindPaymentBySequenceInPage(outgoingPage, int64(burnTxForSeq.SequenceNumber)); stellarTxBySeq != nil {
 			logger.Info().
@@ -352,11 +349,8 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 				Str("event_kind", "event").
 				Str("category", "withdraw").
 				Int64("sequence_number", int64(burnTxForSeq.SequenceNumber)).
-				Msg("idempotency: found pre-upgrade Stellar tx by sequence number (no memo), completing TFChain confirmation")
-			if err := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); err != nil {
-				return err
-			}
-			return bridge.idempotency.MarkWithdrawCompleted(txID)
+				Msg("idempotency: found pre-upgrade Stellar tx by sequence number (no memo), deferring TFChain confirmation to batch")
+			return txID, nil
 		}
 
 		logger.Info().Msg("idempotency: no Stellar tx found by memo or sequence, safe to retry")
@@ -365,7 +359,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 	// 3. Check TFChain: already burned?
 	burned, err := bridge.subClient.IsBurnedAlready(types.U64(txID))
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if burned {
 		_ = bridge.idempotency.MarkWithdrawCompleted(txID)
@@ -374,13 +368,13 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 			Str("event_kind", "event").
 			Str("category", "withdraw").
 			Msg("the withdraw transaction has already been processed")
-		return pkg.ErrTransactionAlreadyBurned
+		return 0, pkg.ErrTransactionAlreadyBurned
 	}
 
 	// 4. Get burn tx with signatures
 	burnTx, err := bridge.subClient.GetBurnTransaction(types.U64(txID))
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(burnTx.Signatures) == 0 {
 		logger.Info().
@@ -388,12 +382,12 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 			Str("event_kind", "event").
 			Str("category", "withdraw").
 			Msg("the withdraw has been postponed due to the transaction signatures being removed on the TFChain side while the bridge was processing the transaction")
-		return nil
+		return 0, nil
 	}
 
 	// 5. Mark PROCESSING before Stellar submit
 	if err := bridge.idempotency.MarkWithdrawProcessing(txID); err != nil {
-		return err
+		return 0, err
 	}
 
 	// 6. Submit to Stellar
@@ -406,34 +400,13 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 			Dict("metadata", zerolog.Dict().
 				Str("reason", err.Error())).
 			Msgf("the withdraw has been postponed due to a problem in sending this transaction to the stellar network. error was %s", err.Error())
-		return nil // leave as PROCESSING, will reconcile on next attempt
+		return 0, nil // leave as PROCESSING, will reconcile on next attempt
 	}
 
-	// 7. Mark executed on TFChain — must complete before logging withdraw_completed
-	// so that ops logs accurately reflect the full transaction lifecycle.
-	if err := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); err != nil {
-		return err
-	}
-
-	// 8. Mark COMPLETED in idempotency store
-	if err := bridge.idempotency.MarkWithdrawCompleted(txID); err != nil {
-		return err
-	}
-
-	logger.Info().
-		Str("event_action", "withdraw_completed").
-		Str("event_kind", "event").
-		Str("category", "withdraw").
-		Msg("the withdraw has proceed")
-	logger.Info().
-		Str("event_action", "transfer_completed").
-		Str("event_kind", "event").
-		Str("category", "transfer").
-		Dict("metadata", zerolog.Dict().
-			Str("outcome", "bridged")).
-		Msg("the transfer has completed")
-
-	return nil
+	// 7. Stellar payment submitted — return txID for batch TFChain confirmation.
+	// The caller (bridge.go) collects all returned txIDs and submits them as a
+	// single Utility.force_batch extrinsic, confirming all burns in one block.
+	return txID, nil
 }
 
 func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.WithdrawCreatedEvent) error {

@@ -19,6 +19,12 @@ import (
 const (
 	BridgeNetwork  = "stellar"
 	MinimumBalance = 0
+
+	// maxExecutionBatchSize caps the number of Ready events processed per cycle.
+	// This limits the number of PROCESSING entries in BoltDB at any time, ensuring
+	// crash recovery can find all Stellar payments within the 200-tx outgoing page.
+	// 100 burns + 100 refunds = 200 max, matching the Stellar query limit.
+	maxExecutionBatchSize = 100
 )
 
 // Bridge is a high lvl structure which listens on contract events and bridge-related
@@ -170,24 +176,90 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 				return errors.Wrap(data.Err, "failed to get tfchain events")
 			}
 
-			// Process Ready events FIRST — they are time-sensitive (Stellar submissions).
-			for _, withdrawReadyEvent := range data.Events.WithdrawReadyEvents {
-				err := bridge.handleWithdrawReady(ctx, withdrawReadyEvent)
+			// Process Ready events — submit all to Stellar first, then batch TFChain confirmations.
+			// Cap at maxExecutionBatchSize to stay within the 200-tx Stellar reconciliation window.
+			var confirmedBurnIDs []uint64
+			withdrawEvents := data.Events.WithdrawReadyEvents
+			if len(withdrawEvents) > maxExecutionBatchSize {
+				withdrawEvents = withdrawEvents[:maxExecutionBatchSize]
+			}
+			for _, withdrawReadyEvent := range withdrawEvents {
+				txID, err := bridge.handleWithdrawReady(ctx, withdrawReadyEvent)
 				if err != nil {
 					if errors.Is(err, pkg.ErrTransactionAlreadyBurned) {
 						continue
 					}
 					return errors.Wrap(err, "an error occurred while handling WithdrawReadyEvents")
 				}
+				if txID > 0 {
+					confirmedBurnIDs = append(confirmedBurnIDs, txID)
+				}
 			}
-			for _, refundReadyEvent := range data.Events.RefundReadyEvents {
-				err := bridge.handleRefundReady(ctx, refundReadyEvent)
+
+			var confirmedRefundHashes []string
+			refundEvents := data.Events.RefundReadyEvents
+			if len(refundEvents) > maxExecutionBatchSize {
+				refundEvents = refundEvents[:maxExecutionBatchSize]
+			}
+			for _, refundReadyEvent := range refundEvents {
+				txHash, err := bridge.handleRefundReady(ctx, refundReadyEvent)
 				if err != nil {
 					if errors.Is(err, pkg.ErrTransactionAlreadyRefunded) {
 						continue
 					}
 					return errors.Wrap(err, "an error occurred while handling RefundReadyEvents")
 				}
+				if txHash != "" {
+					confirmedRefundHashes = append(confirmedRefundHashes, txHash)
+				}
+			}
+
+			// Batch all TFChain confirmations into single force_batch extrinsics.
+			// This confirms all burns/refunds in one block instead of N sequential blocks.
+			if err := bridge.subClient.BatchSetWithdrawExecuted(ctx, confirmedBurnIDs); err != nil {
+				return errors.Wrap(err, "failed to batch set withdraws executed")
+			}
+			for _, txID := range confirmedBurnIDs {
+				if err := bridge.idempotency.MarkWithdrawCompleted(txID); err != nil {
+					log.Warn().Err(err).Uint64("tx_id", txID).Msg("idempotency: failed to mark withdraw completed")
+				}
+				log.Info().
+					Str("event_action", "withdraw_completed").
+					Str("event_kind", "event").
+					Str("category", "withdraw").
+					Str("trace_id", fmt.Sprint(txID)).
+					Msg("the withdraw has proceed")
+				log.Info().
+					Str("event_action", "transfer_completed").
+					Str("event_kind", "event").
+					Str("category", "transfer").
+					Str("trace_id", fmt.Sprint(txID)).
+					Dict("metadata", zerolog.Dict().
+						Str("outcome", "bridged")).
+					Msg("the transfer has completed")
+			}
+
+			if err := bridge.subClient.BatchSetRefundTransactionExecuted(ctx, confirmedRefundHashes); err != nil {
+				return errors.Wrap(err, "failed to batch set refunds executed")
+			}
+			for _, txHash := range confirmedRefundHashes {
+				if err := bridge.idempotency.MarkRefundCompleted(txHash); err != nil {
+					log.Warn().Err(err).Str("tx_hash", txHash).Msg("idempotency: failed to mark refund completed")
+				}
+				log.Info().
+					Str("event_action", "refund_completed").
+					Str("event_kind", "event").
+					Str("category", "refund").
+					Str("trace_id", txHash).
+					Msg("the transaction has refunded")
+				log.Info().
+					Str("event_action", "transfer_completed").
+					Str("event_kind", "event").
+					Str("category", "transfer").
+					Str("trace_id", txHash).
+					Dict("metadata", zerolog.Dict().
+						Str("outcome", "refunded")).
+					Msg("the transfer has completed")
 			}
 
 			// Batch all proposal events (BurnCreated, BurnExpired, RefundExpired)

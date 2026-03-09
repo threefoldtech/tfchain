@@ -79,14 +79,14 @@ func (bridge *Bridge) proposeRefundDirect(ctx context.Context, refundExpiredEven
 	return nil
 }
 
-func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent subpkg.RefundTransactionReadyEvent) error {
+func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent subpkg.RefundTransactionReadyEvent) (string, error) {
 	logger := log.Logger.With().Str("trace_id", refundReadyEvent.Hash).Logger()
 	txHash := refundReadyEvent.Hash
 
 	// 1. Check idempotency store
 	state, err := bridge.idempotency.GetRefundState(txHash)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if state == pkg.TxStateCompleted {
 		logger.Info().
@@ -94,7 +94,7 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 			Str("event_kind", "event").
 			Str("category", "refund").
 			Msg("idempotency: refund already completed, skipping")
-		return pkg.ErrTransactionAlreadyRefunded
+		return "", pkg.ErrTransactionAlreadyRefunded
 	}
 
 	// 2. If PROCESSING, check if Stellar tx was already submitted (crash recovery)
@@ -112,7 +112,7 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 		if err != nil {
 			logger.Warn().Err(err).Str("tx_hash", txHash).
 				Msg("failed to fetch Horizon transactions for PROCESSING check; will retry on next event")
-			return nil
+			return "", nil
 		}
 
 		// Primary check: look for a refund tx with matching MemoReturn hash (current bridge behaviour)
@@ -121,18 +121,15 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 				Str("event_action", "refund_recovered").
 				Str("event_kind", "event").
 				Str("category", "refund").
-				Msg("idempotency: found existing Stellar tx by return hash, completing TFChain confirmation")
-			if err := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, txHash); err != nil {
-				return err
-			}
-			return bridge.idempotency.MarkRefundCompleted(txHash)
+				Msg("idempotency: found existing Stellar tx by return hash, deferring TFChain confirmation to batch")
+			return txHash, nil
 		}
 
 		// Fallback: look for a tx by sequence number, covering pre-upgrade submissions
 		// that were made without a memo. See FindPaymentBySequenceInPage for rationale.
 		refundTxForSeq, err := bridge.subClient.GetRefundTransaction(txHash)
 		if err != nil {
-			return err
+			return "", err
 		}
 		if stellarTxBySeq := bridge.wallet.FindPaymentBySequenceInPage(outgoingPage, int64(refundTxForSeq.SequenceNumber)); stellarTxBySeq != nil {
 			logger.Info().
@@ -140,11 +137,8 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 				Str("event_kind", "event").
 				Str("category", "refund").
 				Int64("sequence_number", int64(refundTxForSeq.SequenceNumber)).
-				Msg("idempotency: found pre-upgrade Stellar tx by sequence number (no memo), completing TFChain confirmation")
-			if err := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, txHash); err != nil {
-				return err
-			}
-			return bridge.idempotency.MarkRefundCompleted(txHash)
+				Msg("idempotency: found pre-upgrade Stellar tx by sequence number (no memo), deferring TFChain confirmation to batch")
+			return txHash, nil
 		}
 
 		logger.Info().Msg("idempotency: no Stellar tx found by return hash or sequence, safe to retry")
@@ -153,7 +147,7 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 	// 3. Check TFChain: already refunded?
 	refunded, err := bridge.subClient.IsRefundedAlready(txHash)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if refunded {
 		_ = bridge.idempotency.MarkRefundCompleted(txHash)
@@ -162,13 +156,13 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 			Str("event_kind", "event").
 			Str("category", "refund").
 			Msg("the transaction has already been refunded")
-		return pkg.ErrTransactionAlreadyRefunded
+		return "", pkg.ErrTransactionAlreadyRefunded
 	}
 
 	// 4. Get refund tx with signatures
 	refund, err := bridge.subClient.GetRefundTransaction(txHash)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if len(refund.Signatures) == 0 {
 		logger.Info().
@@ -176,12 +170,12 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 			Str("event_kind", "event").
 			Str("category", "refund").
 			Msg("the refund has been postponed due to the transaction signatures being removed on the TFChain side while the bridge was processing the transaction")
-		return nil
+		return "", nil
 	}
 
 	// 5. Mark PROCESSING before Stellar submit
 	if err := bridge.idempotency.MarkRefundProcessing(txHash); err != nil {
-		return err
+		return "", err
 	}
 
 	// 6. Submit to Stellar
@@ -193,31 +187,11 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 			Dict("metadata", zerolog.Dict().
 				Str("reason", err.Error())).
 			Msgf("the refund has been postponed due to a problem in sending this transaction to the stellar network. error was %s", err.Error())
-		return nil // leave as PROCESSING, will reconcile on next attempt
+		return "", nil // leave as PROCESSING, will reconcile on next attempt
 	}
 
-	// 7. Mark executed on TFChain
-	if err := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, refund.TxHash); err != nil {
-		return err
-	}
-
-	// 8. Mark COMPLETED
-	if err := bridge.idempotency.MarkRefundCompleted(txHash); err != nil {
-		return err
-	}
-
-	logger.Info().
-		Str("event_action", "refund_completed").
-		Str("event_kind", "event").
-		Str("category", "refund").
-		Msg("the transaction has refunded")
-	logger.Info().
-		Str("event_action", "transfer_completed").
-		Str("event_kind", "event").
-		Str("category", "transfer").
-		Dict("metadata", zerolog.Dict().
-			Str("outcome", "refunded")).
-		Msg("the transfer has completed")
-
-	return nil
+	// 7. Stellar refund submitted — return txHash for batch TFChain confirmation.
+	// The caller (bridge.go) collects all returned txHashes and submits them as a
+	// single Utility.force_batch extrinsic, confirming all refunds in one block.
+	return refund.TxHash, nil
 }
