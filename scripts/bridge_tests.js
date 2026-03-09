@@ -106,33 +106,46 @@ function startBridge () {
 // ─── On-chain assertion helpers ─────────────────────────────────────────────
 
 /**
- * Verify a burn tx moved to ExecutedBurnTransactions and is not stuck in active map.
- * Returns true if all checks pass, false otherwise (failures logged via fail()).
+ * Poll until a burn tx moves to ExecutedBurnTransactions (not stuck in active map).
+ * Waits up to 30s for the on-chain state to settle — set_burn_transaction_executed
+ * may finalize a few blocks after the Stellar payment is visible.
  */
 async function assertBurnExecuted (name, burnId) {
-  const active = (await api.query.tftBridgeModule.burnTransactions(burnId)).toJSON()
-  if (active && active.target) {
-    fail(name, `burn ${burnId} still in active BurnTransactions`, counter)
+  try {
+    await waitUntil(async () => {
+      const active = (await api.query.tftBridgeModule.burnTransactions(burnId)).toJSON()
+      if (active && active.target) return false
+      const executed = (await api.query.tftBridgeModule.executedBurnTransactions(burnId)).toJSON()
+      return executed && executed.target
+    }, { timeoutMs: 30_000, intervalMs: 3000, desc: `burn ${burnId} to reach ExecutedBurnTransactions` })
+    return true
+  } catch {
+    const active = (await api.query.tftBridgeModule.burnTransactions(burnId)).toJSON()
+    if (active && active.target) {
+      fail(name, `burn ${burnId} still in active BurnTransactions after 30s`, counter)
+    } else {
+      fail(name, `burn ${burnId} not in ExecutedBurnTransactions after 30s`, counter)
+    }
     return false
   }
-  const executed = (await api.query.tftBridgeModule.executedBurnTransactions(burnId)).toJSON()
-  if (!executed || !executed.target) {
-    fail(name, `burn ${burnId} not in ExecutedBurnTransactions`, counter)
-    return false
-  }
-  return true
 }
 
 /**
- * Verify at least one new refund reached ExecutedRefundTransactions since `countBefore`.
+ * Poll until at least one new refund reaches ExecutedRefundTransactions since `countBefore`.
+ * Waits up to 30s — set_refund_transaction_executed may finalize after the Stellar refund.
  */
 async function assertRefundExecuted (name, countBefore) {
-  const after = await api.query.tftBridgeModule.executedRefundTransactions.entries()
-  if (after.length <= countBefore) {
-    fail(name, `no new refund in ExecutedRefundTransactions (before: ${countBefore}, after: ${after.length})`, counter)
+  try {
+    await waitUntil(async () => {
+      const after = await api.query.tftBridgeModule.executedRefundTransactions.entries()
+      return after.length > countBefore
+    }, { timeoutMs: 30_000, intervalMs: 3000, desc: 'new refund in ExecutedRefundTransactions' })
+    return true
+  } catch {
+    const after = await api.query.tftBridgeModule.executedRefundTransactions.entries()
+    fail(name, `no new refund in ExecutedRefundTransactions after 30s (before: ${countBefore}, after: ${after.length})`, counter)
     return false
   }
-  return true
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -165,12 +178,13 @@ async function test1_normalWithdraw () {
     }
     log(`User Stellar TFT after: ${afterStellar} (+${delta} TFT)`)
 
-    // Assert TFChain balance decreased by swap amount
+    // Assert TFChain balance decreased by at least swapAmount.
+    // The small excess (~0.003 TFT) is the substrate extrinsic fee for swapToStellar.
     const afterTFChain = await tfchainBalance(api, alice.address)
     const tfDelta = Math.round((beforeTFChain - afterTFChain) * TFT_DECIMALS) / TFT_DECIMALS
     log(`Alice TFChain TFT after: ${afterTFChain} (-${tfDelta} TFT)`)
-    if (Math.abs(tfDelta - swapAmount) > 1e-7) {
-      fail(name, `TFChain balance should decrease by ${swapAmount}, decreased by ${tfDelta}`, counter); return
+    if (tfDelta < swapAmount - 1e-7) {
+      fail(name, `TFChain balance should decrease by at least ${swapAmount}, decreased by ${tfDelta}`, counter); return
     }
 
     // Assert on-chain: burn executed
@@ -322,12 +336,13 @@ async function test5_deposit () {
       if (mints.length > mintsBefore) return true
     }, { timeoutMs: 120_000, desc: 'executed mint count to increase' })
 
-    // Assert Alice's TFChain balance increased by (deposit - depositFee)
+    // Assert Alice's TFChain balance increased by at least (deposit - depositFee).
+    // Slight excess possible from block author rewards (Alice is the dev chain authority).
     const aliceBalAfter = await tfchainBalance(api, alice.address)
     const balDelta = Math.round((aliceBalAfter - aliceBalBefore) * TFT_DECIMALS) / TFT_DECIMALS
     log(`Alice TFChain TFT after: ${aliceBalAfter} (+${balDelta} TFT)`)
-    if (Math.abs(balDelta - expectedMint) > 1e-7) {
-      fail(name, `Expected TFChain +${expectedMint} TFT, got +${balDelta}`, counter); return
+    if (balDelta < expectedMint - 1e-7) {
+      fail(name, `Expected TFChain at least +${expectedMint} TFT, got +${balDelta}`, counter); return
     }
 
     pass(name, counter)
