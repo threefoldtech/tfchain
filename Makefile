@@ -10,13 +10,15 @@ SHELL := /bin/bash
 #   make bridge-mv-dev     # 3 validators, 2-of-3 multi-sig
 #
 # Configurable:
-#   TFCHAIN_URL         WebSocket URL  (default: ws://localhost:9944)
-#   BRIDGE_ENV_FILE     Env file path  (default: /tmp/bridge_local_env.sh)
-#   BRIDGE_MV_ENV_FILE  MV env file    (default: /tmp/bridge_mv_env.sh)
+#   TFCHAIN_URL         WebSocket URL          (default: ws://localhost:9944)
+#   BRIDGE_ENV_FILE     Env file path          (default: /tmp/bridge_local_env.sh)
+#   BRIDGE_MV_ENV_FILE  MV env file            (default: /tmp/bridge_mv_env.sh)
+#   TFCHAIN_BIN         TFChain binary path    (default: release; use debug to skip 30-min build)
+#                       e.g. TFCHAIN_BIN=substrate-node/target/debug/tfchain make bridge-dev
 
 BRIDGE_DIR        := bridge/tfchain_bridge
 BRIDGE_BIN        := $(BRIDGE_DIR)/tfchain_bridge_local
-TFCHAIN_BIN       := substrate-node/target/release/tfchain
+TFCHAIN_BIN       ?= substrate-node/target/release/tfchain
 SCRIPTS_DIR       := scripts
 
 BRIDGE_LOG        := /tmp/bridge_local.log
