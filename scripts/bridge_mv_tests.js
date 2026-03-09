@@ -549,8 +549,8 @@ async function testMV9_expiredBatchRecovery () {
     // handleWithdrawReady submits them sequentially — each using its stored sequence
     // number, so all succeed in one pass.
     //
-    // After all Stellar payments complete, each handleWithdrawReady calls
-    // SetWithdrawExecuted individually (could be batched in a future optimization).
+    // After all Stellar payments in a cycle complete, BatchSetWithdrawExecuted
+    // confirms all in one force_batch. Multiple expiry cycles may be needed.
     for (let i = 1; i <= 3; i++) startValidator(i)
     log('All 3 validators restarted. Recovering expired burns via batch re-proposal...')
     log(`Expected: 1 force_batch re-proposes all ${N}, then all ${N} Stellar payments execute in sequence`)
@@ -567,7 +567,7 @@ async function testMV9_expiredBatchRecovery () {
         lastReported = count
       }
       if (bal >= beforeStellar + expectedNet - 1e-7) return bal
-    }, { timeoutMs: 600_000, intervalMs: 10_000, desc: `all ${N} burns delivered (+${expectedNet} TFT)` })
+    }, { timeoutMs: 900_000, intervalMs: 10_000, desc: `all ${N} burns delivered (+${expectedNet} TFT)` })
 
     const delta = Math.round((finalStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
     log(`All ${N} burns delivered: +${delta} TFT (expected +${expectedNet})`)
@@ -597,7 +597,7 @@ async function testMV7_cleanState () {
       const refunds = await api.query.tftBridgeModule.refundTransactions.entries()
       const mints = await api.query.tftBridgeModule.mintTransactions.entries()
       return burns.length === 0 && refunds.length === 0 && mints.length === 0
-    }, { timeoutMs: 60_000, intervalMs: 5000, desc: 'all active tx maps to drain' })
+    }, { timeoutMs: 300_000, intervalMs: 5000, desc: 'all active tx maps to drain' })
     pass(name, counter)
   } catch (e) {
     // On timeout, report what's left

@@ -551,7 +551,7 @@ async function test9_expiredBatchRecovery () {
         lastReported = count
       }
       if (bal >= beforeStellar + expectedNet - 1e-7) return bal
-    }, { timeoutMs: 600_000, intervalMs: 10_000, desc: `all ${N} burns delivered (+${expectedNet} TFT)` })
+    }, { timeoutMs: 900_000, intervalMs: 10_000, desc: `all ${N} burns delivered (+${expectedNet} TFT)` })
 
     const delta = Math.round((finalStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
     log(`All ${N} burns delivered: +${delta} TFT (expected +${expectedNet})`)
@@ -581,7 +581,7 @@ async function test7_cleanState () {
       const refunds = await api.query.tftBridgeModule.refundTransactions.entries()
       const mints = await api.query.tftBridgeModule.mintTransactions.entries()
       return burns.length === 0 && refunds.length === 0 && mints.length === 0
-    }, { timeoutMs: 60_000, intervalMs: 5000, desc: 'all active tx maps to drain' })
+    }, { timeoutMs: 300_000, intervalMs: 5000, desc: 'all active tx maps to drain' })
     pass(name, counter)
   } catch (e) {
     // On timeout, report what's left

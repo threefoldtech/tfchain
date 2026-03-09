@@ -49,7 +49,16 @@ func (s *Substrate) BatchCalls(identity Identity, calls []types.Call) (*BatchRes
 		// ItemFailed events are emitted by force_batch for each failed call.
 		// The event payload does not carry the batch-call index — only a DispatchError.
 		// We count failures but cannot reliably map them to specific call positions.
+		//
+		// IMPORTANT: getEventRecords reads ALL events from the block, not just
+		// those emitted by this extrinsic. In multi-validator setups, multiple
+		// validators may submit force_batch extrinsics in the same block. Each
+		// validator sees ItemFailed events from ALL batches, inflating the count.
+		// Cap failedCount at len(calls) to prevent negative SuccessCount.
 		failedCount := len(resp.Events.Utility_ItemFailed)
+		if failedCount > len(calls) {
+			failedCount = len(calls)
+		}
 		if failedCount > 0 {
 			result.FailedCount = failedCount
 			result.SuccessCount = len(calls) - failedCount
