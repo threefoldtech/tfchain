@@ -542,11 +542,18 @@ async function testMV9_expiredBatchRecovery () {
     log('All burns expired (signatures cleared, sequence_number reset to 0)')
 
     // Start all 3 validators — they catch the next BurnTransactionExpired events.
-    // handleProposalsBatch re-proposes all expired burns in a single force_batch tx.
-    // Due to Stellar sequence number constraints, only ~1 burn succeeds per expiry cycle (~120s).
+    // handleProposalsBatch re-proposes all expired burns in a single force_batch tx with
+    // consecutive Stellar sequence numbers (SyncSequenceNumber + per-proposal increment).
+    // All validators sync the same base sequence (no Stellar tx submitted yet), so they
+    // produce matching signatures. Once threshold is met, all burns become Ready and
+    // handleWithdrawReady submits them sequentially — each using its stored sequence
+    // number, so all succeed in one pass.
+    //
+    // After all Stellar payments complete, each handleWithdrawReady calls
+    // SetWithdrawExecuted individually (could be batched in a future optimization).
     for (let i = 1; i <= 3; i++) startValidator(i)
     log('All 3 validators restarted. Recovering expired burns via batch re-proposal...')
-    log(`Expected: each expiry cycle re-proposes all remaining in 1 force_batch, ~1 succeeds per cycle`)
+    log(`Expected: 1 force_batch re-proposes all ${N}, then all ${N} Stellar payments execute in sequence`)
 
     const expectedNet = N * (2 - WITHDRAW_FEE_TFT)
     let lastReported = 0
@@ -560,7 +567,7 @@ async function testMV9_expiredBatchRecovery () {
         lastReported = count
       }
       if (bal >= beforeStellar + expectedNet - 1e-7) return bal
-    }, { timeoutMs: 7_200_000, intervalMs: 10_000, desc: `all ${N} burns delivered (+${expectedNet} TFT)` })
+    }, { timeoutMs: 600_000, intervalMs: 10_000, desc: `all ${N} burns delivered (+${expectedNet} TFT)` })
 
     const delta = Math.round((finalStellar - beforeStellar) * TFT_DECIMALS) / TFT_DECIMALS
     log(`All ${N} burns delivered: +${delta} TFT (expected +${expectedNet})`)
