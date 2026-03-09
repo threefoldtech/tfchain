@@ -195,11 +195,10 @@ bridge-test:
 	node $(SCRIPTS_DIR)/bridge_tests.js
 
 bridge-clean: bridge-stop bridge-tfchain-stop
-	@echo "==> Cleaning bridge state..."
 	rm -f $(BRIDGE_DIR)/signer_local.json
 	rm -f $(BRIDGE_DIR)/signer_local.json.idem.db
-	rm -f $(BRIDGE_LOG) $(TFCHAIN_LOG) $(BRIDGE_PID_FILE) $(TFCHAIN_PID_FILE)
-	@echo "==> Done."
+	rm -f $(BRIDGE_LOG) $(TFCHAIN_LOG)
+	rm -f $(BRIDGE_PID_FILE) $(TFCHAIN_PID_FILE)
 
 bridge-dev: bridge-clean bridge-build $(TFCHAIN_BIN) bridge-accounts \
             bridge-tfchain-start bridge-setup bridge-start bridge-test
@@ -285,20 +284,18 @@ bridge-mv-test:
 	BRIDGE_DIR=$(BRIDGE_DIR) \
 	node $(SCRIPTS_DIR)/bridge_mv_tests.js
 
-bridge-mv-clean: bridge-mv-stop bridge-tfchain-stop
-	@echo "==> Cleaning MV bridge state..."
+bridge-mv-clean: bridge-mv-stop
 	rm -f $(BRIDGE_DIR)/signer_mv_*.json
 	rm -f $(BRIDGE_DIR)/signer_mv_*.json.idem.db
-	rm -f /tmp/bridge_mv_*.log /tmp/bridge_mv_*.pid
-	rm -f $(TFCHAIN_LOG) $(TFCHAIN_PID_FILE)
-	@echo "==> Done."
+	rm -f /tmp/bridge_mv_*.log
+	rm -f /tmp/bridge_mv_*.pid
 
 bridge-mv-dev: bridge-mv-clean bridge-build $(TFCHAIN_BIN) bridge-mv-accounts \
                bridge-tfchain-start bridge-mv-setup bridge-mv-start bridge-mv-test
 
 # Build TFChain only if binary is missing (expensive Rust build)
 $(TFCHAIN_BIN):
-	@$(MAKE) bridge-build-tfchain
+	$(MAKE) bridge-build-tfchain
 
 # ─────────────────────────────────────────────────────────────────────────────
 # End bridge local development environment
