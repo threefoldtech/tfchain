@@ -240,16 +240,9 @@ impl<T: Config> Pallet<T> {
             Error::<T>::BurnTransactionAlreadyExecuted
         );
 
-        let Some(mut burn_tx) = BurnTransactions::<T>::get(tx_id) else {
-            return Err(DispatchErrorWithPostInfo::from(
-                Error::<T>::BurnTransactionNotExists,
-            ));
-        };
-
-        ensure!(
-            BurnTransactions::<T>::contains_key(tx_id),
-            Error::<T>::BurnTransactionNotExists
-        );
+        let burn_tx = BurnTransactions::<T>::get(tx_id).ok_or(
+            DispatchErrorWithPostInfo::from(Error::<T>::BurnTransactionNotExists),
+        )?;
 
         ensure!(
             burn_tx.amount == amount,
@@ -260,26 +253,12 @@ impl<T: Config> Pallet<T> {
             Error::<T>::WrongParametersProvided
         );
 
-        if BurnTransactions::<T>::contains_key(tx_id) {
-            return Self::add_stellar_sig_burn_transaction(
-                tx_id,
-                signature,
-                stellar_pub_key,
-                sequence_number,
-            );
-        }
-
-        let now = <frame_system::Pallet<T>>::block_number();
-
-        burn_tx.block = now;
-        burn_tx.sequence_number = sequence_number;
-        BurnTransactions::<T>::insert(tx_id.clone(), &burn_tx);
-
-        Self::add_stellar_sig_burn_transaction(tx_id, signature, stellar_pub_key, sequence_number)?;
-
-        Self::deposit_event(Event::BurnTransactionProposed(tx_id, target, amount));
-
-        Ok(().into())
+        Self::add_stellar_sig_burn_transaction(
+            tx_id,
+            signature,
+            stellar_pub_key,
+            sequence_number,
+        )
     }
 
     pub fn add_stellar_sig_burn_transaction(
@@ -318,6 +297,14 @@ impl<T: Config> Pallet<T> {
             signature,
             stellar_pub_key,
         };
+
+        // Reset the expiry timer when this is the first signature after an expiry.
+        // on_finalize clears signatures and sets block to the expiry block. Without
+        // this reset, the old block value causes on_finalize to immediately re-expire
+        // the burn in the same block the new signature is added.
+        if tx.signatures.is_empty() {
+            tx.block = <frame_system::Pallet<T>>::block_number();
+        }
 
         tx.sequence_number = sequence_number;
         tx.signatures.push(stellar_signature.clone());
@@ -396,6 +383,11 @@ impl<T: Config> Pallet<T> {
             signature,
             stellar_pub_key,
         };
+
+        // Reset the expiry timer when this is the first signature after an expiry.
+        if tx.signatures.is_empty() {
+            tx.block = <frame_system::Pallet<T>>::block_number();
+        }
 
         tx.sequence_number = sequence_number;
         tx.signatures.push(stellar_signature.clone());
