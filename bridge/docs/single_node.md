@@ -107,4 +107,4 @@ Now construct a memo message indicating which twin you will deposit to: "twin_TW
 ./stellar-utils transfer GAYJSBPBQ3J32CZZ72OM3GZP646KSVD3V5QB3WBJSSGPYHYS5MZSS4Z6 50 "twin_1" --secret SDGRCA63GSP4MSASFAWX5FORTS6ATQMK63YL6ZMF7YIFEJVBTLJDJA3M
 ```
 
-Now you should have received the tokens minus the depositfee on your account on tfchain (the default depositfee is 10 TFT).
+Now you should have received the tokens minus the depositfee on your account on tfchain (the default depositfee is 1 TFT).

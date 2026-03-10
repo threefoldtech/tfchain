@@ -345,16 +345,9 @@ impl<T: Config> Pallet<T> {
             !ExecutedBurnTransactions::<T>::contains_key(tx_id),
             Error::<T>::BurnTransactionAlreadyExecuted
         );
-        ensure!(
-            BurnTransactions::<T>::contains_key(tx_id),
-            Error::<T>::BurnTransactionNotExists
-        );
-
-        let Some(tx) = BurnTransactions::<T>::get(tx_id) else {
-            return Err(DispatchErrorWithPostInfo::from(
-                Error::<T>::BurnTransactionNotExists,
-            ));
-        };
+        let tx = BurnTransactions::<T>::get(tx_id).ok_or(
+            DispatchErrorWithPostInfo::from(Error::<T>::BurnTransactionNotExists),
+        )?;
 
         BurnTransactions::<T>::remove(tx_id);
         ExecutedBurnTransactions::<T>::insert(tx_id, &tx);

@@ -11,7 +11,8 @@
  *   5. Deposit/mint      — send TFT to bridge with twin memo, verify TFChain balance
  *   6. Below-minimum     — swap below fee, expect dispatch error
  *   4. Crash recovery    — SIGKILL bridge mid-withdraw, restart, verify delivery completes
- *   8. Lost cursor       — wipe persistency (BoltDB), restart, verify no double-spend
+ *   8. Lost cursor       — wipe persistency (BoltDB), restart, verify no double-spend,
+ *                          then deposit to prove bridge is at Stellar tip (tx hash verified)
  *   9. Expired batch     — 50 swaps while bridge offline, wait for expiry, restart, all delivered
  *   7. Clean state       — verify no orphaned active transactions on-chain
  *
@@ -35,6 +36,7 @@ const {
   stellarTFTBalance,
   tfchainBalance,
   waitUntil,
+  sendStellarPayment,
   swapToStellar,
   TFT_DECIMALS
 } = require('./bridge_helpers')
@@ -242,8 +244,6 @@ async function test3_badDeposit () {
   const userSecret = getEnv('USER_SECRET')
 
   try {
-    const userKpStellar = StellarSdk.Keypair.fromSecret(userSecret)
-    const TFTAsset = new StellarSdk.Asset('TFT', issuerAddress)
     const depositAmount = '3'
 
     const beforeStellar = await stellarTFTBalance(userAddress, horizon, issuerAddress)
@@ -251,20 +251,7 @@ async function test3_badDeposit () {
     log(`User Stellar TFT before: ${beforeStellar}`)
 
     // Send TFT to bridge without a memo
-    const acc = await horizon.loadAccount(userAddress)
-    const tx = new StellarSdk.TransactionBuilder(acc, {
-      fee: '1000',
-      networkPassphrase: NETWORK_PASSPHRASE
-    })
-      .addOperation(StellarSdk.Operation.payment({
-        destination: bridgeAddress,
-        asset: TFTAsset,
-        amount: depositAmount
-      }))
-      .setTimeout(30)
-      .build()
-    tx.sign(userKpStellar)
-    const result = await horizon.submitTransaction(tx)
+    const result = await sendStellarPayment(horizon, issuerAddress, NETWORK_PASSPHRASE, userSecret, bridgeAddress, depositAmount)
     log(`Bad deposit sent: ${result.hash.slice(0, 16)}`)
 
     // Wait for refund — balance should return to (roughly) beforeStellar
@@ -311,24 +298,7 @@ async function test5_deposit () {
 
     // Send TFT to bridge with twin_<id> memo
     const userSecret = getEnv('USER_SECRET')
-    const userKpStellar = StellarSdk.Keypair.fromSecret(userSecret)
-    const TFTAsset = new StellarSdk.Asset('TFT', issuerAddress)
-    const userAddress = getEnv('USER_ADDRESS')
-    const acc = await horizon.loadAccount(userAddress)
-    const tx = new StellarSdk.TransactionBuilder(acc, {
-      fee: '1000',
-      networkPassphrase: NETWORK_PASSPHRASE
-    })
-      .addOperation(StellarSdk.Operation.payment({
-        destination: bridgeAddress,
-        asset: TFTAsset,
-        amount: depositAmount
-      }))
-      .addMemo(StellarSdk.Memo.text(`twin_${twinId}`))
-      .setTimeout(30)
-      .build()
-    tx.sign(userKpStellar)
-    const result = await horizon.submitTransaction(tx)
+    const result = await sendStellarPayment(horizon, issuerAddress, NETWORK_PASSPHRASE, userSecret, bridgeAddress, depositAmount, `twin_${twinId}`)
     log(`Deposit sent: ${result.hash.slice(0, 16)} (memo: twin_${twinId})`)
 
     // Wait for mint to be executed on TFChain
@@ -441,8 +411,9 @@ async function test8_lostCursor () {
     await new Promise(r => setTimeout(r, 2000))
 
     // Wipe the persistency file (BoltDB/JSON cursor).
-    // Without the cursor, the PROCESSING guard is gone.
-    // Only protection: IsBurnedAlready (queries ExecutedBurnTransactions on-chain).
+    // Without the cursor, bridge re-scans the Stellar account from the beginning.
+    // Protection against duplicate burns:  IsBurnedAlready  (ExecutedBurnTransactions)
+    // Protection against duplicate mints:  IsMintedAlready  (ExecutedMintTransactions)
     if (fs.existsSync(BRIDGE_PERSISTENCY)) {
       fs.unlinkSync(BRIDGE_PERSISTENCY)
       log(`Persistency wiped: ${BRIDGE_PERSISTENCY}`)
@@ -466,26 +437,73 @@ async function test8_lostCursor () {
     if (Math.abs(delta) > 1e-7) {
       fail(name, `DOUBLE-SPEND: balance changed by ${delta} TFT after cursor wipe`, counter); return
     }
-    log('No double-spend — IsBurnedAlready (ExecutedBurnTransactions) held')
+    log('No double-spend — IsMintedAlready + IsBurnedAlready held during rescan')
 
-    // Prove bridge is still functional with a fresh withdraw
-    log('Running fresh withdraw to verify bridge functionality...')
-    const burnId = await swapToStellar(api, alice, 2, { userAddress })
-    log(`Fresh burn ID: ${burnId}`)
+    // ─── Hardened: fresh DEPOSIT to prove bridge is at Stellar tip ───────
+    //
+    // A withdraw (old approach) is event-driven from TFChain — it doesn't use
+    // the Stellar cursor at all, so it doesn't prove the bridge finished scanning.
+    //
+    // A deposit proves the bridge has caught up to the TIP of the Stellar account,
+    // because the bridge must reach our new transaction in the Horizon stream.
+    //
+    // Extra hardening: we verify the on-chain mint's tx_id matches our Stellar
+    // deposit hash, ruling out the case where an OLD deposit was re-processed
+    // and our new deposit is still un-seen.
+    log('Running fresh deposit to verify bridge scanned to Stellar tip...')
 
-    const finalStellar = await waitUntil(async () => {
-      const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
-      if (bal > afterStellar) return bal
-    }, { timeoutMs: 180_000, desc: 'fresh withdraw to complete' })
+    const twinOpt = await api.query.tfgridModule.twinIdByAccountID(alice.address)
+    const twinId = twinOpt.isSome ? twinOpt.unwrap().toNumber() : twinOpt.toJSON()
+    if (!twinId) throw new Error('Alice has no twin on TFChain — is bridge-setup complete?')
 
-    const freshDelta = Math.round((finalStellar - afterStellar) * TFT_DECIMALS) / TFT_DECIMALS
-    const expected = 2 - WITHDRAW_FEE_TFT
-    log(`Fresh withdraw delivered: +${freshDelta} TFT`)
-    if (Math.abs(freshDelta - expected) > 1e-7) {
-      fail(name, `Fresh withdraw: expected +${expected}, got +${freshDelta}`, counter); return
+    const depositAmount = '2'
+    const depositFee = Number(await api.query.tftBridgeModule.depositFee()) / TFT_DECIMALS
+    const expectedMint = parseFloat(depositAmount) - depositFee
+    log(`Deposit fee: ${depositFee} TFT, expected mint: ${expectedMint} TFT`)
+
+    const aliceBalBefore = await tfchainBalance(api, alice.address)
+    const mintsBefore = (await api.query.tftBridgeModule.executedMintTransactions.entries()).length
+    log(`Alice TFChain TFT before: ${aliceBalBefore}, executed mints: ${mintsBefore}`)
+
+    // Send deposit — capture the Stellar tx hash for verification
+    const userSecret = getEnv('USER_SECRET')
+    const result = await sendStellarPayment(horizon, issuerAddress, NETWORK_PASSPHRASE, userSecret, bridgeAddress, depositAmount, `twin_${twinId}`)
+    const depositTxHash = result.hash
+    log(`Fresh deposit sent: ${depositTxHash} (memo: twin_${twinId})`)
+
+    // Wait for the mint to appear on-chain
+    await waitUntil(async () => {
+      const mints = await api.query.tftBridgeModule.executedMintTransactions.entries()
+      if (mints.length > mintsBefore) return mints
+    }, { timeoutMs: 300_000, desc: 'fresh deposit mint to complete' })
+
+    // ─── TX HASH VERIFICATION ──────────────────────────────────────────
+    // Query executedMintTransactions by our specific Stellar tx hash.
+    // On-chain key = Vec<u8> of the Stellar tx hash string (same as Go bridge passes).
+    // If found: our NEW deposit was processed (bridge is at tip).
+    // If not found: an OLD deposit was re-processed instead — FAIL.
+    const mintTx = (await api.query.tftBridgeModule.executedMintTransactions(depositTxHash)).toJSON()
+    if (!mintTx || !mintTx.amount || mintTx.amount === 0) {
+      fail(name, `Mint tx hash mismatch: executedMintTransactions["${depositTxHash.slice(0, 16)}..."] not found on-chain — an old deposit may have been re-processed instead`, counter)
+      return
+    }
+    log(`TX hash verified: executedMintTransactions["${depositTxHash.slice(0, 16)}..."] = {amount: ${mintTx.amount}, votes: ${mintTx.votes}}`)
+
+    // Verify Alice's TFChain balance increased by expected amount (± 0.1 for block author rewards)
+    const aliceBalAfter = await tfchainBalance(api, alice.address)
+    const balDelta = Math.round((aliceBalAfter - aliceBalBefore) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`Alice TFChain TFT after: ${aliceBalAfter} (+${balDelta} TFT)`)
+    if (Math.abs(balDelta - expectedMint) > 0.1) {
+      fail(name, `Fresh deposit: expected TFChain ~+${expectedMint} TFT (±0.1), got +${balDelta}`, counter); return
     }
 
-    if (!(await assertBurnExecuted(name, burnId))) return
+    // Verify exactly 1 new mint was processed (no old deposits re-minted)
+    const mintsAfter = (await api.query.tftBridgeModule.executedMintTransactions.entries()).length
+    const mintCountDelta = mintsAfter - mintsBefore
+    log(`Executed mints: ${mintsBefore} → ${mintsAfter} (+${mintCountDelta})`)
+    if (mintCountDelta !== 1) {
+      fail(name, `Expected exactly 1 new mint, got ${mintCountDelta} — old deposits may have been re-processed`, counter); return
+    }
 
     pass(name, counter)
   } catch (e) {

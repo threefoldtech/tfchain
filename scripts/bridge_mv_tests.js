@@ -12,9 +12,11 @@
  *   MV2 — Deposit/mint: send TFT with valid memo, all 3 propose mint, threshold met
  *   MV3 — Bad deposit: no memo, all 3 detect and propose refund, full refund delivered
  *   MV4 — Validator offline: kill Val3 before deposit, Val1+Val2 alone complete refund (2-of-3)
- *   MV5 — Batch withdraws: 3 simultaneous swaps, all 3 eventually delivered (may use expiry)
+ *   MV5 — Batch withdraws: 5 simultaneous swaps, all 5 eventually delivered (may use expiry)
  *   MV6 — Crash recovery: kill Val2 mid-withdraw, restart, verify delivery completes
- *   MV8 — Lost cursor: wipe all 3 persistency files, restart, verify no double-spend
+ *   MV6a— Below-minimum: swap below fee, expect dispatch error (parity with SV test6)
+ *   MV8 — Lost cursor: wipe all 3 persistency files, restart, verify no double-spend,
+ *          then deposit to prove bridge is at Stellar tip (tx hash verified)
  *   MV9 — Expired batch: 50 swaps while all validators offline, wait for expiry, restart, all delivered
  *   MV7 — Clean state: verify no orphaned active transactions on-chain
  *
@@ -37,9 +39,11 @@ const {
   stellarTFTBalance,
   tfchainBalance,
   waitUntil,
+  sendStellarPayment,
   swapToStellar,
   TFT_DECIMALS
 } = require('./bridge_helpers')
+const { startEventCollector, markTestPhase, generateReport } = require('./bridge_instrumentation')
 
 const TFCHAIN_URL = process.env.TFCHAIN_URL || 'ws://localhost:9944'
 const HORIZON_URL = process.env.STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
@@ -54,30 +58,9 @@ const VAL_LOG_FILES = [1, 2, 3].map(i => `/tmp/bridge_mv_${i}.log`)
 const WITHDRAW_FEE_TFT = 1
 
 const counter = { passed: 0, failed: 0 }
-let api, alice, horizon, issuerAddress, bridgeAddress
+let api, alice, horizon, issuerAddress, bridgeAddress, collector
 
 // ─── Validator lifecycle helpers ────────────────────────────────────────────
-
-async function sendStellarPayment (fromSecret, toAddress, amount, memo = null) {
-  const kp = StellarSdk.Keypair.fromSecret(fromSecret)
-  const TFTAsset = new StellarSdk.Asset('TFT', issuerAddress)
-  const acc = await horizon.loadAccount(kp.publicKey())
-
-  const builder = new StellarSdk.TransactionBuilder(acc, {
-    fee: '1000',
-    networkPassphrase: NETWORK_PASSPHRASE
-  }).addOperation(StellarSdk.Operation.payment({
-    destination: toAddress,
-    asset: TFTAsset,
-    amount: String(amount)
-  })).setTimeout(30)
-
-  if (memo) builder.addMemo(StellarSdk.Memo.text(String(memo)))
-
-  const tx = builder.build()
-  tx.sign(kp)
-  return horizon.submitTransaction(tx)
-}
 
 function getValPid (valIndex) {
   const pidFile = VAL_PID_FILES[valIndex - 1]
@@ -125,15 +108,6 @@ function startValidator (valIndex) {
   child.unref()
   fs.writeFileSync(VAL_PID_FILES[valIndex - 1], String(child.pid))
   log(`Val${valIndex} restarted (PID ${child.pid})`)
-}
-
-async function waitForValReady (valIndex) {
-  const logFile = VAL_LOG_FILES[valIndex - 1]
-  await waitUntil(async () => {
-    if (!fs.existsSync(logFile)) return false
-    const tail = fs.readFileSync(logFile, 'utf8').slice(-20000)
-    return tail.includes('bridge_started')
-  }, { timeoutMs: 30_000, desc: `Val${valIndex} bridge_started` })
 }
 
 // ─── On-chain assertion helpers ─────────────────────────────────────────────
@@ -185,6 +159,7 @@ async function assertRefundExecuted (name, countBefore) {
 
 async function testMV1_normalWithdraw () {
   console.log('\n── MV1: Normal withdraw (3 validators, threshold=2) ──')
+  markTestPhase(collector, 'MV1', 'start')
   const name = 'MV1_normalWithdraw'
   const userAddress = getEnv('USER_ADDRESS')
   const swapAmount = 2
@@ -224,10 +199,12 @@ async function testMV1_normalWithdraw () {
 
     pass(name, counter)
   } catch (e) { fail(name, e.message, counter) }
+  finally { markTestPhase(collector, 'MV1', 'end') }
 }
 
 async function testMV2_deposit () {
   console.log('\n── MV2: Deposit/mint (3 validators all propose) ──')
+  markTestPhase(collector, 'MV2', 'start')
   const name = 'MV2_deposit'
   const aliceAddress = alice.address
 
@@ -249,6 +226,7 @@ async function testMV2_deposit () {
 
     // Memo format must be "twin_<id>" (bridge parses "object_objectID")
     const result = await sendStellarPayment(
+      horizon, issuerAddress, NETWORK_PASSPHRASE,
       getEnv('USER_SECRET'),
       bridgeAddress,
       depositAmount,
@@ -274,10 +252,12 @@ async function testMV2_deposit () {
 
     pass(name, counter)
   } catch (e) { fail(name, e.message, counter) }
+  finally { markTestPhase(collector, 'MV2', 'end') }
 }
 
 async function testMV3_badDeposit () {
   console.log('\n── MV3: Bad deposit (no memo -> full refund, 3 validators) ──')
+  markTestPhase(collector, 'MV3', 'start')
   const name = 'MV3_badDeposit'
   const userAddress = getEnv('USER_ADDRESS')
 
@@ -286,7 +266,7 @@ async function testMV3_badDeposit () {
     const refundsBefore = (await api.query.tftBridgeModule.executedRefundTransactions.entries()).length
     log(`User Stellar TFT before: ${beforeStellar}`)
 
-    const result = await sendStellarPayment(getEnv('USER_SECRET'), bridgeAddress, '3')
+    const result = await sendStellarPayment(horizon, issuerAddress, NETWORK_PASSPHRASE, getEnv('USER_SECRET'), bridgeAddress, '3')
     log(`Bad deposit sent: ${result.hash.slice(0, 16)} (no memo)`)
 
     const afterStellar = await waitUntil(async () => {
@@ -306,10 +286,12 @@ async function testMV3_badDeposit () {
 
     pass(name, counter)
   } catch (e) { fail(name, e.message, counter) }
+  finally { markTestPhase(collector, 'MV3', 'end') }
 }
 
 async function testMV4_validatorOffline () {
   console.log('\n── MV4: Val3 offline — Val1+Val2 complete refund with 2-of-3 threshold ──')
+  markTestPhase(collector, 'MV4', 'start')
   const name = 'MV4_validatorOffline'
   const userAddress = getEnv('USER_ADDRESS')
 
@@ -323,7 +305,7 @@ async function testMV4_validatorOffline () {
     log(`Val3 killed. User Stellar TFT before: ${beforeStellar}`)
 
     // Send bad deposit (no memo) — Val1+Val2 detect it, propose refund, threshold=2 met
-    const result = await sendStellarPayment(getEnv('USER_SECRET'), bridgeAddress, '4')
+    const result = await sendStellarPayment(horizon, issuerAddress, NETWORK_PASSPHRASE, getEnv('USER_SECRET'), bridgeAddress, '4')
     log(`Bad deposit sent: ${result.hash.slice(0, 16)} (no memo, Val3 offline)`)
 
     // Wait for refund to complete — Val1+Val2 have enough signatures (2-of-3)
@@ -354,11 +336,13 @@ async function testMV4_validatorOffline () {
     } catch (restartErr) {
       log(`Warning: Val3 restart failed: ${restartErr.message}`)
     }
+    markTestPhase(collector, 'MV4', 'end')
   }
 }
 
 async function testMV5_batchWithdraws () {
-  console.log('\n── MV5: Batch withdraws (3 simultaneous, all validators) ──')
+  console.log('\n── MV5: Batch withdraws (5 simultaneous, all validators) ──')
+  markTestPhase(collector, 'MV5', 'start')
   const name = 'MV5_batchWithdraws'
   const userAddress = getEnv('USER_ADDRESS')
 
@@ -368,11 +352,11 @@ async function testMV5_batchWithdraws () {
 
     const nonce = await api.rpc.system.accountNextIndex(alice.address)
     const burnIds = await Promise.all(
-      [0, 1, 2].map(i => swapToStellar(api, alice, 2, { userAddress, nonce: nonce.toNumber() + i }))
+      [0, 1, 2, 3, 4].map(i => swapToStellar(api, alice, 2, { userAddress, nonce: nonce.toNumber() + i }))
     )
     log(`Burn IDs: ${burnIds.join(', ')}`)
 
-    const expectedNet = 3 * (2 - WITHDRAW_FEE_TFT)
+    const expectedNet = 5 * (2 - WITHDRAW_FEE_TFT)
 
     // Use longer timeout — sequence collisions may require expiry cycle (~2 min each)
     const afterStellar = await waitUntil(async () => {
@@ -393,10 +377,12 @@ async function testMV5_batchWithdraws () {
 
     pass(name, counter)
   } catch (e) { fail(name, e.message, counter) }
+  finally { markTestPhase(collector, 'MV5', 'end') }
 }
 
 async function testMV6_crashRecovery () {
   console.log('\n── MV6: Crash recovery (kill Val2 mid-withdraw, restart, verify delivery) ──')
+  markTestPhase(collector, 'MV6', 'start')
   const name = 'MV6_crashRecovery'
   const userAddress = getEnv('USER_ADDRESS')
 
@@ -442,10 +428,30 @@ async function testMV6_crashRecovery () {
 
     pass(name, counter)
   } catch (e) { fail(name, e.message, counter) }
+  finally { markTestPhase(collector, 'MV6', 'end') }
+}
+
+async function testMV6a_belowMinimum () {
+  console.log('\n── MV6a: Withdraw below minimum (should be rejected) ──')
+  markTestPhase(collector, 'MV6a', 'start')
+  const name = 'MV6a_belowMinimum'
+  try {
+    await swapToStellar(api, alice, 0.5, { userAddress: getEnv('USER_ADDRESS') })
+    fail(name, 'swapToStellar should have thrown, but succeeded', counter)
+  } catch (e) {
+    if (e.message.includes('AmountIsLessThanWithdrawFee')) {
+      log(`Correctly rejected: ${e.message}`)
+      pass(name, counter)
+    } else {
+      fail(name, `Expected AmountIsLessThanWithdrawFee, got: ${e.message}`, counter)
+    }
+  }
+  markTestPhase(collector, 'MV6a', 'end')
 }
 
 async function testMV8_lostCursor () {
   console.log('\n── MV8: Lost cursor (wipe all 3 persistency files → no double-spend) ──')
+  markTestPhase(collector, 'MV8', 'start')
   const name = 'MV8_lostCursor'
   const userAddress = getEnv('USER_ADDRESS')
 
@@ -455,8 +461,9 @@ async function testMV8_lostCursor () {
     await new Promise(r => setTimeout(r, 2000))
 
     // Wipe all 3 persistency files.
-    // Without the cursor, the PROCESSING guard is gone.
-    // Only protection: IsBurnedAlready (queries ExecutedBurnTransactions on-chain).
+    // Without the cursor, bridges re-scan the Stellar account from the beginning.
+    // Protection against duplicate burns:  IsBurnedAlready  (ExecutedBurnTransactions)
+    // Protection against duplicate mints:  IsMintedAlready  (ExecutedMintTransactions)
     for (let i = 1; i <= 3; i++) {
       const p = `${BRIDGE_DIR}/signer_mv_${i}.json`
       if (fs.existsSync(p)) {
@@ -481,35 +488,90 @@ async function testMV8_lostCursor () {
     if (Math.abs(delta) > 1e-7) {
       fail(name, `DOUBLE-SPEND: balance changed by ${delta} TFT after cursor wipe`, counter); return
     }
-    log('No double-spend — IsBurnedAlready (ExecutedBurnTransactions) held')
+    log('No double-spend — IsMintedAlready + IsBurnedAlready held during rescan')
 
-    // Prove bridge is still functional with a fresh withdraw
-    log('Running fresh withdraw to verify bridge functionality...')
-    const burnId = await swapToStellar(api, alice, 2, { userAddress })
-    log(`Fresh burn ID: ${burnId}`)
+    // ─── Hardened: fresh DEPOSIT to prove bridge is at Stellar tip ───────
+    //
+    // A withdraw (old approach) is event-driven from TFChain — it doesn't use
+    // the Stellar cursor at all, so it doesn't prove the bridge finished scanning.
+    //
+    // A deposit proves the bridge has caught up to the TIP of the Stellar account,
+    // because the bridge must reach our new transaction in the Horizon stream.
+    //
+    // Extra hardening: we verify the on-chain mint's tx_id matches our Stellar
+    // deposit hash, ruling out the case where an OLD deposit was re-processed
+    // and our new deposit is still un-seen.
+    log('Running fresh deposit to verify bridge scanned to Stellar tip...')
 
-    const finalStellar = await waitUntil(async () => {
-      const bal = await stellarTFTBalance(userAddress, horizon, issuerAddress)
-      if (bal > afterStellar) return bal
-    }, { timeoutMs: 300_000, intervalMs: 4000, desc: 'fresh withdraw to complete' })
+    const twinOpt = await api.query.tfgridModule.twinIdByAccountID(alice.address)
+    const twinId = twinOpt.isSome ? twinOpt.unwrap().toNumber() : twinOpt.toJSON()
+    if (!twinId) throw new Error('Alice has no twin on TFChain — is bridge-setup complete?')
 
-    const freshDelta = Math.round((finalStellar - afterStellar) * TFT_DECIMALS) / TFT_DECIMALS
-    const expected = 2 - WITHDRAW_FEE_TFT
-    log(`Fresh withdraw delivered: +${freshDelta} TFT`)
-    if (Math.abs(freshDelta - expected) > 1e-7) {
-      fail(name, `Fresh withdraw: expected +${expected}, got +${freshDelta}`, counter); return
+    const depositAmount = '2'
+    const depositFee = Number(await api.query.tftBridgeModule.depositFee()) / TFT_DECIMALS
+    const expectedMint = parseFloat(depositAmount) - depositFee
+    log(`Deposit fee: ${depositFee} TFT, expected mint: ${expectedMint} TFT`)
+
+    const aliceBalBefore = await tfchainBalance(api, alice.address)
+    const mintsBefore = (await api.query.tftBridgeModule.executedMintTransactions.entries()).length
+    log(`Alice TFChain TFT before: ${aliceBalBefore}, executed mints: ${mintsBefore}`)
+
+    // Send deposit — capture the Stellar tx hash for verification
+    const result = await sendStellarPayment(
+      horizon, issuerAddress, NETWORK_PASSPHRASE,
+      getEnv('USER_SECRET'),
+      bridgeAddress,
+      depositAmount,
+      `twin_${twinId}`
+    )
+    const depositTxHash = result.hash
+    log(`Fresh deposit sent: ${depositTxHash} (memo: twin_${twinId})`)
+
+    // Wait for the mint to appear on-chain
+    await waitUntil(async () => {
+      const mints = await api.query.tftBridgeModule.executedMintTransactions.entries()
+      if (mints.length > mintsBefore) return mints
+    }, { timeoutMs: 300_000, intervalMs: 4000, desc: 'fresh deposit mint to complete' })
+
+    // ─── TX HASH VERIFICATION ──────────────────────────────────────────
+    // Query executedMintTransactions by our specific Stellar tx hash.
+    // On-chain key = Vec<u8> of the Stellar tx hash string (same as Go bridge passes).
+    // If found: our NEW deposit was processed (bridge is at tip).
+    // If not found: an OLD deposit was re-processed instead — FAIL.
+    const mintTx = (await api.query.tftBridgeModule.executedMintTransactions(depositTxHash)).toJSON()
+    if (!mintTx || !mintTx.amount || mintTx.amount === 0) {
+      fail(name, `Mint tx hash mismatch: executedMintTransactions["${depositTxHash.slice(0, 16)}..."] not found on-chain — an old deposit may have been re-processed instead`, counter)
+      return
+    }
+    log(`TX hash verified: executedMintTransactions["${depositTxHash.slice(0, 16)}..."] = {amount: ${mintTx.amount}, votes: ${mintTx.votes}}`)
+
+    // Verify Alice's TFChain balance increased by expected amount (± 0.1 for block author rewards)
+    const aliceBalAfter = await tfchainBalance(api, alice.address)
+    const balDelta = Math.round((aliceBalAfter - aliceBalBefore) * TFT_DECIMALS) / TFT_DECIMALS
+    log(`Alice TFChain TFT after: ${aliceBalAfter} (+${balDelta} TFT)`)
+    if (Math.abs(balDelta - expectedMint) > 0.1) {
+      fail(name, `Fresh deposit: expected TFChain ~+${expectedMint} TFT (±0.1), got +${balDelta}`, counter); return
     }
 
-    if (!(await assertBurnExecuted(name, burnId))) return
+    // Verify exactly 1 new mint was processed (no old deposits re-minted)
+    const mintsAfter = (await api.query.tftBridgeModule.executedMintTransactions.entries()).length
+    const mintCountDelta = mintsAfter - mintsBefore
+    log(`Executed mints: ${mintsBefore} → ${mintsAfter} (+${mintCountDelta})`)
+    if (mintCountDelta !== 1) {
+      fail(name, `Expected exactly 1 new mint, got ${mintCountDelta} — old deposits may have been re-processed`, counter); return
+    }
 
     pass(name, counter)
   } catch (e) {
     fail(name, e.message, counter)
+  } finally {
+    markTestPhase(collector, 'MV8', 'end')
   }
 }
 
 async function testMV9_expiredBatchRecovery () {
   console.log('\n── MV9: Expired batch recovery (50 swaps offline → expiry → restart) ──')
+  markTestPhase(collector, 'MV9', 'start')
   const name = 'MV9_expiredBatchRecovery'
   const userAddress = getEnv('USER_ADDRESS')
   const N = 50
@@ -583,11 +645,14 @@ async function testMV9_expiredBatchRecovery () {
     pass(name, counter)
   } catch (e) {
     fail(name, e.message, counter)
+  } finally {
+    markTestPhase(collector, 'MV9', 'end')
   }
 }
 
 async function testMV7_cleanState () {
   console.log('\n── MV7: Clean state (no orphaned active transactions) ──')
+  markTestPhase(collector, 'MV7', 'start')
   const name = 'MV7_cleanState'
 
   try {
@@ -605,6 +670,8 @@ async function testMV7_cleanState () {
     const refunds = await api.query.tftBridgeModule.refundTransactions.entries()
     const mints = await api.query.tftBridgeModule.mintTransactions.entries()
     fail(name, `Orphaned: ${burns.length} burns, ${refunds.length} refunds, ${mints.length} mints`, counter)
+  } finally {
+    markTestPhase(collector, 'MV7', 'end')
   }
 }
 
@@ -623,6 +690,10 @@ async function main () {
     const keyring = new Keyring({ type: 'sr25519' })
     alice = keyring.addFromUri('//Alice')
 
+    // Start event collector for deep analysis
+    collector = await startEventCollector(api)
+    console.log('[mv-tests] Event collector started — tracking all bridge events by block')
+
     console.log('[mv-tests] Starting multi-validator test suite...\n')
 
     await testMV1_normalWithdraw()
@@ -631,6 +702,7 @@ async function main () {
     await testMV4_validatorOffline()  // kills/restarts Val3
     await testMV5_batchWithdraws()
     await testMV6_crashRecovery()           // kills/restarts Val2
+    await testMV6a_belowMinimum()           // pure pallet test, no bridge needed
     await testMV8_lostCursor()              // kills/restarts all 3 with wiped cursors
     await testMV9_expiredBatchRecovery()   // kills all 3, 50 swaps, expiry, restart (long)
     await testMV7_cleanState()
@@ -638,7 +710,12 @@ async function main () {
     console.log(`\n${'─'.repeat(50)}`)
     console.log(`Results: ${counter.passed} passed, ${counter.failed} failed`)
     console.log('─'.repeat(50))
+
+    // Generate analysis report (pass api for chain-state reconciliation)
+    const outputPath = process.env.ANALYSIS_OUTPUT || '/tmp/bridge_mv_analysis.json'
+    await generateReport(collector, outputPath, api)
   } finally {
+    if (collector) collector.stop()
     await api.disconnect()
   }
 

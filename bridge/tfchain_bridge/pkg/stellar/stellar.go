@@ -49,6 +49,7 @@ type StellarWallet struct {
 	// differ in test/dev environments that use a custom issuer.
 	resolvedAssetCode   string
 	resolvedAssetIssuer string
+	httpClient          *http.Client
 }
 
 type TraceIdKey struct{}
@@ -64,6 +65,24 @@ func NewStellarWallet(ctx context.Context, config *pkg.StellarConfig) (*StellarW
 		keypair: kp,
 		config:  config,
 	}
+
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 3
+	retryClient.RetryWaitMin = 2 * time.Second
+	retryClient.RetryWaitMax = 5 * time.Second
+	retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+		if err != nil {
+			return true, nil
+		}
+		if resp.StatusCode == 429 || (resp.StatusCode >= 500 && resp.StatusCode <= 599) {
+			return true, nil
+		}
+		return false, nil
+	}
+	w.httpClient = retryClient.StandardClient()
 
 	account, err := w.getAccountDetails(config.StellarBridgeAccount)
 	if err != nil {
@@ -642,7 +661,7 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 		}
 
 		creditedEffect := effect.(horizoneffects.AccountCredited)
-		if creditedEffect.Code != asset[0] && creditedEffect.Issuer != asset[1] {
+		if creditedEffect.Code != asset[0] || creditedEffect.Issuer != asset[1] {
 			continue
 		}
 
@@ -654,11 +673,25 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 		senders := make(map[string]*big.Int)
 		for _, op := range ops.Embedded.Records {
 			if op.GetType() != "payment" {
-				return nil, nil
+				continue
 			}
 
 			PaymentOperation := op.(operations.Payment)
 			if PaymentOperation.To != w.config.StellarBridgeAccount || PaymentOperation.From == w.config.StellarBridgeAccount {
+				continue
+			}
+
+			// Reject non-TFT payments — log as suspicious
+			if PaymentOperation.Code != asset[0] || PaymentOperation.Issuer != asset[1] {
+				logger.Warn().
+					Str("event_action", "non_tft_payment_rejected").
+					Str("event_kind", "alert").
+					Str("from", PaymentOperation.From).
+					Str("asset_code", PaymentOperation.Code).
+					Str("asset_issuer", PaymentOperation.Issuer).
+					Str("amount", PaymentOperation.Amount).
+					Str("tx_hash", PaymentOperation.TransactionHash).
+					Msg("non-TFT payment to bridge detected — skipping")
 				continue
 			}
 
@@ -749,30 +782,7 @@ func (w *StellarWallet) getHorizonClient() (*horizonclient.Client, error) {
 	if w.config.StellarHorizonUrl != "" {
 		client = &horizonclient.Client{HorizonURL: w.config.StellarHorizonUrl}
 	}
-
-	// custom HTTP client with retry logic
-	retryClient := retryablehttp.NewClient()
-	retryClient.RetryMax = 3
-	retryClient.RetryWaitMin = 2 * time.Second
-	retryClient.RetryWaitMax = 5 * time.Second
-
-	retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
-		if ctx.Err() != nil {
-			return false, ctx.Err()
-		}
-
-		if err != nil {
-			return true, nil
-		}
-
-		if resp.StatusCode == 429 || (resp.StatusCode >= 500 && resp.StatusCode <= 599) {
-			return true, nil
-		}
-
-		return false, nil
-	}
-
-	client.HTTP = retryClient.StandardClient()
+	client.HTTP = w.httpClient
 
 	return client, nil
 }
@@ -817,7 +827,7 @@ func (w *StellarWallet) StatBridgeAccount() (string, error) {
 	asset := w.getAssetCodeAndIssuer()
 
 	for _, balance := range acc.Balances {
-		if balance.Code == asset[0] || balance.Issuer == asset[1] {
+		if balance.Code == asset[0] && balance.Issuer == asset[1] {
 			return balance.Balance, nil
 		}
 	}

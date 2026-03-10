@@ -10,6 +10,7 @@
 
 const fs = require('fs')
 const https = require('https')
+const StellarSdk = require('@stellar/stellar-sdk')
 
 // ─── Logging & test result helpers ──────────────────────────────────────────
 
@@ -92,6 +93,38 @@ async function waitForAccount (address, server, retries = 12) {
   throw new Error(`Account ${address} not found after ${retries} attempts`)
 }
 
+/**
+ * Send a Stellar payment (TFT asset) with optional memo.
+ * @param {object} horizon - Horizon.Server instance
+ * @param {string} issuerAddress - TFT issuer public key
+ * @param {string} networkPassphrase - Stellar network passphrase
+ * @param {string} fromSecret - Sender's Stellar secret key
+ * @param {string} toAddress - Destination Stellar public key
+ * @param {string|number} amount - Amount to send (string for Stellar precision)
+ * @param {string|null} [memo=null] - Optional text memo (e.g. "twin_<id>")
+ * @returns {Promise<object>} Horizon submit result (includes .hash)
+ */
+async function sendStellarPayment (horizon, issuerAddress, networkPassphrase, fromSecret, toAddress, amount, memo = null) {
+  const kp = StellarSdk.Keypair.fromSecret(fromSecret)
+  const TFTAsset = new StellarSdk.Asset('TFT', issuerAddress)
+  const acc = await horizon.loadAccount(kp.publicKey())
+
+  const builder = new StellarSdk.TransactionBuilder(acc, {
+    fee: '1000',
+    networkPassphrase
+  }).addOperation(StellarSdk.Operation.payment({
+    destination: toAddress,
+    asset: TFTAsset,
+    amount: String(amount)
+  })).setTimeout(30)
+
+  if (memo) builder.addMemo(StellarSdk.Memo.text(String(memo)))
+
+  const tx = builder.build()
+  tx.sign(kp)
+  return horizon.submitTransaction(tx)
+}
+
 // ─── Polling helper ─────────────────────────────────────────────────────────
 
 /**
@@ -169,6 +202,7 @@ module.exports = {
   friendbot,
   waitForAccount,
   waitUntil,
+  sendStellarPayment,
   swapToStellar,
   TFT,
   TFT_DECIMALS
