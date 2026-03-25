@@ -59,9 +59,13 @@ docker pull ghcr.io/threefoldtech/tfchain:latest
 
 ## 2. Sync the New Node
 
-Start the node in **non-validator mode** first to sync the chain without producing blocks. Use `--sync warp` for fastest sync.
+Start the node in **non-validator mode** first to sync the chain without producing blocks. There are two approaches:
 
-### Using the binary:
+### Option A: Warp Sync (simplest)
+
+Start the node with `--sync warp` to download finality proofs and the latest state directly.
+
+**Using the binary:**
 
 ```bash
 ./tfchain \
@@ -73,7 +77,7 @@ Start the node in **non-validator mode** first to sync the chain without produci
   --sync warp
 ```
 
-### Using Docker:
+**Using Docker:**
 
 ```bash
 docker run -d --name tfchain-sync \
@@ -86,6 +90,31 @@ docker run -d --name tfchain-sync \
   --state-pruning 1000 \
   --sync warp
 ```
+
+### Option B: Restore from Snapshot (fastest)
+
+The grid_deployment infrastructure provides pre-built chain snapshots that can be downloaded via rsync. This is typically faster than warp sync, especially for mainnet.
+
+```bash
+# Create the database directory
+mkdir -p /srv/tfchain/chains/tfchain_mainnet/db ~/grid_snapshots_tmp
+
+# Download and extract the snapshot
+cd ~/grid_snapshots_tmp
+rsync -Lv --progress --partial rsync://bknd.snapshot.grid.tf:34873/gridsnapshots/tfchain-mainnet-validator-latest.tar.gz .
+tar -I pigz -xf tfchain-mainnet-validator-latest.tar.gz -C /srv/tfchain/chains/tfchain_mainnet/db/
+rm tfchain-mainnet-validator-latest.tar.gz
+
+# Clean up
+cd ~
+rm -r ~/grid_snapshots_tmp
+```
+
+> Note: `pigz` is required for parallel decompression (`sudo apt install pigz`). The snapshot path and name may differ per network — the example above is for mainnet. Adjust the path for other networks (e.g., `tfchain_testnet`).
+
+After restoring the snapshot, start the node normally (without `--sync warp`) to catch up with any remaining blocks.
+
+---
 
 Replace `<NETWORK>` with your target network (`main`, `test`, `qanet`, or `dev`).
 
@@ -159,6 +188,8 @@ docker run --rm \
 Both AURA and GRANDPA keys are derived from the **same mnemonic** but use different cryptographic schemes (sr25519 vs ed25519), which produces different key pairs.
 
 The `key insert` command creates key files in the keystore directory at `<base-path>/chains/<chain_id>/keystore/` (or at `--keystore-path` if specified).
+
+> **Security note:** If you pass the mnemonic via an environment variable or a file (e.g., `.secrets.env` in a docker-compose setup), **remove it immediately after key insertion.** The mnemonic should only be stored encrypted in a password manager, never left in plaintext on disk.
 
 ### Option B: Copy the Keystore Directory
 
@@ -305,6 +336,8 @@ docker run -d --name tfchain-validator \
 ```
 
 Consider setting up a [systemd service](../misc/adding_validators.md#24-managing-tfchain-with-systemd-optional) to auto-restart the node on failure or reboot.
+
+For docker-compose based deployments, see the [grid_deployment validator guide](https://github.com/threefoldtech/grid_deployment/tree/development/tfchain-validator) which provides ready-made compose files and init scripts.
 
 ## 6. Verify the Migration
 
