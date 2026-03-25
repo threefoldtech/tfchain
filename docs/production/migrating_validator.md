@@ -51,11 +51,13 @@ cargo build --release
 # Binary is at ./target/release/tfchain
 ```
 
-Or use Docker:
+Or use Docker (check the [grid_deployment .env](https://github.com/threefoldtech/grid_deployment/tree/development/tfchain-validator) for the current recommended image version):
 
 ```bash
-docker pull ghcr.io/threefoldtech/tfchain:latest
+docker pull ghcr.io/threefoldtech/tfchain:<version>
 ```
+
+> Note: The Docker examples below use `/path/to/storage` as a placeholder for the host directory mounted into the container. If you are following the [grid_deployment](https://github.com/threefoldtech/grid_deployment/tree/development/tfchain-validator) setup, use `/srv/tfchain/` to stay consistent with its docker-compose files and snapshot scripts.
 
 ## 2. Sync the New Node
 
@@ -81,11 +83,14 @@ Start the node with `--sync warp` to download finality proofs and the latest sta
 
 ```bash
 docker run -d --name tfchain-sync \
+  --restart unless-stopped \
   -v /path/to/storage:/storage \
-  ghcr.io/threefoldtech/tfchain:latest \
+  -p 30333:30333 \
+  ghcr.io/threefoldtech/tfchain:<version> \
   --base-path /storage \
   --chain /etc/chainspecs/<NETWORK>/chainSpecRaw.json \
   --name "YourNode-syncing" \
+  --port 30333 \
   --blocks-pruning archive \
   --state-pruning 1000 \
   --sync warp
@@ -165,7 +170,7 @@ The `--suri` parameter accepts a mnemonic phrase directly:
 # Insert AURA key
 docker run --rm \
   -v /path/to/storage:/storage \
-  ghcr.io/threefoldtech/tfchain:latest \
+  ghcr.io/threefoldtech/tfchain:<version> \
   key insert \
   --base-path /storage \
   --chain /etc/chainspecs/<NETWORK>/chainSpecRaw.json \
@@ -176,7 +181,7 @@ docker run --rm \
 # Insert GRANDPA key
 docker run --rm \
   -v /path/to/storage:/storage \
-  ghcr.io/threefoldtech/tfchain:latest \
+  ghcr.io/threefoldtech/tfchain:<version> \
   key insert \
   --base-path /storage \
   --chain /etc/chainspecs/<NETWORK>/chainSpecRaw.json \
@@ -323,13 +328,18 @@ Once the old node is stopped and session keys are in place on the new machine:
 
 ```bash
 docker run -d --name tfchain-validator \
+  --restart unless-stopped \
   -v /path/to/storage:/storage \
-  ghcr.io/threefoldtech/tfchain:latest \
+  -p 30333:30333 \
+  -p 9615:9615 \
+  ghcr.io/threefoldtech/tfchain:<version> \
   --base-path /storage \
   --chain /etc/chainspecs/<NETWORK>/chainSpecRaw.json \
   --validator \
   --node-key "<node_private_key>" \
   --name "YourValidatorName" \
+  --port 30333 \
+  --prometheus-external \
   --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1' \
   --blocks-pruning archive \
   --state-pruning 1000
