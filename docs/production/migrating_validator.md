@@ -116,6 +116,8 @@ rm -r ~/grid_snapshots_tmp
 ```
 
 > Note: `pigz` is required for parallel decompression (`sudo apt install pigz`). The snapshot path and name may differ per network — the example above is for mainnet. Adjust the path for other networks (e.g., `tfchain_testnet`).
+>
+> The validator snapshot is a **pruned state** snapshot (`--state-pruning 1000 --blocks-pruning archive`), matching the recommended validator configuration. It is not suitable for archive nodes that need full historical state.
 
 After restoring the snapshot, start the node normally (without `--sync warp`) to catch up with any remaining blocks.
 
