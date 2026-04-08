@@ -134,7 +134,7 @@ the source field set contains all fields which are included in the source object
 | Instance_public_key | string | yes | Instance public key which you can use to filter logs by instance |
 | Bridge_wallet_address | string | yes | The bridge account address which you can use to filter logs by bridge |
 | Stellar_network | string | yes | Stellar network name which you can use to filter logs by environment |
-| Tfchain_url | []string | yes | The urls of the substrate rpc node which you can use to filter logs by environment |
+| Tfchain_urls | []string | yes | The urls of the substrate rpc nodes which you can use to filter logs by environment |
 
 #### Event-specific fields:
 
@@ -956,7 +956,7 @@ the filtered result would be similar to the one below:
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
     "event_action": "payment_received",
@@ -978,7 +978,7 @@ the filtered result would be similar to the one below:
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
     "event_action": "transfer_initiated",
@@ -997,7 +997,7 @@ the filtered result would be similar to the one below:
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
     "event_action": "mint_proposed",
@@ -1018,7 +1018,7 @@ the filtered result would be similar to the one below:
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
     "event_action": "mint_completed",
@@ -1034,7 +1034,7 @@ the filtered result would be similar to the one below:
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
     "event_action": "transfer_completed",
@@ -1073,7 +1073,7 @@ This time, the transfer was not completed on the other network and was instead r
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "10",
     "event_action": "event_burn_tx_created_received",
@@ -1089,7 +1089,7 @@ This time, the transfer was not completed on the other network and was instead r
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "10",
     "event_action": "transfer_initiated",
@@ -1108,7 +1108,7 @@ This time, the transfer was not completed on the other network and was instead r
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "10",
     "event_action": "mint_proposed",
@@ -1129,7 +1129,7 @@ This time, the transfer was not completed on the other network and was instead r
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "10",
     "event_action": "mint_completed",
@@ -1145,7 +1145,7 @@ This time, the transfer was not completed on the other network and was instead r
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "10",
     "event_action": "transfer_completed",
@@ -1181,7 +1181,7 @@ For a more simplified view, you can filter events by the transfer category to di
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "13",
     "event_action": "event_burn_tx_created_received",
@@ -1197,7 +1197,7 @@ For a more simplified view, you can filter events by the transfer category to di
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "13",
     "event_action": "transfer_initiated",
@@ -1216,7 +1216,7 @@ For a more simplified view, you can filter events by the transfer category to di
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "13",
     "event_action": "withdraw_proposed",
@@ -1237,7 +1237,7 @@ For a more simplified view, you can filter events by the transfer category to di
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "13",
     "event_action": "event_burn_tx_ready_received",
@@ -1253,7 +1253,7 @@ For a more simplified view, you can filter events by the transfer category to di
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "13",
     "event_action": "stellar_transaction_submitted",
@@ -1272,7 +1272,7 @@ For a more simplified view, you can filter events by the transfer category to di
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "13",
     "event_action": "withdraw_completed",
@@ -1288,7 +1288,7 @@ For a more simplified view, you can filter events by the transfer category to di
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "13",
     "event_action": "transfer_completed",
@@ -1322,7 +1322,7 @@ Also Upon reviewing the `refund_proposed` event, we found that the `reason` fiel
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
     "event_action": "payment_received",
@@ -1344,7 +1344,7 @@ Also Upon reviewing the `refund_proposed` event, we found that the `reason` fiel
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
     "event_action": "transfer_initiated",
@@ -1363,7 +1363,7 @@ Also Upon reviewing the `refund_proposed` event, we found that the `reason` fiel
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
     "event_action": "refund_proposed",
@@ -1382,7 +1382,7 @@ Also Upon reviewing the `refund_proposed` event, we found that the `reason` fiel
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
     "event_action": "event_refund_tx_ready_received",
@@ -1398,7 +1398,7 @@ Also Upon reviewing the `refund_proposed` event, we found that the `reason` fiel
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
     "event_action": "stellar_transaction_submitted",
@@ -1417,7 +1417,7 @@ Also Upon reviewing the `refund_proposed` event, we found that the `reason` fiel
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
     "event_action": "refund_completed",
@@ -1433,7 +1433,7 @@ Also Upon reviewing the `refund_proposed` event, we found that the `reason` fiel
       "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
       "Stellar_network": "testnet",
-      "Tfchain_url": "ws://localhost:9944"
+      "Tfchain_urls": ["ws://localhost:9944"]
     },
     "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
     "event_action": "transfer_completed",

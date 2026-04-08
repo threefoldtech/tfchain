@@ -18,7 +18,7 @@ func main() {
 	var bridgeCfg pkg.BridgeConfig
 
 	var debug bool
-	flag.StringArrayVar(&bridgeCfg.TfchainURL, "tfchainurl", []string{}, "Tfchain websocket url")
+	flag.StringArrayVar(&bridgeCfg.TfchainURLs, "tfchainurl", []string{}, "Tfchain websocket urls")
 	flag.StringVar(&bridgeCfg.TfchainSeed, "tfchainseed", "", "Tfchain secret seed")
 	flag.StringVar(&bridgeCfg.StellarBridgeAccount, "bridgewallet", "", "stellar bridge wallet")
 	flag.StringVar(&bridgeCfg.StellarSeed, "secret", "", "stellar secret")
@@ -51,7 +51,7 @@ func main() {
 		Instance_public_key:   address,
 		Bridge_wallet_address: bridgeCfg.StellarBridgeAccount,
 		Stellar_network:       bridgeCfg.StellarNetwork,
-		Tfchain_url:           bridgeCfg.TfchainURL,
+		Tfchain_urls:          bridgeCfg.TfchainURLs,
 	}
 
 	log.Logger = log.Logger.With().Interface("source", sourceLogEntry).Logger()

@@ -3,7 +3,7 @@ package pkg
 import "errors"
 
 type BridgeConfig struct {
-	TfchainURL          []string
+	TfchainURLs         []string
 	TfchainSeed         string
 	RescanBridgeAccount bool
 	PersistencyFile     string

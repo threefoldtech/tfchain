@@ -29,7 +29,7 @@ type Bridge struct {
 }
 
 func NewBridge(ctx context.Context, cfg pkg.BridgeConfig) (*Bridge, string, error) {
-	subClient, err := subpkg.NewSubstrateClient(cfg.TfchainURL, cfg.TfchainSeed)
+	subClient, err := subpkg.NewSubstrateClient(cfg.TfchainURLs, cfg.TfchainSeed)
 	if err != nil {
 		return nil, "", err
 	}
