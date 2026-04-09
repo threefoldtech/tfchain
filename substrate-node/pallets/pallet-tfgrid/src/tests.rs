@@ -1784,6 +1784,141 @@ fn attach_farming_policy_with_certified_node_certification_works() {
 }
 
 #[test]
+fn diy_node_gets_default_policy_when_limit_requires_certification() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+
+        let farm_id = 1;
+        let node_id = 1;
+
+        // Confirm node starts as Diy
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(node.certification, NodeCertification::Diy);
+
+        // Attach farming policy 3 (certified) with node_certification = true
+        let fp = TfgridModule::farming_policies_map(3);
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: fp.id,
+            cu: Some(100),
+            su: Some(100),
+            end: None,
+            node_certification: true,
+            node_count: Some(100),
+        };
+
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            farm_id,
+            Some(limit)
+        ));
+
+        // Diy node should NOT get the certified policy (3) — should fall back
+        // to the best matching default for a Diy node on a Gold farm, which is
+        // policy 1 (Diy + Gold)
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_ne!(
+            node.farming_policy_id, fp.id,
+            "Diy node should not receive certified-only farming policy"
+        );
+        assert_eq!(
+            node.farming_policy_id, 1,
+            "Diy node on Gold farm should get policy 1 (Diy + Gold default)"
+        );
+    });
+}
+
+#[test]
+fn certified_node_gets_limited_policy_when_limit_requires_certification() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+
+        let farm_id = 1;
+        let node_id = 1;
+
+        // Certify the node first
+        assert_ok!(TfgridModule::add_node_certifier(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+        assert_ok!(TfgridModule::set_node_certification(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            NodeCertification::Certified
+        ));
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(node.certification, NodeCertification::Certified);
+
+        // Attach certified-only policy
+        let fp = TfgridModule::farming_policies_map(3);
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: fp.id,
+            cu: Some(100),
+            su: Some(100),
+            end: None,
+            node_certification: true,
+            node_count: Some(100),
+        };
+
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            farm_id,
+            Some(limit)
+        ));
+
+        // Certified node SHOULD get the limited policy
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(
+            node.farming_policy_id, fp.id,
+            "Certified node should receive the certified-only farming policy"
+        );
+    });
+}
+
+#[test]
+fn diy_node_gets_limited_policy_when_no_certification_required() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+
+        let farm_id = 1;
+        let node_id = 1;
+
+        // Confirm node is Diy
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(node.certification, NodeCertification::Diy);
+
+        // Attach policy with node_certification = false (no restriction)
+        let fp = TfgridModule::farming_policies_map(3);
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: fp.id,
+            cu: Some(100),
+            su: Some(100),
+            end: None,
+            node_certification: false,
+            node_count: Some(100),
+        };
+
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            farm_id,
+            Some(limit)
+        ));
+
+        // Diy node should get the limited policy since certification is not required
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(
+            node.farming_policy_id, fp.id,
+            "Diy node should receive limited policy when node_certification is false"
+        );
+    });
+}
+
+#[test]
 fn attach_another_custom_farming_policy_to_farm_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
