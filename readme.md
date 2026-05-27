@@ -126,3 +126,8 @@ In this repository [conventional commits](https://www.conventionalcommits.org/en
 ## Releases
 
 See [releases](./docs/production/releases.md) for more information on how to create or validate a release.
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+Copyright (c) TFTech NV.
