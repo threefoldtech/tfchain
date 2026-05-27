@@ -1,10 +1,10 @@
-# TFChain
+# Ledger Chain
 
 A Substrate-based blockchain that handles node registration, smart contract management, billing, and consensus for decentralized infrastructure operations. It records the canonical state of nodes, deployments, and token transactions across the network.
 
 ## What this is
 
-TFChain is a purpose-built blockchain that serves as the coordination and settlement layer for a decentralized grid of compute, storage, and network resources. It maintains registries of nodes, farms, and twins; manages smart contracts between users and node operators; handles billing based on resource consumption; and provides a governance mechanism for network evolution. The chain also supports cross-chain transfers with Bitcoin, Binance Smart Chain, and Stellar.
+Ledger Chain is a purpose-built blockchain that serves as the coordination and settlement layer for a decentralized grid of compute, storage, and network resources. It maintains registries of nodes, farms, and twins; manages smart contracts between users and node operators; handles billing based on resource consumption; and provides a governance mechanism for network evolution. The chain also supports cross-chain transfers with Bitcoin, Binance Smart Chain, and Stellar.
 
 ## What this repository contains
 
@@ -16,8 +16,8 @@ TFChain is a purpose-built blockchain that serves as the coordination and settle
   - `tests` — Integration tests
   - `chainspecs` — Genesis specifications for dev, QA, test, and main networks
   - `charts` — Kubernetes deployment charts
-- **Bridge** — Background service for cross-chain transfers between TFChain TFT and Stellar TFT
-- **Clients** — Language-specific libraries for interacting with TFChain
+- **Bridge** — Background service for cross-chain transfers between Ledger Chain TFT and Stellar TFT
+- **Clients** — Language-specific libraries for interacting with Ledger Chain
   - `tfchain-client-js` — JavaScript client
   - `tfchain-client-rs` — Rust client (in progress)
   - `tfchain-client-go` — Go client
@@ -28,7 +28,7 @@ TFChain is a purpose-built blockchain that serves as the coordination and settle
 
 ## Role in the stack
 
-TFChain is the ledger and coordination layer of the infrastructure stack. It is the source of truth for:
+Ledger Chain is the ledger and coordination layer of the infrastructure stack. It is the source of truth for:
 
 - **Node registry** — Which nodes exist, their capabilities, and their operational status
 - **Farm registry** — Collections of nodes operated by independent providers
@@ -40,7 +40,7 @@ Nodes run ZOS / Zero-OS and report their state to the chain. Users interact with
 
 ## ZOS / Zero-OS
 
-ZOS, also known as Zero-OS, is the operating system layer used to run and manage nodes. It provides the low-level runtime environment for workloads, networking, storage, and automation. Nodes running ZOS register themselves on TFChain and receive deployment instructions through the chain.
+ZOS, also known as Zero-OS, is the operating system layer used to run and manage nodes. It provides the low-level runtime environment for workloads, networking, storage, and automation. Nodes running ZOS register themselves on Ledger Chain and receive deployment instructions through the chain.
 
 ## Relation to ThreeFold
 
@@ -52,7 +52,7 @@ This repository is owned and maintained by TF-Tech NV, a Belgian company respons
 
 ## Runtime architecture
 
-The TFChain runtime is built using FRAME and consists of pallets from Substrate and custom pallets in `pallets/`.
+The Ledger Chain runtime is built using FRAME and consists of pallets from Substrate and custom pallets in `pallets/`.
 
 ### Substrate pallets
 
@@ -76,7 +76,7 @@ The TFChain runtime is built using FRAME and consists of pallets from Substrate 
 - **pallet-runtime-upgrade** — Configurable-origin wrapper for `set_code` extrinsics
 - **pallet-smart-contract** — Creation, billing, and deletion of smart contracts
 - **pallet-tfgrid** — Registry for nodes, farms, and twins
-- **pallet-tft-bridge** — Bridging between TFChain TFT and Stellar TFT
+- **pallet-tft-bridge** — Bridging between Ledger Chain TFT and Stellar TFT
 - **pallet-tft-price** — TFT price oracle
 - **substrate-validator-set** — Authority addition and removal
 - **pallet-validator** — Validator management (deprecated)
@@ -84,11 +84,11 @@ The TFChain runtime is built using FRAME and consists of pallets from Substrate 
 
 ## Docs
 
-See [docs](./docs/readme.md) for more information on how to work with TFChain.
+See [docs](./docs/readme.md) for more information on how to work with Ledger Chain.
 
 ## Bridge
 
-See [bridge](./bridge/README.md) for more information on the bridge between TFChain TFT and Stellar TFT.
+See [bridge](./bridge/README.md) for more information on the bridge between Ledger Chain TFT and Stellar TFT.
 
 ## Scripts
 
