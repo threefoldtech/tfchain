@@ -30,3 +30,9 @@ var ErrTransactionAlreadyRefunded = errors.New("transaction is already refunded"
 var ErrTransactionAlreadyMinted = errors.New("transaction is already minted")
 var ErrTransactionAlreadyBurned = errors.New("transaction is already burned")
 var ErrNoSignatures = errors.New("transaction has no signatures")
+
+// ErrStellarTransactionUndeliverable signals that a Stellar submission failed
+// with a permanent, target-side error (e.g. the destination removed its
+// trustline) that can never succeed on retry. The refund must be quarantined
+// and the bridge must continue, rather than crashing in a retry loop.
+var ErrStellarTransactionUndeliverable = errors.New("stellar transaction permanently undeliverable to target account")
