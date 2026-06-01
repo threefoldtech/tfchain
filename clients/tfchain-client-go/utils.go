@@ -16,7 +16,6 @@ var (
 	Gigabyte     = 1024 * 1024 * 1024
 )
 
-
 type CallResponse struct {
 	Hash     types.Hash
 	Events   *EventRecords
