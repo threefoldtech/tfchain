@@ -1,7 +1,6 @@
 package substrate
 
 import (
-	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -16,275 +15,6 @@ var (
 	ErrIsUsurped = fmt.Errorf("is usurped")
 	Gigabyte     = 1024 * 1024 * 1024
 )
-
-// map from module index to error list
-// https://github.com/threefoldtech/tfchain/blob/development/substrate-node/runtime/src/lib.rs#L697
-var moduleErrors = [][]string{
-	nil,                       // 0 -> System
-	nil,                       // 1 -> Timestamp
-	nil,                       // 2
-	nil,                       // 3 -> Utility
-	nil,                       // 4 -> Scheduler
-	nil,                       // 5
-	nil,                       // 6
-	nil,                       // 7
-	nil,                       // 8
-	nil,                       // 9
-	nil,                       // 10 -> ValidatorSet
-	nil,                       // 11  Session
-	nil,                       // 12 -> Aura
-	nil,                       // 13 -> Grandpa
-	nil,                       // 14 -> Historical
-	nil,                       // 15 -> Authorship
-	nil,                       // 16
-	nil,                       // 17
-	nil,                       // 18
-	nil,                       // 19
-	nil,                       // 20 -> Balances
-	nil,                       // 21 -> TransactionPayment
-	nil,                       // 22
-	nil,                       // 23
-	nil,                       // 24
-	tfgridModuleErrors,        // 25 -> TfgridModule
-	smartContractModuleErrors, // 26 -> SmartContractModule
-	tftBridgeModuleErrors,     // 27 -> TFTBridgeModule
-	nil,                       // 28 -> TftPriceModule
-	nil,                       // 29 -> BurningModule
-	nil,                       // 30 -> TFKVStore
-	nil,                       // 31 -> RuntimeUpgrade
-	nil,                       // 32
-	nil,                       // 33
-	nil,                       // 34
-	nil,                       // 35
-	nil,                       // 36
-	nil,                       // 37
-	nil,                       // 38
-	nil,                       // 39
-	nil,                       // 40 -> Council
-	nil,                       // 41 -> CouncilMembership
-	nil,                       // 42
-	nil,                       // 43 -> Dao
-	nil,                       // 44
-	nil,                       // 45
-	nil,                       // 46
-	nil,                       // 47
-	nil,                       // 48
-	nil,                       // 49
-	nil,                       // 50 -> Validator
-}
-
-// https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-smart-contract/src/lib.rs#L336
-var smartContractModuleErrors = []string{
-	"TwinNotExists",
-	"NodeNotExists",
-	"FarmNotExists",
-	"FarmHasNotEnoughPublicIPs",
-	"FarmHasNotEnoughPublicIPsFree",
-	"FailedToReserveIP",
-	"FailedToFreeIPs",
-	"ContractNotExists",
-	"TwinNotAuthorizedToUpdateContract",
-	"TwinNotAuthorizedToCancelContract",
-	"NodeNotAuthorizedToDeployContract",
-	"NodeNotAuthorizedToComputeReport",
-	"PricingPolicyNotExists",
-	"ContractIsNotUnique",
-	"ContractWrongBillingLoopIndex",
-	"NameExists",
-	"NameNotValid",
-	"InvalidContractType",
-	"TFTPriceValueError",
-	"NotEnoughResourcesOnNode",
-	"NodeNotAuthorizedToReportResources",
-	"MethodIsDeprecated",
-	"NodeHasActiveContracts",
-	"NodeHasRentContract",
-	"FarmIsNotDedicated",
-	"NodeNotAvailableToDeploy",
-	"CannotUpdateContractInGraceState",
-	"NumOverflow",
-	"OffchainSignedTxCannotSign",
-	"OffchainSignedTxAlreadySent",
-	"OffchainSignedTxNoLocalAccountAvailable",
-	"NameContractNameTooShort",
-	"NameContractNameTooLong",
-	"InvalidProviderConfiguration",
-	"NoSuchSolutionProvider",
-	"SolutionProviderNotApproved",
-	"TwinNotAuthorized",
-	"ServiceContractNotExists",
-	"ServiceContractCreationNotAllowed",
-	"ServiceContractModificationNotAllowed",
-	"ServiceContractApprovalNotAllowed",
-	"ServiceContractRejectionNotAllowed",
-	"ServiceContractBillingNotApprovedByBoth",
-	"ServiceContractBillingVariableAmountTooHigh",
-	"ServiceContractBillMetadataTooLong",
-	"ServiceContractMetadataTooLong",
-	"ServiceContractNotEnoughFundsToPayBill",
-	"CanOnlyIncreaseFrequency",
-	"IsNotAnAuthority",
-	"WrongAuthority",
-	"UnauthorizedToChangeSolutionProviderId",
-	"UnauthorizedToSetExtraFee",
-	"RewardDistributionError",
-	"ContractPaymentStateNotExists",
-	"OnlyTwinAdminCanDeployOnThisNode",
-}
-
-// https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-tfgrid/src/lib.rs#L442
-var tfgridModuleErrors = []string{
-	"NoneValue",
-	"StorageOverflow",
-	"CannotCreateNode",
-	"NodeNotExists",
-	"NodeWithTwinIdExists",
-	"CannotDeleteNode",
-	"NodeDeleteNotAuthorized",
-	"NodeUpdateNotAuthorized",
-	"FarmExists",
-	"FarmNotExists",
-	"CannotCreateFarmWrongTwin",
-	"CannotUpdateFarmWrongTwin",
-	"CannotDeleteFarm",
-	"CannotDeleteFarmWithPublicIPs",
-	"CannotDeleteFarmWithNodesAssigned",
-	"CannotDeleteFarmWrongTwin",
-	"IpExists",
-	"IpNotExists",
-	"EntityWithNameExists",
-	"EntityWithPubkeyExists",
-	"EntityNotExists",
-	"EntitySignatureDoesNotMatch",
-	"EntityWithSignatureAlreadyExists",
-	"CannotUpdateEntity",
-	"CannotDeleteEntity",
-	"SignatureLengthIsIncorrect",
-	"TwinExists",
-	"TwinNotExists",
-	"TwinWithPubkeyExists",
-	"CannotCreateTwin",
-	"UnauthorizedToUpdateTwin",
-	"TwinCannotBoundToItself",
-	"PricingPolicyExists",
-	"PricingPolicyNotExists",
-	"PricingPolicyWithDifferentIdExists",
-	"CertificationCodeExists",
-	"FarmingPolicyAlreadyExists",
-	"FarmPayoutAdressAlreadyRegistered",
-	"FarmerDoesNotHaveEnoughFunds",
-	"UserDidNotSignTermsAndConditions",
-	"FarmerDidNotSignTermsAndConditions",
-	"FarmerNotAuthorized",
-	"InvalidFarmName",
-	"AlreadyCertifier",
-	"NotCertifier",
-	"NotAllowedToCertifyNode",
-	"FarmingPolicyNotExists",
-	"RelayTooShort",
-	"RelayTooLong",
-	"InvalidRelay",
-	"FarmNameTooShort",
-	"FarmNameTooLong",
-	"InvalidPublicIP",
-	"PublicIPTooShort",
-	"PublicIPTooLong",
-	"GatewayIPTooShort",
-	"GatewayIPTooLong",
-	"IP4TooShort",
-	"IP4TooLong",
-	"InvalidIP4",
-	"GW4TooShort",
-	"GW4TooLong",
-	"InvalidGW4",
-	"IP6TooShort",
-	"IP6TooLong",
-	"InvalidIP6",
-	"GW6TooShort",
-	"GW6TooLong",
-	"InvalidGW6",
-	"DomainTooShort",
-	"DomainTooLong",
-	"InvalidDomain",
-	"MethodIsDeprecated",
-	"InterfaceNameTooShort",
-	"InterfaceNameTooLong",
-	"InvalidInterfaceName",
-	"InterfaceMacTooShort",
-	"InterfaceMacTooLong",
-	"InvalidMacAddress",
-	"InterfaceIpTooShort",
-	"InterfaceIpTooLong",
-	"InvalidInterfaceIP",
-	"InvalidZosVersion",
-	"FarmingPolicyExpired",
-	"InvalidHRUInput",
-	"InvalidSRUInput",
-	"InvalidCRUInput",
-	"InvalidMRUInput",
-	"LatitudeInputTooShort",
-	"LatitudeInputTooLong",
-	"InvalidLatitudeInput",
-	"LongitudeInputTooShort",
-	"LongitudeInputTooLong",
-	"InvalidLongitudeInput",
-	"CountryNameTooShort",
-	"CountryNameTooLong",
-	"InvalidCountryName",
-	"CityNameTooShort",
-	"CityNameTooLong",
-	"InvalidCityName",
-	"InvalidCountryCityPair",
-	"SerialNumberTooShort",
-	"SerialNumberTooLong",
-	"InvalidSerialNumber",
-	"DocumentLinkInputTooShort",
-	"DocumentLinkInputTooLong",
-	"InvalidDocumentLinkInput",
-	"DocumentHashInputTooShort",
-	"DocumentHashInputTooLong",
-	"InvalidDocumentHashInput",
-	"InvalidPublicConfig",
-	"UnauthorizedToChangePowerTarget",
-	"NodeHasActiveContracts",
-	"InvalidRelayAddress",
-	"InvalidTimestampHint",
-	"InvalidStorageInput",
-	"TwinTransferRequestNotFound",
-	"TwinTransferNewAccountHasTwin",
-	"TwinTransferPendingExists",
-	"NodeV3BillingOptOutAlreadyEnabled",
-	"AlreadyTwinAdmin",
-	"NotTwinAdmin",
-	"TwinAdminListFull",
-	"NodeNotOptedOutOfV3Billing",
-	"NodeV3OptOutMetadataTooLong",
-}
-
-// https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-tft-bridge/src/lib.rs#L152
-var tftBridgeModuleErrors = []string{
-	"ValidatorExists",
-	"ValidatorNotExists",
-	"TransactionValidatorExists",
-	"TransactionValidatorNotExists",
-	"MintTransactionExists",
-	"MintTransactionAlreadyExecuted",
-	"MintTransactionNotExists",
-	"BurnTransactionExists",
-	"BurnTransactionNotExists",
-	"BurnSignatureExists",
-	"EnoughBurnSignaturesPresent",
-	"RefundSignatureExists",
-	"BurnTransactionAlreadyExecuted",
-	"RefundTransactionNotExists",
-	"RefundTransactionAlreadyExecuted",
-	"EnoughRefundSignaturesPresent",
-	"NotEnoughBalanceToSwap",
-	"AmountIsLessThanWithdrawFee",
-	"AmountIsLessThanDepositFee",
-	"WrongParametersProvided",
-	"InvalidStellarPublicKey",
-}
 
 type CallResponse struct {
 	Hash     types.Hash
@@ -536,20 +266,19 @@ func (s *Substrate) checkForError(callResponse *CallResponse) error {
 			if err != nil {
 				return err
 			}
-			b := make([]byte, 4)
-			for i, v := range e.DispatchError.ModuleError.Error {
-				b[i] = byte(v)
-			}
-			errIndex := binary.LittleEndian.Uint32(b[:])
 			if *accId == who {
-				if int(e.DispatchError.ModuleError.Index) < len(moduleErrors) {
-					if int(errIndex) >= len(moduleErrors[e.DispatchError.ModuleError.Index]) || moduleErrors[e.DispatchError.ModuleError.Index] == nil {
-						return fmt.Errorf("module error (%d) with unknown code %d occurred, please update the module error list", e.DispatchError.ModuleError.Index, e.DispatchError.ModuleError.Error)
-					}
-					return errors.New(moduleErrors[e.DispatchError.ModuleError.Index][errIndex])
-				} else {
-					return fmt.Errorf("unknown module error (%d) with code %d occurred, please create the module error list", e.DispatchError.ModuleError.Index, e.DispatchError.ModuleError.Error)
+				metaErr, err := s.meta.FindError(
+					types.U8(e.DispatchError.ModuleError.Index),
+					e.DispatchError.ModuleError.Error,
+				)
+				if err != nil {
+					return fmt.Errorf("module %d error index %v: %w",
+						e.DispatchError.ModuleError.Index,
+						e.DispatchError.ModuleError.Error,
+						err,
+					)
 				}
+				return errors.New(metaErr.Name)
 			}
 		}
 	}
