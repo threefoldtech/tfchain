@@ -276,6 +276,58 @@ func (w *StellarWallet) createTransaction(ctx context.Context, txn txnbuild.Tran
 	return tx, nil
 }
 
+// terminalSubmitOperationCodes are Horizon payment operation result codes that
+// represent a target-side failure the bridge can never resolve on its own:
+// delivery requires a deliberate action by the destination owner (add a
+// trustline, create the account, get issuer authorization) that the bridge has
+// no visibility into. A refund hitting one of these is forfeited rather than
+// retried forever.
+//
+// Deliberately excluded:
+//   - op_line_full: the destination CAN receive the asset but is momentarily at
+//     its trustline limit; it may succeed once the balance is spent down, so it
+//     is postponed and retried rather than forfeited.
+//   - op_underfunded / op_src_no_trust / op_src_not_authorized: bridge-side
+//     (source) problems that must alert/halt, never forfeit a user's refund.
+//   - op_malformed / op_no_issuer: bridge bug or global asset misconfiguration
+//     affecting all transactions, not a per-target condition.
+var terminalSubmitOperationCodes = map[string]struct{}{
+	"op_no_trust":       {}, // destination has no trustline for the asset
+	"op_no_destination": {}, // destination account does not exist
+	"op_not_authorized": {}, // destination is not authorized to hold the asset
+}
+
+// isTerminalSubmitError reports whether a Stellar submission failure is a
+// target-side error that the bridge cannot resolve by retrying, and so should
+// be forfeited rather than postponed.
+func isTerminalSubmitError(codes *hProtocol.TransactionResultCodes) bool {
+	if codes == nil {
+		return false
+	}
+	for _, op := range codes.OperationCodes {
+		if _, ok := terminalSubmitOperationCodes[op]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+// isInsufficientFundsError reports whether a Stellar submission failed because
+// the bridge (source) account is out of funds. This is an operational
+// condition that requires the bridge wallet to be refilled; it is not the
+// target's fault and the transaction must not be forfeited.
+func isInsufficientFundsError(codes *hProtocol.TransactionResultCodes) bool {
+	if codes == nil {
+		return false
+	}
+	for _, op := range codes.OperationCodes {
+		if op == "op_underfunded" {
+			return true
+		}
+	}
+	return false
+}
+
 func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Transaction) error {
 	client, err := w.getHorizonClient()
 	if err != nil {
@@ -287,8 +339,26 @@ func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Tra
 	if err != nil {
 		log.Info().Msg(err.Error())
 		if hError, ok := err.(*horizonclient.Error); ok {
-			if ok {
-				log.Err(err).Msgf("error while submitting transaction %+v", hError.Problem.Extras)
+			log.Err(err).Msgf("error while submitting transaction %+v", hError.Problem.Extras)
+			if codes, rcErr := hError.ResultCodes(); rcErr == nil {
+				// A target-side failure (e.g. the destination removed its trustline)
+				// can never succeed on retry. Surface it as a typed error so the
+				// caller can quarantine the transaction instead of retrying forever.
+				// The account sequence is irrelevant here, so don't reset it.
+				if isTerminalSubmitError(codes) {
+					return errors.Wrapf(pkg.ErrStellarTransactionUndeliverable, "operation result codes %v", codes.OperationCodes)
+				}
+				// The bridge account is out of funds. This is recoverable (the
+				// transaction will be retried) but needs operator attention to refill
+				// the bridge wallet, so raise an alert rather than only postponing.
+				if isInsufficientFundsError(codes) {
+					log.Warn().
+						Str("trace_id", fmt.Sprint(ctx.Value(TraceIdKey{}))).
+						Str("event_action", "bridge_account_underfunded").
+						Str("event_kind", "alert").
+						Str("category", "vault").
+						Msg("the bridge account has insufficient funds to submit the transaction; it will be retried but the bridge wallet must be refilled")
+				}
 			}
 		}
 		errSequence := w.resetAccountSequence()
