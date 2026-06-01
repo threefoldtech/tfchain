@@ -196,18 +196,27 @@ impl<T: Config> Pallet<T> {
 
         // If there is a farming policy defined on the
         // farm policy limits, use that one
-        match farm.farming_policy_limits {
+        match farm.farming_policy_limits.clone() {
             Some(mut limits) => {
                 ensure!(
                     FarmingPoliciesMap::<T>::contains_key(limits.farming_policy_id),
                     Error::<T>::FarmingPolicyNotExists
                 );
+
+                // If the policy limit requires certified nodes, non-certified
+                // nodes get a default policy matching their certification.
+                if limits.node_certification
+                    && node.certification != NodeCertification::Certified
+                {
+                    return Self::get_default_farming_policy_for(node, &farm);
+                }
+
                 match limits.end {
                     Some(end_timestamp) => {
                         let now =
                             <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
                         if now > end_timestamp {
-                            return Self::get_default_farming_policy();
+                            return Self::get_default_farming_policy_for(node, &farm);
                         }
                     }
                     None => (),
@@ -217,7 +226,7 @@ impl<T: Config> Pallet<T> {
                     Some(cu_limit) => {
                         let cu = node.resources.get_cu();
                         if cu > cu_limit {
-                            return Self::get_default_farming_policy();
+                            return Self::get_default_farming_policy_for(node, &farm);
                         }
                         limits.cu = Some(cu_limit - cu);
                     }
@@ -228,7 +237,7 @@ impl<T: Config> Pallet<T> {
                     Some(su_limit) => {
                         let su = node.resources.get_su();
                         if su > su_limit {
-                            return Self::get_default_farming_policy();
+                            return Self::get_default_farming_policy_for(node, &farm);
                         }
                         limits.su = Some(su_limit - su);
                     }
@@ -238,7 +247,7 @@ impl<T: Config> Pallet<T> {
                 match limits.node_count {
                     Some(node_count) => {
                         if node_count == 0 {
-                            return Self::get_default_farming_policy();
+                            return Self::get_default_farming_policy_for(node, &farm);
                         }
                         limits.node_count = Some(node_count - 1);
                     }
@@ -288,21 +297,25 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    // Set the default farming policy as the last best certified
-    // farming policy amoung all the default farming policies
-    fn get_default_farming_policy(
+    // Select the best matching default farming policy for the given node
+    // and farm certification levels.
+    fn get_default_farming_policy_for(
+        node: &TfgridNode<T>,
+        farm: &FarmInfoOf<T>,
     ) -> Result<types::FarmingPolicy<BlockNumberFor<T>>, DispatchErrorWithPostInfo> {
         let mut policies: Vec<types::FarmingPolicy<BlockNumberFor<T>>> =
             FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
 
         policies.sort();
-        // by reversing sorted policies we place default policies first
-        // and then rank them from more certified to less certified
         policies.reverse();
 
         let possible_policy = policies
             .into_iter()
-            .filter(|policy| policy.default)
+            .filter(|policy| {
+                policy.default
+                    && policy.node_certification <= node.certification
+                    && policy.farm_certification <= farm.certification
+            })
             .take(1)
             .next();
 
