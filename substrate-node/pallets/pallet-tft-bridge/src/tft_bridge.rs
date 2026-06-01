@@ -120,6 +120,15 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         Self::check_if_validator_exists(validator.clone())?;
 
+        // check if it already has been executed in the past, mirroring the mint
+        // and burn paths. Without this guard a refund that was already executed
+        // (e.g. quarantined by the bridge) would be silently recreated, re-arming
+        // the on_finalize retry loop.
+        ensure!(
+            !ExecutedRefundTransactions::<T>::contains_key(tx_hash.clone()),
+            Error::<T>::RefundTransactionAlreadyExecuted
+        );
+
         // make sure we don't duplicate the transaction
         // ensure!(!MintTransactions::<T>::contains_key(tx_id.clone()), Error::<T>::MintTransactionExists);
         if RefundTransactions::<T>::contains_key(tx_hash.clone()) {

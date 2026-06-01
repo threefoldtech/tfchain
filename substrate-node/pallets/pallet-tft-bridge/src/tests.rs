@@ -610,6 +610,52 @@ fn refund_signature_after_expiry_resets_block_and_survives() {
     });
 }
 
+#[test]
+fn creating_refund_for_already_executed_transaction_fails() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(TFTBridgeModule::add_bridge_validator(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+
+        let tx_hash = b"some_tx".to_vec();
+
+        // Create the refund and add a signature. With a single validator this
+        // immediately reaches the signature threshold.
+        assert_ok!(TFTBridgeModule::create_refund_transaction_or_add_sig(
+            RuntimeOrigin::signed(alice()),
+            tx_hash.clone(),
+            b"some_target".to_vec(),
+            2,
+            b"some_signature".to_vec(),
+            b"some_pub_key".to_vec(),
+            0,
+        ));
+
+        // Mark it executed: moves it from RefundTransactions to
+        // ExecutedRefundTransactions.
+        assert_ok!(TFTBridgeModule::set_refund_transaction_executed(
+            RuntimeOrigin::signed(alice()),
+            tx_hash.clone(),
+        ));
+
+        // Re-creating the same refund must be rejected, not silently recreated
+        // (which would re-arm the on_finalize retry/crash loop).
+        assert_noop!(
+            TFTBridgeModule::create_refund_transaction_or_add_sig(
+                RuntimeOrigin::signed(alice()),
+                tx_hash.clone(),
+                b"some_target".to_vec(),
+                2,
+                b"some_signature".to_vec(),
+                b"some_pub_key".to_vec(),
+                0,
+            ),
+            Error::<TestRuntime>::RefundTransactionAlreadyExecuted
+        );
+    });
+}
+
 fn prepare_validators() {
     TFTBridgeModule::add_bridge_validator(RawOrigin::Root.into(), alice()).unwrap();
     TFTBridgeModule::add_bridge_validator(RawOrigin::Root.into(), bob()).unwrap();
