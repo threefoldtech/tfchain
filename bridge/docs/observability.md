@@ -59,6 +59,8 @@ For example, if a customer is complaining that their deposit never bridged, you 
 - `event_refund_tx_expired_received`: The bridge instance has received TFChain  `RefundTransactionExpired` event.
 - `refund_skipped`: a refund request skipped by the bridge instance as it has already been refunded.
 - `refund_proposed`: a refund has proposed or signed by the bridge instance.
+- `refund_postponed`: a refund has postponed due to a problem in sending this transaction to the stellar network and will be retried later.
+- `refund_quarantined`: a refund is permanently undeliverable to the target account (e.g. the target removed its trustline, the account no longer exists, or it is not authorized to hold the asset) and has been marked executed on chain so the bridge stops retrying it. The refunded TFT is forfeited.
 - `refund_completed`: a refund has completed and received on the target stellar account.
 
 ##### Withdraw related 
@@ -73,6 +75,7 @@ For example, if a customer is complaining that their deposit never bridged, you 
 ##### Bridge vault account related
 - `payment_received` : This event represents successful payment to the bridge account (a deposit).
 - `stellar_transaction_submitted` : This event represents successful transaction from the bridge account (a refund or a withdraw).
+- `bridge_account_underfunded` : The bridge account has insufficient funds to submit a transaction. The transaction is retried, but the bridge wallet must be refilled by an operator.
 
 ### Metrics:
 
@@ -658,6 +661,38 @@ the source field set contains all fields which are included in the source object
     </tbody>
 </table>
 
+##### refund_quarantined
+
+- kind: alert
+
+- category: refund
+
+<table>
+    <thead>
+        <tr><th colspan="4"><div>refund_quarantined Event Properties</div></th></tr>
+        <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>target</code></td>
+            <td>string</td>
+            <td>yes</td>
+            <td>The stellar target account the refund could not be delivered to. </td>
+        </tr>
+        <tr>
+            <td><code>amount</code></td>
+            <td>number</td>
+            <td>yes</td>
+            <td>The forfeited refund amount in stroops. </td>
+        </tr>
+    </tbody>
+</table>
+
 ##### event_burn_tx_created_received
 
 - kind: event
@@ -903,6 +938,29 @@ the source field set contains all fields which are included in the source object
             <td>string</td>
             <td>yes</td>
             <td>The stellar id of the bridge executed transaction. </td>
+        </tr>            
+    </tbody>
+</table>
+
+##### bridge_account_underfunded
+
+- kind: alert
+
+- category: vault
+
+<table>
+    <thead>
+        <tr><th colspan="4"><div>bridge_account_underfunded Event Properties</div></th></tr>
+        <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="4"><div>No metadata</div></td>
         </tr>            
     </tbody>
 </table>

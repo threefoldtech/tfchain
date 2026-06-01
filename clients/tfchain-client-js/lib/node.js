@@ -126,6 +126,53 @@ async function deleteNode (self, id, callback) {
     .signAndSend(self.key, { nonce }, callback)
 }
 
+// optOutOfV3Billing opts a node out of v3 billing (farmer only, one-way)
+async function optOutOfV3Billing (self, nodeID, callback) {
+  const nonce = await self.api.rpc.system.accountNextIndex(self.address)
+  return self.api.tx.tfgridModule
+    .optOutOfV3Billing(nodeID)
+    .signAndSend(self.key, { nonce }, callback)
+}
+
+// getAllowedTwinAdmins returns the list of accounts allowed to deploy on opted-out nodes
+async function getAllowedTwinAdmins (self) {
+  const result = await self.api.query.tfgridModule.allowedTwinAdmins()
+  return result.toJSON() || []
+}
+
+// isNodeOptedOutOfV3Billing returns true if the node has opted out of v3 billing.
+// Deprecated: use getNodeV3BillingOptOutTimestamp to also retrieve the opt-out time.
+async function isNodeOptedOutOfV3Billing (self, nodeID) {
+  return (await getNodeV3BillingOptOutTimestamp(self, nodeID)) !== null
+}
+
+// getNodeV3BillingOptOutTimestamp returns the Unix timestamp (seconds) at which the node
+// opted out of v3 billing, or null if the node has not opted out.
+async function getNodeV3BillingOptOutTimestamp (self, nodeID) {
+  const result = await self.api.query.tfgridModule.nodeV3BillingOptOut(nodeID)
+  if (result.isNone) return null
+  return result.unwrap().toNumber()
+}
+
+// getNodeV3OptOutMetadata returns the metadata stored for an opted-out node as a string,
+// or null if no metadata has been set.
+async function getNodeV3OptOutMetadata (self, nodeID) {
+  const result = await self.api.query.tfgridModule.nodeV3OptOutMetadata(nodeID)
+  if (result.isNone) return null
+  return Buffer.from(result.unwrap().toU8a(true)).toString('utf8')
+}
+
+// setNodeV3OptOutMetadata sets metadata for an opted-out node (e.g. a v4 account address).
+// The node must already be opted out of v3 billing. Pass empty string to clear.
+// Only the farm owner can call this.
+async function setNodeV3OptOutMetadata (self, nodeID, metadata, callback) {
+  const nonce = await self.api.rpc.system.accountNextIndex(self.address)
+  const bytes = Buffer.from(metadata, 'utf8')
+  return self.api.tx.tfgridModule
+    .setNodeV3OptOutMetadata(nodeID, bytes)
+    .signAndSend(self.key, { nonce }, callback)
+}
+
 async function validateNode (self, farmID) {
   const farm = await getFarm(self, farmID)
   if (farm.id !== farmID) {
@@ -139,5 +186,11 @@ module.exports = {
   getNode,
   getNodeIDByPubkey,
   deleteNode,
-  listNodes
+  listNodes,
+  optOutOfV3Billing,
+  getAllowedTwinAdmins,
+  isNodeOptedOutOfV3Billing,
+  getNodeV3BillingOptOutTimestamp,
+  getNodeV3OptOutMetadata,
+  setNodeV3OptOutMetadata
 }

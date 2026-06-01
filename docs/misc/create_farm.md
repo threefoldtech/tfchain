@@ -7,21 +7,15 @@
 
 With these two steps done - we're good to go and get a devnet 3.0 farm_id
 
-## Step 1: Copy types to clipboard
-
-Open https://raw.githubusercontent.com/threefoldtech/tfgrid-api-client/master/types.json and copy the whole content to your clipboard.
-
-## Step 2: browse to Polkadot UI
+## Step 1: browse to Polkadot UI
 
 Open the following URL based on your setup:
-- Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/settings/developer
-- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/settings/developer
+- Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/accounts
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/accounts
 
-Paste the types in the box and hit `save`
+Note: Custom types are no longer needed. TFChain exposes metadata v14/v15, so Polkadot UI derives all types automatically from on-chain metadata.
 
-![img](./assets/copy_types_1.png)
-
-## Step 3: Create an account
+## Step 2: Create an account
 
 Open the following URL based on your setup:
 - Using a private node:https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/accounts
@@ -33,13 +27,13 @@ Click `I have saved my mnemonic seed safely` and click next and fill in the requ
 
 ![account_creation](./assets/account_create_1.png)
 
-## Step 4: Fund your account
+## Step 3: Fund your account
 
 On the same page, on the left top, hover over `Account` button and click on `Transfer`. First select account `Alice` and secondly select your newly created account from the list. Send any amount to your account (these are just tokens to play around with, they hold no real value).
 
 ![account_transfer](./assets/account_transfer_1.png)
 
-## Step 5: Create a Twin
+## Step 4: Create a Twin
 
 Open the following URL based on your setup:
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics
@@ -51,7 +45,7 @@ Fill in your [Yggdrasil](https://github.com/yggdrasil-network/yggdrasil-go) IPV6
 
 ![create_twin](./assets/create_twin_1.png)
 
-## Step 6: Create a Farm
+## Step 5: Create a Farm
 
 Open the following URL based on your setup:
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics
@@ -67,7 +61,7 @@ Optionally you can also provide public ips on your farm.
 
 ![create_farm](./assets/create_farm_1.png)
 
-## Step 7: query twin ID and Farm ID
+## Step 6: query twin ID and Farm ID
 
 ### Query twin
 

@@ -12,10 +12,200 @@ use tfchain_support::types::{
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
+use crate::pallet::{
+    PendingTransferByTwin, TwinIdByAccountID, TwinTransferRequestID, TwinTransferRequests, Twins,
+};
+use frame_support::traits::ReservableCurrency;
+
 #[test]
 fn test_create_entity_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
+    });
+}
+
+#[test]
+fn twin_transfer_request_happy_path() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin(); // twin 1 owned by alice
+
+        // new owner candidate (bob) accepts T&C
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+
+        // request must be initiated by current owner (alice), specifying new_account (bob)
+        assert_ok!(TfgridModule::_request_twin_transfer(
+            RuntimeOrigin::signed(alice()),
+            bob(),
+        ));
+
+        // storage checks
+        assert_eq!(TwinTransferRequestID::<TestRuntime>::get(), 1);
+        let req = TwinTransferRequests::<TestRuntime>::get(1).expect("request stored");
+        assert_eq!(req.twin_id, 1);
+        assert_eq!(req.from, alice());
+        assert_eq!(req.to, bob());
+        assert_eq!(PendingTransferByTwin::<TestRuntime>::get(1), Some(1));
+    });
+}
+
+// Note: request must be initiated by the new account (signer). No test needed for mismatched initiator.
+
+#[test]
+fn twin_transfer_request_without_tc_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        // Given: an existing twin owned by alice
+        create_twin();
+
+        // When: owner (alice) tries to request transfer to bob (who did NOT accept T&C)
+        // Then: it should fail with UserDidNotSignTermsAndConditions
+        assert_noop!(
+            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(alice()), bob()),
+            Error::<TestRuntime>::UserDidNotSignTermsAndConditions
+        );
+    });
+}
+
+#[test]
+fn twin_transfer_request_new_account_has_twin_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_twin_bob(); // bob already has a twin
+
+        assert_noop!(
+            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(alice()), bob()),
+            Error::<TestRuntime>::TwinTransferNewAccountHasTwin
+        );
+    });
+}
+
+#[test]
+fn twin_transfer_request_duplicate_pending_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+        assert_ok!(TfgridModule::_request_twin_transfer(
+            RuntimeOrigin::signed(alice()),
+            bob(),
+        ));
+
+        // second request while pending should fail
+        assert_noop!(
+            TfgridModule::_request_twin_transfer(RuntimeOrigin::signed(alice()), bob()),
+            Error::<TestRuntime>::TwinTransferPendingExists
+        );
+    });
+}
+
+#[test]
+fn twin_transfer_accept_happy_path_moves_reserved_and_updates_owner() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+
+        // create request id 1
+        assert_ok!(TfgridModule::_request_twin_transfer(
+            RuntimeOrigin::signed(alice()),
+            bob(),
+        ));
+
+        // reserve some balance on alice
+        assert_ok!(<TestRuntime as crate::pallet::Config>::Currency::reserve(
+            &alice(),
+            100
+        ));
+        assert_eq!(
+            <TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&alice()),
+            100
+        );
+
+        // accept by new account (bob)
+        assert_ok!(TfgridModule::_accept_twin_transfer(
+            RuntimeOrigin::signed(bob()),
+            1,
+        ));
+
+        // twin owner updated
+        let twin = Twins::<TestRuntime>::get(&1).expect("twin exists");
+        assert_eq!(twin.account_id, bob());
+
+        // account->twin mapping updated
+        assert_eq!(TwinIdByAccountID::<TestRuntime>::get(&alice()), None);
+        assert_eq!(TwinIdByAccountID::<TestRuntime>::get(&bob()), Some(1));
+
+        // request removed and pending cleared
+        let req = TwinTransferRequests::<TestRuntime>::get(1);
+        assert!(req.is_none());
+        assert_eq!(PendingTransferByTwin::<TestRuntime>::get(1), None);
+
+        // reserved moved to bob
+        assert_eq!(
+            <TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&alice()),
+            0
+        );
+        assert_eq!(
+            <TestRuntime as crate::pallet::Config>::Currency::reserved_balance(&bob()),
+            100
+        );
+    });
+}
+
+#[test]
+fn twin_transfer_accept_wrong_signer_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+        assert_ok!(TfgridModule::_request_twin_transfer(
+            RuntimeOrigin::signed(alice()),
+            bob(),
+        ));
+
+        // alice (old owner) cannot accept; must be new account (bob)
+        assert_noop!(
+            TfgridModule::_accept_twin_transfer(RuntimeOrigin::signed(alice()), 1),
+            Error::<TestRuntime>::UnauthorizedToUpdateTwin
+        );
+    });
+}
+
+#[test]
+fn twin_transfer_cancel_by_owner_clears_request() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        assert_ok!(TfgridModule::user_accept_tc(
+            RuntimeOrigin::signed(bob()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ));
+        assert_ok!(TfgridModule::_request_twin_transfer(
+            RuntimeOrigin::signed(alice()),
+            bob(),
+        ));
+
+        // cancel by owner (alice)
+        assert_ok!(TfgridModule::_cancel_twin_transfer(
+            RuntimeOrigin::signed(alice()),
+            1
+        ));
+
+        // request removed and pending cleared
+        assert!(TwinTransferRequests::<TestRuntime>::get(1).is_none());
+        assert_eq!(PendingTransferByTwin::<TestRuntime>::get(1), None);
     });
 }
 
@@ -1594,6 +1784,141 @@ fn attach_farming_policy_with_certified_node_certification_works() {
 }
 
 #[test]
+fn diy_node_gets_default_policy_when_limit_requires_certification() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+
+        let farm_id = 1;
+        let node_id = 1;
+
+        // Confirm node starts as Diy
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(node.certification, NodeCertification::Diy);
+
+        // Attach farming policy 3 (certified) with node_certification = true
+        let fp = TfgridModule::farming_policies_map(3);
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: fp.id,
+            cu: Some(100),
+            su: Some(100),
+            end: None,
+            node_certification: true,
+            node_count: Some(100),
+        };
+
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            farm_id,
+            Some(limit)
+        ));
+
+        // Diy node should NOT get the certified policy (3) — should fall back
+        // to the best matching default for a Diy node on a Gold farm, which is
+        // policy 1 (Diy + Gold)
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_ne!(
+            node.farming_policy_id, fp.id,
+            "Diy node should not receive certified-only farming policy"
+        );
+        assert_eq!(
+            node.farming_policy_id, 1,
+            "Diy node on Gold farm should get policy 1 (Diy + Gold default)"
+        );
+    });
+}
+
+#[test]
+fn certified_node_gets_limited_policy_when_limit_requires_certification() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+
+        let farm_id = 1;
+        let node_id = 1;
+
+        // Certify the node first
+        assert_ok!(TfgridModule::add_node_certifier(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+        assert_ok!(TfgridModule::set_node_certification(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            NodeCertification::Certified
+        ));
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(node.certification, NodeCertification::Certified);
+
+        // Attach certified-only policy
+        let fp = TfgridModule::farming_policies_map(3);
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: fp.id,
+            cu: Some(100),
+            su: Some(100),
+            end: None,
+            node_certification: true,
+            node_count: Some(100),
+        };
+
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            farm_id,
+            Some(limit)
+        ));
+
+        // Certified node SHOULD get the limited policy
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(
+            node.farming_policy_id, fp.id,
+            "Certified node should receive the certified-only farming policy"
+        );
+    });
+}
+
+#[test]
+fn diy_node_gets_limited_policy_when_no_certification_required() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+
+        let farm_id = 1;
+        let node_id = 1;
+
+        // Confirm node is Diy
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(node.certification, NodeCertification::Diy);
+
+        // Attach policy with node_certification = false (no restriction)
+        let fp = TfgridModule::farming_policies_map(3);
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: fp.id,
+            cu: Some(100),
+            su: Some(100),
+            end: None,
+            node_certification: false,
+            node_count: Some(100),
+        };
+
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            farm_id,
+            Some(limit)
+        ));
+
+        // Diy node should get the limited policy since certification is not required
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(
+            node.farming_policy_id, fp.id,
+            "Diy node should receive limited policy when node_certification is false"
+        );
+    });
+}
+
+#[test]
 fn attach_another_custom_farming_policy_to_farm_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
@@ -2653,6 +2978,377 @@ fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {
 }
 
 // Attach given farming policy to farm 1 that contains node 1
+// ------------------------------------ //
+//  V3 BILLING OPT-OUT TESTS            //
+// ------------------------------------ //
+
+#[test]
+fn test_opt_out_of_v3_billing_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert!(TfgridModule::node_v3_billing_opt_out(node_id).is_some());
+
+        let our_events = System::events();
+        assert!(our_events.iter().any(|e| matches!(
+            &e.event,
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::NodeV3BillingOptedOut {
+                node_id: 1,
+                ..
+            })
+        )));
+    });
+}
+
+#[test]
+fn test_opt_out_of_v3_billing_not_farmer_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_twin_bob();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_noop!(
+            TfgridModule::opt_out_of_v3_billing(RuntimeOrigin::signed(bob()), node_id),
+            Error::<TestRuntime>::NodeUpdateNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_opt_out_of_v3_billing_node_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        assert_noop!(
+            TfgridModule::opt_out_of_v3_billing(RuntimeOrigin::signed(alice()), 999),
+            Error::<TestRuntime>::NodeNotExists
+        );
+    });
+}
+
+#[test]
+fn test_opt_out_of_v3_billing_already_opted_out_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_noop!(
+            TfgridModule::opt_out_of_v3_billing(RuntimeOrigin::signed(alice()), node_id),
+            Error::<TestRuntime>::NodeV3BillingOptOutAlreadyEnabled
+        );
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        let metadata = b"alice.near".to_vec();
+        assert_ok!(TfgridModule::set_node_v3_opt_out_metadata(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            metadata.clone(),
+        ));
+
+        let stored = TfgridModule::node_v3_opt_out_metadata(node_id).unwrap();
+        assert_eq!(stored.to_vec(), metadata);
+
+        let our_events = System::events();
+        assert!(our_events.iter().any(|e| matches!(
+            &e.event,
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::NodeV3OptOutMetadataUpdated {
+                node_id: 1,
+                metadata: Some(_),
+            })
+        )));
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_clear_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_ok!(TfgridModule::set_node_v3_opt_out_metadata(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            b"alice.near".to_vec(),
+        ));
+
+        assert!(TfgridModule::node_v3_opt_out_metadata(node_id).is_some());
+
+        assert_ok!(TfgridModule::set_node_v3_opt_out_metadata(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            vec![],
+        ));
+
+        assert!(TfgridModule::node_v3_opt_out_metadata(node_id).is_none());
+
+        let our_events = System::events();
+        assert!(our_events.iter().any(|e| matches!(
+            &e.event,
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::NodeV3OptOutMetadataUpdated {
+                node_id: 1,
+                metadata: None,
+            })
+        )));
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_not_opted_out_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_noop!(
+            TfgridModule::set_node_v3_opt_out_metadata(
+                RuntimeOrigin::signed(alice()),
+                node_id,
+                b"alice.near".to_vec(),
+            ),
+            Error::<TestRuntime>::NodeNotOptedOutOfV3Billing
+        );
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_not_farmer_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_twin_bob();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert_noop!(
+            TfgridModule::set_node_v3_opt_out_metadata(
+                RuntimeOrigin::signed(bob()),
+                node_id,
+                b"bob.near".to_vec(),
+            ),
+            Error::<TestRuntime>::NodeUpdateNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_too_long_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        let too_long = vec![b'x'; 257];
+        assert_noop!(
+            TfgridModule::set_node_v3_opt_out_metadata(
+                RuntimeOrigin::signed(alice()),
+                node_id,
+                too_long,
+            ),
+            Error::<TestRuntime>::NodeV3OptOutMetadataTooLong
+        );
+    });
+}
+
+#[test]
+fn test_set_node_v3_opt_out_metadata_node_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        assert_noop!(
+            TfgridModule::set_node_v3_opt_out_metadata(
+                RuntimeOrigin::signed(alice()),
+                999,
+                b"alice.near".to_vec(),
+            ),
+            Error::<TestRuntime>::NodeNotExists
+        );
+    });
+}
+
+#[test]
+fn test_add_twin_admin_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_ok!(TfgridModule::add_twin_admin(
+            RawOrigin::Root.into(),
+            alice(),
+        ));
+
+        let admins = TfgridModule::allowed_twin_admins().unwrap_or_default();
+        assert!(admins.contains(&alice()));
+
+        let our_events = System::events();
+        assert!(our_events.iter().any(|e| matches!(
+            &e.event,
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::TwinAdminAdded(_))
+        )));
+    });
+}
+
+#[test]
+fn test_add_twin_admin_not_council_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_noop!(
+            TfgridModule::add_twin_admin(RuntimeOrigin::signed(alice()), alice()),
+            sp_runtime::DispatchError::BadOrigin
+        );
+    });
+}
+
+#[test]
+fn test_add_twin_admin_duplicate_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_ok!(TfgridModule::add_twin_admin(
+            RawOrigin::Root.into(),
+            alice(),
+        ));
+
+        assert_noop!(
+            TfgridModule::add_twin_admin(RawOrigin::Root.into(), alice()),
+            Error::<TestRuntime>::AlreadyTwinAdmin
+        );
+    });
+}
+
+#[test]
+fn test_remove_twin_admin_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_ok!(TfgridModule::add_twin_admin(
+            RawOrigin::Root.into(),
+            alice(),
+        ));
+
+        assert_ok!(TfgridModule::remove_twin_admin(
+            RawOrigin::Root.into(),
+            alice(),
+        ));
+
+        let admins = TfgridModule::allowed_twin_admins().unwrap_or_default();
+        assert!(!admins.contains(&alice()));
+
+        let our_events = System::events();
+        assert!(our_events.iter().any(|e| matches!(
+            &e.event,
+            MockEvent::TfgridModule(TfgridEvent::<TestRuntime>::TwinAdminRemoved(_))
+        )));
+    });
+}
+
+#[test]
+fn test_remove_twin_admin_not_council_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_noop!(
+            TfgridModule::remove_twin_admin(RuntimeOrigin::signed(alice()), alice()),
+            sp_runtime::DispatchError::BadOrigin
+        );
+    });
+}
+
+#[test]
+fn test_remove_twin_admin_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_noop!(
+            TfgridModule::remove_twin_admin(RawOrigin::Root.into(), alice()),
+            Error::<TestRuntime>::NotTwinAdmin
+        );
+    });
+}
+
+#[test]
+fn test_add_twin_admin_list_full() {
+    ExternalityBuilder::build().execute_with(|| {
+        // Fill the list up to MaxTwinAdmins (= 10 in test config)
+        for i in 0..10u64 {
+            let account = AccountId::from([i as u8; 32]);
+            assert_ok!(TfgridModule::add_twin_admin(
+                RawOrigin::Root.into(),
+                account,
+            ));
+        }
+
+        // The 11th add must fail with TwinAdminListFull
+        let overflow = AccountId::from([99u8; 32]);
+        assert_noop!(
+            TfgridModule::add_twin_admin(RawOrigin::Root.into(), overflow),
+            Error::<TestRuntime>::TwinAdminListFull
+        );
+    });
+}
+
+#[test]
+fn test_delete_opted_out_node_cleans_up_storage() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+        assert!(TfgridModule::node_v3_billing_opt_out(node_id).is_some());
+
+        assert_ok!(TfgridModule::delete_node(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+        ));
+
+        assert!(TfgridModule::node_v3_billing_opt_out(node_id).is_none());
+    });
+}
+
 fn test_attach_farming_policy_flow(farming_policy_id: u32) {
     create_twin();
     create_farm();

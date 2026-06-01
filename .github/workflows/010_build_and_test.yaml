@@ -54,7 +54,7 @@ jobs:
           cd substrate-node/tests
           robot -d _output_tests/ .
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: integration test output

@@ -418,6 +418,7 @@ pub mod pallet {
         UnauthorizedToSetExtraFee,
         RewardDistributionError,
         ContractPaymentStateNotExists,
+        OnlyTwinAdminCanDeployOnThisNode,
     }
 
     #[pallet::genesis_config]

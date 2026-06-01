@@ -10,6 +10,10 @@ See this very thorough guide on substrate: https://docs.substrate.io/tutorials/g
 
 See [releases](./releases.md) for instructions on how to create / validate a release.
 
+### Migrating a validator
+
+See [migrating a validator](./migrating_validator.md) for instructions on how to migrate a validator to a new machine.
+
 ### Upgrading runtime
 
 See [process](./upgrade_process.md)

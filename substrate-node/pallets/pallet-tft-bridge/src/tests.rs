@@ -496,6 +496,166 @@ fn burn_fails_if_less_than_withdraw_fee_amount() {
     });
 }
 
+#[test]
+// Regression test for #1080: a signature added >= RetryInterval blocks after the
+// last block-reset must NOT be immediately wiped by on_finalize in the same block.
+// Before the fix, add_stellar_sig_* never reset tx.block, so on_finalize (which runs
+// after extrinsics in the same block) saw current_block - tx.block >= RetryInterval
+// and cleared the just-added signature.
+fn burn_signature_after_expiry_resets_block_and_survives() {
+    new_test_ext().execute_with(|| {
+        prepare_validators();
+        run_to_block(1);
+
+        // Create a burn at block 1 (tx.block = 1, no signatures yet).
+        assert_ok!(TFTBridgeModule::swap_to_stellar(
+            RuntimeOrigin::signed(alice()),
+            b"GBIYYEQO73AYJEADTHMTF5M42WICTHU55IIT2CPEZBBLLDSJ322OGW7Z".to_vec(),
+            750000000
+        ));
+
+        // Advance to exactly RetryInterval (20) blocks after creation WITHOUT triggering
+        // an auto-expiry: at block 20 the gap is 19 (< 20), so on_finalize does not fire.
+        // Now at block 21, tx.block is still 1 and the gap is exactly 20.
+        run_to_block(21);
+        let burn_tx = TFTBridgeModule::burn_transactions(1).unwrap();
+        assert_eq!(burn_tx.block, 1, "precondition: block not yet reset");
+        assert_eq!(burn_tx.signatures.len(), 0, "precondition: no signatures");
+
+        // First signature arrives when current_block - tx.block == RetryInterval.
+        assert_ok!(TFTBridgeModule::propose_burn_transaction_or_add_sig(
+            RuntimeOrigin::signed(alice()),
+            1,
+            b"GBIYYEQO73AYJEADTHMTF5M42WICTHU55IIT2CPEZBBLLDSJ322OGW7Z".to_vec(),
+            250000000,
+            b"alice_sig".to_vec(),
+            b"alice_stellar_pubkey".to_vec(),
+            1
+        ));
+
+        // The fix resets tx.block to the current block on the first signature.
+        let burn_tx = TFTBridgeModule::burn_transactions(1).unwrap();
+        assert_eq!(burn_tx.block, 21, "tx.block must be reset to the signing block");
+        assert_eq!(burn_tx.signatures.len(), 1);
+
+        // Run on_finalize for block 21 (advancing to 22). Without the reset this would
+        // see 21 - 1 == 20 >= RetryInterval and clear the signature in the same block.
+        run_to_block(22);
+        let burn_tx = TFTBridgeModule::burn_transactions(1).unwrap();
+        assert_eq!(
+            burn_tx.signatures.len(),
+            1,
+            "signature must survive on_finalize, not be immediately re-expired"
+        );
+    });
+}
+
+#[test]
+// Regression test for #1080 (refund path): mirrors the burn case for
+// add_stellar_sig_refund_transaction. After an expiry clears the signatures, the
+// first re-signature must reset tx.block so on_finalize does not wipe it the same block.
+fn refund_signature_after_expiry_resets_block_and_survives() {
+    new_test_ext().execute_with(|| {
+        prepare_validators();
+        run_to_block(1);
+
+        let tx_hash = b"some_refund_tx_hash".to_vec();
+        let target = b"GBIYYEQO73AYJEADTHMTF5M42WICTHU55IIT2CPEZBBLLDSJ322OGW7Z".to_vec();
+
+        // Create a refund with a first signature at block 1 (tx.block = 1).
+        assert_ok!(TFTBridgeModule::create_refund_transaction_or_add_sig(
+            RuntimeOrigin::signed(alice()),
+            tx_hash.clone(),
+            target.clone(),
+            250000000,
+            b"alice_sig".to_vec(),
+            b"alice_stellar_pubkey".to_vec(),
+            1
+        ));
+
+        // Let it expire: on_finalize at block 21 (21 - 1 == 20) clears signatures and
+        // sets tx.block = 21.
+        run_to_block(22);
+        let refund_tx = TFTBridgeModule::refund_transactions(&tx_hash);
+        assert_eq!(refund_tx.block, 21, "precondition: expiry reset block to 21");
+        assert_eq!(refund_tx.signatures.len(), 0, "precondition: signatures cleared");
+
+        // Advance to where current_block - tx.block == 20 again, without triggering
+        // another auto-expiry (block 40 gap is 19). Now at block 41 the gap is exactly 20.
+        run_to_block(41);
+
+        // First signature after expiry arrives at the expiry boundary.
+        assert_ok!(TFTBridgeModule::create_refund_transaction_or_add_sig(
+            RuntimeOrigin::signed(alice()),
+            tx_hash.clone(),
+            target.clone(),
+            250000000,
+            b"alice_sig".to_vec(),
+            b"alice_stellar_pubkey".to_vec(),
+            1
+        ));
+
+        let refund_tx = TFTBridgeModule::refund_transactions(&tx_hash);
+        assert_eq!(refund_tx.block, 41, "tx.block must be reset to the signing block");
+        assert_eq!(refund_tx.signatures.len(), 1);
+
+        // on_finalize for block 41 must not immediately re-expire the signature.
+        run_to_block(42);
+        let refund_tx = TFTBridgeModule::refund_transactions(&tx_hash);
+        assert_eq!(
+            refund_tx.signatures.len(),
+            1,
+            "signature must survive on_finalize, not be immediately re-expired"
+        );
+    });
+}
+
+#[test]
+fn creating_refund_for_already_executed_transaction_fails() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(TFTBridgeModule::add_bridge_validator(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+
+        let tx_hash = b"some_tx".to_vec();
+
+        // Create the refund and add a signature. With a single validator this
+        // immediately reaches the signature threshold.
+        assert_ok!(TFTBridgeModule::create_refund_transaction_or_add_sig(
+            RuntimeOrigin::signed(alice()),
+            tx_hash.clone(),
+            b"some_target".to_vec(),
+            2,
+            b"some_signature".to_vec(),
+            b"some_pub_key".to_vec(),
+            0,
+        ));
+
+        // Mark it executed: moves it from RefundTransactions to
+        // ExecutedRefundTransactions.
+        assert_ok!(TFTBridgeModule::set_refund_transaction_executed(
+            RuntimeOrigin::signed(alice()),
+            tx_hash.clone(),
+        ));
+
+        // Re-creating the same refund must be rejected, not silently recreated
+        // (which would re-arm the on_finalize retry/crash loop).
+        assert_noop!(
+            TFTBridgeModule::create_refund_transaction_or_add_sig(
+                RuntimeOrigin::signed(alice()),
+                tx_hash.clone(),
+                b"some_target".to_vec(),
+                2,
+                b"some_signature".to_vec(),
+                b"some_pub_key".to_vec(),
+                0,
+            ),
+            Error::<TestRuntime>::RefundTransactionAlreadyExecuted
+        );
+    });
+}
+
 fn prepare_validators() {
     TFTBridgeModule::add_bridge_validator(RawOrigin::Root.into(), alice()).unwrap();
     TFTBridgeModule::add_bridge_validator(RawOrigin::Root.into(), bob()).unwrap();

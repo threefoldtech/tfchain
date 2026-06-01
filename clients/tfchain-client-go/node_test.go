@@ -67,6 +67,88 @@ func TestSetDedicatedNodePrice(t *testing.T) {
 	require.Equal(t, uint64(price), priceSet)
 }
 
+func TestOptOutOfV3Billing(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	// Bob is the farmer
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+	nodeID := assertCreateNode(t, cl, farmID, twinID, identity)
+
+	_, err = cl.OptOutOfV3Billing(identity, nodeID)
+	// NodeV3BillingOptOutAlreadyEnabled is acceptable on re-runs (opt-out is permanent)
+	if err != nil {
+		// If node is already opted out, that's fine
+		require.Contains(t, err.Error(), "NodeV3BillingOptOutAlreadyEnabled")
+	}
+
+	optedOut, err := cl.IsNodeOptedOutOfV3Billing(nodeID)
+	require.NoError(t, err)
+	require.True(t, optedOut)
+}
+
+func TestSetNodeV3OptOutMetadata(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+	nodeID := assertCreateNode(t, cl, farmID, twinID, identity)
+
+	// Node must be opted out first
+	_, err = cl.OptOutOfV3Billing(identity, nodeID)
+	if err != nil {
+		// If node is already opted out, that's fine
+		require.Contains(t, err.Error(), "NodeV3BillingOptOutAlreadyEnabled")
+	}
+
+	metadata := []byte(`{"v4_account":"5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"}`)
+
+	_, err = cl.SetNodeV3OptOutMetadata(identity, nodeID, metadata)
+	require.NoError(t, err)
+
+	got, err := cl.GetNodeV3OptOutMetadata(nodeID)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	require.Equal(t, metadata, got)
+}
+
+func TestClearNodeV3OptOutMetadata(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+	nodeID := assertCreateNode(t, cl, farmID, twinID, identity)
+
+	// Node must be opted out first
+	_, err = cl.OptOutOfV3Billing(identity, nodeID)
+	if err != nil {
+		// If node is already opted out, that's fine
+		require.Contains(t, err.Error(), "NodeV3BillingOptOutAlreadyEnabled")
+	}
+
+	// Set some metadata first
+	metadata := []byte(`{"v4_account":"5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"}`)
+	_, err = cl.SetNodeV3OptOutMetadata(identity, nodeID, metadata)
+	require.NoError(t, err)
+
+	// Clear by passing empty bytes
+	_, err = cl.SetNodeV3OptOutMetadata(identity, nodeID, []byte{})
+	require.NoError(t, err)
+
+	got, err := cl.GetNodeV3OptOutMetadata(nodeID)
+	require.NoError(t, err)
+	require.Nil(t, got)
+}
+
 func TestUptimeReport(t *testing.T) {
 	cl := startLocalConnection(t)
 	defer cl.Close()

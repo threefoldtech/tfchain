@@ -3,7 +3,7 @@
 use super::*;
 use crate::Pallet as TfgridModule;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
-use frame_support::{assert_ok, BoundedVec};
+use frame_support::{assert_ok, traits::Get, BoundedVec};
 use frame_system::{pallet_prelude::BlockNumberFor, EventRecord, Pallet as System, RawOrigin};
 // use hex;
 // use scale_info::prelude::format;
@@ -534,6 +534,113 @@ benchmarks! {
         assert!(TfgridModule::<T>::users_terms_and_condition(caller).is_some());
     }
 
+    // request_twin_transfer(new_account)
+    request_twin_transfer {
+        let old_owner: T::AccountId = whitelisted_caller();
+        // old owner must have signed T&C and have a twin
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+        assert_ok!(TfgridModule::<T>::create_twin(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_relay_input(b"relay"),
+            get_public_key_input(b"0x0102030405060708090001020304050607080900010203040506070809000102"),
+        ));
+
+        // new account: T&C accepted, no twin
+        let new_owner: T::AccountId = account("new", 0, 0);
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(new_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+    }: _(RawOrigin::Signed(old_owner.clone()), new_owner.clone())
+    verify {
+        assert!(TfgridModule::<T>::pending_transfer_by_twin(1).is_some());
+        assert_has_event::<T>(Event::TwinTransferRequested {
+            request_id: 1,
+            twin_id: 1,
+            from: old_owner,
+            to: new_owner,
+        }.into());
+    }
+
+    // accept_twin_transfer(request_id)
+    accept_twin_transfer {
+        let old_owner: T::AccountId = whitelisted_caller();
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+        assert_ok!(TfgridModule::<T>::create_twin(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_relay_input(b"relay"),
+            get_public_key_input(b"0x0102030405060708090001020304050607080900010203040506070809000103"),
+        ));
+
+        let new_owner: T::AccountId = account("new", 0, 0);
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(new_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+
+        assert_ok!(TfgridModule::<T>::request_twin_transfer(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            new_owner.clone(),
+        ));
+        let request_id: u64 = 1;
+    }: _(RawOrigin::Signed(new_owner.clone()), request_id)
+    verify {
+        assert!(TfgridModule::<T>::pending_transfer_by_twin(1).is_none());
+        assert_has_event::<T>(Event::TwinOwnershipTransferred {
+            request_id,
+            twin_id: 1,
+            from: old_owner,
+            to: new_owner,
+        }.into());
+    }
+
+    // cancel_twin_transfer(request_id)
+    cancel_twin_transfer {
+        let old_owner: T::AccountId = whitelisted_caller();
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+        assert_ok!(TfgridModule::<T>::create_twin(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            get_relay_input(b"relay"),
+            get_public_key_input(b"0x0102030405060708090001020304050607080900010203040506070809000104"),
+        ));
+
+        let new_owner: T::AccountId = account("new", 0, 0);
+        TfgridModule::<T>::user_accept_tc(
+            RawOrigin::Signed(new_owner.clone()).into(),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
+        ).unwrap();
+
+        assert_ok!(TfgridModule::<T>::request_twin_transfer(
+            RawOrigin::Signed(old_owner.clone()).into(),
+            new_owner.clone(),
+        ));
+        let request_id: u64 = 1;
+    }: _(RawOrigin::Signed(old_owner.clone()), request_id)
+    verify {
+        assert!(TfgridModule::<T>::pending_transfer_by_twin(1).is_none());
+        assert_has_event::<T>(Event::TwinTransferCanceled {
+            request_id,
+            twin_id: 1,
+            from: old_owner,
+            to: account("new", 0, 0),
+        }.into());
+    }
+
     // delete_node_farm()
     delete_node_farm {
         let caller: T::AccountId = whitelisted_caller();
@@ -737,6 +844,82 @@ benchmarks! {
         assert_last_event::<T>(Event::NodeUptimeReported(node_id, now, uptime).into());
     }
 
+    // opt_out_of_v3_billing()
+    opt_out_of_v3_billing {
+        let caller: T::AccountId = whitelisted_caller();
+        _prepare_farm_with_node::<T>(caller.clone());
+        let node_id = 1;
+    }: _(RawOrigin::Signed(caller), node_id)
+    verify {
+        assert!(TfgridModule::<T>::node_v3_billing_opt_out(node_id).is_some());
+        assert_last_event::<T>(Event::NodeV3BillingOptedOut {
+            node_id,
+            opted_out_at: TfgridModule::<T>::node_v3_billing_opt_out(node_id).unwrap(),
+        }.into());
+    }
+
+    // set_node_v3_opt_out_metadata()
+    // Worst case: metadata is 256 bytes (maximum allowed).
+    set_node_v3_opt_out_metadata {
+        let caller: T::AccountId = whitelisted_caller();
+        _prepare_farm_with_node::<T>(caller.clone());
+        let node_id = 1;
+        assert_ok!(TfgridModule::<T>::opt_out_of_v3_billing(
+            RawOrigin::Signed(caller.clone()).into(),
+            node_id,
+        ));
+        let metadata = vec![b'x'; 256];
+    }: _(RawOrigin::Signed(caller), node_id, metadata.clone())
+    verify {
+        let stored = TfgridModule::<T>::node_v3_opt_out_metadata(node_id).unwrap();
+        assert_eq!(stored.to_vec(), metadata);
+        assert_has_event::<T>(Event::NodeV3OptOutMetadataUpdated { node_id, metadata: Some(metadata) }.into());
+    }
+
+    // add_twin_admin()
+    // Worst case: list is at MaxTwinAdmins - 1 before the final insert.
+    // n ranges from 0 to MaxTwinAdmins - 1; the extrinsic itself adds the (n+1)-th entry.
+    add_twin_admin {
+        let n in 0 .. (T::MaxTwinAdmins::get() - 1);
+        for i in 0..n {
+            let existing: T::AccountId = account("existing", i, 0);
+            assert_ok!(TfgridModule::<T>::add_twin_admin(
+                RawOrigin::Root.into(),
+                existing,
+            ));
+        }
+        let caller: T::AccountId = account("Alice", 0, 0);
+    }: _(RawOrigin::Root, caller.clone())
+    verify {
+        let admins = TfgridModule::<T>::allowed_twin_admins().unwrap_or_default();
+        assert!(admins.contains(&caller));
+        assert_last_event::<T>(Event::TwinAdminAdded(caller).into());
+    }
+
+    // remove_twin_admin()
+    // Worst case: list is at MaxTwinAdmins before the remove.
+    // n ranges from 1 to MaxTwinAdmins; the extrinsic removes one entry from an n-element list.
+    remove_twin_admin {
+        let n in 1 .. T::MaxTwinAdmins::get();
+        let caller: T::AccountId = account("Alice", 0, 0);
+        assert_ok!(TfgridModule::<T>::add_twin_admin(
+            RawOrigin::Root.into(),
+            caller.clone(),
+        ));
+        for i in 1..n {
+            let existing: T::AccountId = account("existing", i, 0);
+            assert_ok!(TfgridModule::<T>::add_twin_admin(
+                RawOrigin::Root.into(),
+                existing,
+            ));
+        }
+    }: _(RawOrigin::Root, caller.clone())
+    verify {
+        let admins = TfgridModule::<T>::allowed_twin_admins().unwrap_or_default();
+        assert!(!admins.contains(&caller));
+        assert_last_event::<T>(Event::TwinAdminRemoved(caller).into());
+    }
+
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
     impl_benchmark_test_suite!(TfgridModule, crate::mock::new_test_ext(), crate::mock::TestRuntime)
@@ -747,6 +930,13 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
     let EventRecord { event, .. } = &events[events.len() - 1];
     assert_eq!(event, &system_event);
+}
+
+fn assert_has_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
+    let events = System::<T>::events();
+    let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
+    let found = events.iter().any(|ev| ev.event == system_event);
+    assert!(found, "Expected event not found in events list");
 }
 
 pub fn _prepare_farm_with_node<T: Config>(source: T::AccountId) {

@@ -9,7 +9,9 @@ pub mod node;
 pub mod pricing;
 pub mod terms_cond;
 pub mod twin;
+pub mod twin_transfer;
 pub mod types;
+pub mod v3_billing_opt_out;
 pub mod weights;
 
 #[cfg(test)]
@@ -30,6 +32,7 @@ pub use pallet::*;
 pub mod pallet {
     use super::weights::WeightInfo;
     use super::*;
+    use frame_support::traits::ReservableCurrency;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*,
         storage::bounded_vec::BoundedVec, traits::ConstU32, traits::EnsureOrigin, Blake2_128Concat,
@@ -251,6 +254,7 @@ pub mod pallet {
     #[pallet::getter(fn zos_version)]
     pub type ZosVersion<T> = StorageValue<_, Vec<u8>, ValueQuery>;
 
+
     // This storage map maps a node ID to a power state, they node can modify this state
     // to indicate that it has shut down or came back alive
     #[pallet::storage]
@@ -262,6 +266,52 @@ pub mod pallet {
         tfchain_support::types::NodePower<BlockNumberFor<T>>,
         ValueQuery,
     >;
+
+    // Twin ownership transfer storage types with creation timestamp
+    #[derive(Encode, Decode, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+    #[scale_info(skip_type_params(T))]
+    pub struct TwinTransferRequest<T: Config> {
+        pub twin_id: u32,
+        pub from: T::AccountId,
+        pub to: T::AccountId,
+        pub created_at: BlockNumberFor<T>,
+    }
+
+    #[pallet::storage]
+    #[pallet::getter(fn twin_transfer_request_id)]
+    pub type TwinTransferRequestID<T> = StorageValue<_, u64, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn twin_transfer_requests)]
+    pub type TwinTransferRequests<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, TwinTransferRequest<T>, OptionQuery>;
+
+    // Index to ensure at most one pending transfer per twin
+    #[pallet::storage]
+    #[pallet::getter(fn pending_transfer_by_twin)]
+    pub type PendingTransferByTwin<T: Config> =
+        StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
+
+    // Keyed by node_id. Present = node has opted out of v3 billing.
+    #[pallet::storage]
+    #[pallet::getter(fn node_v3_billing_opt_out)]
+    pub type NodeV3BillingOptOut<T> =
+        StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
+
+    // Keyed by node_id. Stores optional metadata for opted-out nodes (e.g. v4 account).
+    // Max 256 bytes of arbitrary UTF-8 content. Node must be opted out before metadata can be set.
+    #[pallet::storage]
+    #[pallet::getter(fn node_v3_opt_out_metadata)]
+    pub type NodeV3OptOutMetadata<T> =
+        StorageMap<_, Blake2_128Concat, u32, BoundedVec<u8, ConstU32<256>>, OptionQuery>;
+
+    // Global list of accounts authorized to deploy on opted-out nodes.
+    // None = list not initialized (treat as empty = no one allowed).
+    // Bounded to prevent unbounded storage growth.
+    #[pallet::storage]
+    #[pallet::getter(fn allowed_twin_admins)]
+    pub type AllowedTwinAdmins<T: Config> =
+        StorageValue<_, BoundedVec<T::AccountId, T::MaxTwinAdmins>, OptionQuery>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
@@ -379,6 +429,9 @@ pub mod pallet {
         type MaxFarmPublicIps: Get<u32>;
 
         #[pallet::constant]
+        type MaxTwinAdmins: Get<u32>;
+
+        #[pallet::constant]
         type MaxInterfacesLength: Get<u32>;
 
         #[pallet::constant]
@@ -386,6 +439,9 @@ pub mod pallet {
 
         #[pallet::constant]
         type TimestampHintDrift: Get<u64>;
+
+        /// Currency used for reserving/repatriating balances during twin ownership transfer
+        type Currency: ReservableCurrency<Self::AccountId>;
     }
 
     #[pallet::event]
@@ -438,6 +494,33 @@ pub mod pallet {
             node_id: u32,
             power_state: PowerState<BlockNumberFor<T>>,
         },
+
+
+        // Twin ownership transfer lifecycle
+        TwinTransferRequested {
+            request_id: u64,
+            twin_id: u32,
+            from: T::AccountId,
+            to: T::AccountId,
+        },
+        TwinOwnershipTransferred {
+            request_id: u64,
+            twin_id: u32,
+            from: T::AccountId,
+            to: T::AccountId,
+        },
+        TwinTransferCanceled {
+            request_id: u64,
+            twin_id: u32,
+            from: T::AccountId,
+            to: T::AccountId,
+        },
+
+        // V3 billing opt-out
+        NodeV3BillingOptedOut { node_id: u32, opted_out_at: u64 },
+        TwinAdminAdded(T::AccountId),
+        TwinAdminRemoved(T::AccountId),
+        NodeV3OptOutMetadataUpdated { node_id: u32, metadata: Option<Vec<u8>> },
     }
 
     #[pallet::error]
@@ -574,6 +657,19 @@ pub mod pallet {
         InvalidTimestampHint,
 
         InvalidStorageInput,
+
+        // Twin transfer specific errors
+        TwinTransferRequestNotFound,
+        TwinTransferNewAccountHasTwin,
+        TwinTransferPendingExists,
+
+        // V3 billing opt-out errors
+        NodeV3BillingOptOutAlreadyEnabled,
+        AlreadyTwinAdmin,
+        NotTwinAdmin,
+        TwinAdminListFull,
+        NodeNotOptedOutOfV3Billing,
+        NodeV3OptOutMetadataTooLong,
     }
 
     #[pallet::genesis_config]
@@ -1238,5 +1334,82 @@ pub mod pallet {
         // Deprecated! Use index 40 for next extrinsic
         // #[pallet::call_index(39)]
         // #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
+
+        // Twin ownership transfer: request by current owner (specify new_account)
+        #[pallet::call_index(40)]
+        #[pallet::weight(<T as Config>::WeightInfo::request_twin_transfer())]
+        pub fn request_twin_transfer(
+            origin: OriginFor<T>,
+            new_account: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            Self::_request_twin_transfer(origin, new_account)
+        }
+
+        // Twin ownership transfer: accept by new account
+        #[pallet::call_index(41)]
+        #[pallet::weight(<T as Config>::WeightInfo::accept_twin_transfer())]
+        pub fn accept_twin_transfer(
+            origin: OriginFor<T>,
+            request_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            Self::_accept_twin_transfer(origin, request_id)
+        }
+
+        // Twin ownership transfer: cancel by current owner
+        #[pallet::call_index(42)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_twin_transfer())]
+        pub fn cancel_twin_transfer(
+            origin: OriginFor<T>,
+            request_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            Self::_cancel_twin_transfer(origin, request_id)
+        }
+
+        // Farmer opts their node out of v3 billing
+        #[pallet::call_index(43)]
+        #[pallet::weight(<T as Config>::WeightInfo::opt_out_of_v3_billing())]
+        pub fn opt_out_of_v3_billing(
+            origin: OriginFor<T>,
+            node_id: u32,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_opt_out_of_v3_billing(account_id, node_id)
+        }
+
+        // Council adds an account to the twin admin list (allowed to deploy on opted-out nodes)
+        #[pallet::call_index(44)]
+        #[pallet::weight(<T as Config>::WeightInfo::add_twin_admin(AllowedTwinAdmins::<T>::get().as_ref().map(|v| v.len()).unwrap_or(0) as u32 + 1))]
+        pub fn add_twin_admin(
+            origin: OriginFor<T>,
+            account: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_add_twin_admin(account)
+        }
+
+        // Council removes an account from the twin admin list
+        #[pallet::call_index(45)]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_twin_admin(AllowedTwinAdmins::<T>::get().as_ref().map(|v| v.len()).unwrap_or(0) as u32 - 1))]
+        pub fn remove_twin_admin(
+            origin: OriginFor<T>,
+            account: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_remove_twin_admin(account)
+        }
+
+        // Farmer sets metadata for an opted-out node (e.g. v4 account address).
+        // Node must already be opted out. Caller must be the farm owner.
+        // Pass empty metadata to clear.
+        #[pallet::call_index(46)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_node_v3_opt_out_metadata())]
+        pub fn set_node_v3_opt_out_metadata(
+            origin: OriginFor<T>,
+            node_id: u32,
+            metadata: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_set_node_v3_opt_out_metadata(account_id, node_id, metadata)
+        }
     }
 }

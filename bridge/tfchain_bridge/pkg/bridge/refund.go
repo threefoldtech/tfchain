@@ -89,9 +89,54 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 		return err
 	}
 
+	if len(refund.Signatures) == 0 {
+		logger.Info().
+			Str("event_action", "refund_postponed").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Msg("the refund has been postponed due to the transaction signatures being removed on the TFChain side while the bridge was processing the transaction")
+		return nil
+	}
+
 	// Todo, retry here?
 	if err = bridge.wallet.CreateRefundPaymentWithSignaturesAndSubmit(ctx, refund.Target, uint64(refund.Amount), refund.TxHash, refund.Signatures, int64(refund.SequenceNumber)); err != nil {
-		return err
+		// A refund submission must never crash the bridge. A single failure would
+		// otherwise propagate up to a fatal exit, and the on-chain on_finalize
+		// retry would re-emit the event every RetryInterval blocks, producing an
+		// endless crash loop.
+		if errors.Is(err, pkg.ErrStellarTransactionUndeliverable) {
+			// Target-side, bridge-unresolvable (e.g. the target removed its Stellar
+			// trustline). It can never be delivered, so quarantine it by marking it
+			// executed on chain to stop the on-chain retries. The refunded TFT is
+			// forfeited.
+			logger.Warn().
+				Err(err).
+				Str("event_action", "refund_quarantined").
+				Str("event_kind", "alert").
+				Str("category", "refund").
+				Dict("metadata", zerolog.Dict().
+					Str("target", refund.Target).
+					Uint64("amount", uint64(refund.Amount))).
+				Msg("the refund is permanently undeliverable to the target account and has been quarantined; the bridge will continue")
+
+			if execErr := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, refund.TxHash); execErr != nil {
+				return execErr
+			}
+			return nil
+		}
+
+		// Any other failure (transient network/sequence issue, or a recoverable
+		// target condition such as op_line_full) is postponed: log and continue,
+		// relying on the on-chain on_finalize retry to re-emit the event so we try
+		// again later. Matches handleWithdrawReady's behaviour.
+		logger.Info().
+			Str("event_action", "refund_postponed").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Dict("metadata", zerolog.Dict().
+				Str("reason", err.Error())).
+			Msg("the refund has been postponed due to a problem submitting the transaction to the Stellar network; it will be retried")
+		return nil
 	}
 
 	err = bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, refund.TxHash)

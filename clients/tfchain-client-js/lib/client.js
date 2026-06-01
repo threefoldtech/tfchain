@@ -1,7 +1,6 @@
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api')
 const crypto = require('@polkadot/util-crypto')
 const bip39 = require('bip39')
-const types = require('../types.json')
 const {
   getEntity, deleteEntity,
   createEntity, updateEntity,
@@ -18,7 +17,8 @@ const {
 } = require('./farms')
 const {
   createNode, updateNode, getNode,
-  getNodeIDByPubkey, deleteNode, listNodes
+  getNodeIDByPubkey, deleteNode, listNodes,
+  optOutOfV3Billing, getAllowedTwinAdmins, isNodeOptedOutOfV3Billing, getNodeV3BillingOptOutTimestamp
 } = require('./node')
 const { signEntityTwinID, signEntityCreation } = require('./sign')
 const { getBalance, transfer } = require('./balance')
@@ -209,6 +209,22 @@ class Client {
     return deleteNode(this, id, callback)
   }
 
+  async optOutOfV3Billing(nodeID, callback) {
+    return optOutOfV3Billing(this, nodeID, callback)
+  }
+
+  async getAllowedTwinAdmins() {
+    return getAllowedTwinAdmins(this)
+  }
+
+  async isNodeOptedOutOfV3Billing(nodeID) {
+    return isNodeOptedOutOfV3Billing(this, nodeID)
+  }
+
+  async getNodeV3BillingOptOutTimestamp(nodeID) {
+    return getNodeV3BillingOptOutTimestamp(this, nodeID)
+  }
+
   async setNodePower (nodeId, power, callback) {
     return setNodePower(this, nodeId, power, callback)
   }
@@ -371,7 +387,7 @@ async function getPolkaAPI(url) {
   }
 
   const provider = new WsProvider(url)
-  return ApiPromise.create({ provider, types })
+  return ApiPromise.create({ provider })
 }
 
 module.exports = { Client }

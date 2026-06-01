@@ -1,7 +1,6 @@
 use crate::{self as pallet_dao};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
-use pallet_collective;
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
@@ -10,7 +9,6 @@ use pallet_tfgrid::{
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
     LatitudeInput, LongitudeInput, PkInput, RelayInput,
 };
-use pallet_timestamp;
 use sp_core::H256;
 use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
@@ -28,6 +26,7 @@ construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         DaoModule: pallet_dao::pallet::{Pallet, Call, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
@@ -58,11 +57,38 @@ impl frame_system::Config for TestRuntime {
     type PalletInfo = PalletInfo;
     type OnNewAccount = ();
     type OnKilledAccount = ();
-    type AccountData = ();
+    type AccountData = pallet_balances::AccountData<u64>;
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
     type MaxConsumers = ConstU32<16>;
+}
+
+// Balances pallet configuration for the mock runtime
+pub const EXISTENTIAL_DEPOSIT: u64 = 500;
+
+parameter_types! {
+    pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
+    pub const ExistentialDepositBalance: u64 = EXISTENTIAL_DEPOSIT;
+}
+
+impl pallet_balances::Config for TestRuntime {
+    type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
+    /// The type for recording an account's balance.
+    type Balance = u64;
+    /// The ubiquitous event type.
+    type RuntimeEvent = RuntimeEvent;
+    type DustRemoval = ();
+    type ExistentialDeposit = ExistentialDepositBalance;
+    type AccountStore = System;
+    type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type RuntimeHoldReason = ();
+    type MaxHolds = ();
 }
 
 pub type BlockNumber = u32;
@@ -119,6 +145,7 @@ parameter_types! {
     pub const MaxInterfaceIpsLength: u32 = 5;
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
+    pub const MaxTwinAdmins: u32 = 10;
     pub const TimestampHintDrift: u64 = 60;
 }
 
@@ -146,6 +173,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
+    type MaxTwinAdmins = MaxTwinAdmins;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = TestInterfaceName;
     type InterfaceMac = TestInterfaceMac;
@@ -156,6 +184,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
     type TimestampHintDrift = TimestampHintDrift;
+    type Currency = Balances;
 }
 
 impl pallet_timestamp::Config for TestRuntime {

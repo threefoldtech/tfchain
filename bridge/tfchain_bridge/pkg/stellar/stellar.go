@@ -6,10 +6,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -210,7 +212,7 @@ func (w *StellarWallet) CheckAccount(account string) error {
 		}
 	}
 
-	return fmt.Errorf("addess has no trustline")
+	return fmt.Errorf("address has no trustline")
 }
 
 func (w *StellarWallet) generatePaymentOperation(amount uint64, destination string, sequenceNumber int64) (txnbuild.TransactionParams, error) {
@@ -274,6 +276,58 @@ func (w *StellarWallet) createTransaction(ctx context.Context, txn txnbuild.Tran
 	return tx, nil
 }
 
+// terminalSubmitOperationCodes are Horizon payment operation result codes that
+// represent a target-side failure the bridge can never resolve on its own:
+// delivery requires a deliberate action by the destination owner (add a
+// trustline, create the account, get issuer authorization) that the bridge has
+// no visibility into. A refund hitting one of these is forfeited rather than
+// retried forever.
+//
+// Deliberately excluded:
+//   - op_line_full: the destination CAN receive the asset but is momentarily at
+//     its trustline limit; it may succeed once the balance is spent down, so it
+//     is postponed and retried rather than forfeited.
+//   - op_underfunded / op_src_no_trust / op_src_not_authorized: bridge-side
+//     (source) problems that must alert/halt, never forfeit a user's refund.
+//   - op_malformed / op_no_issuer: bridge bug or global asset misconfiguration
+//     affecting all transactions, not a per-target condition.
+var terminalSubmitOperationCodes = map[string]struct{}{
+	"op_no_trust":       {}, // destination has no trustline for the asset
+	"op_no_destination": {}, // destination account does not exist
+	"op_not_authorized": {}, // destination is not authorized to hold the asset
+}
+
+// isTerminalSubmitError reports whether a Stellar submission failure is a
+// target-side error that the bridge cannot resolve by retrying, and so should
+// be forfeited rather than postponed.
+func isTerminalSubmitError(codes *hProtocol.TransactionResultCodes) bool {
+	if codes == nil {
+		return false
+	}
+	for _, op := range codes.OperationCodes {
+		if _, ok := terminalSubmitOperationCodes[op]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+// isInsufficientFundsError reports whether a Stellar submission failed because
+// the bridge (source) account is out of funds. This is an operational
+// condition that requires the bridge wallet to be refilled; it is not the
+// target's fault and the transaction must not be forfeited.
+func isInsufficientFundsError(codes *hProtocol.TransactionResultCodes) bool {
+	if codes == nil {
+		return false
+	}
+	for _, op := range codes.OperationCodes {
+		if op == "op_underfunded" {
+			return true
+		}
+	}
+	return false
+}
+
 func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Transaction) error {
 	client, err := w.getHorizonClient()
 	if err != nil {
@@ -285,8 +339,26 @@ func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Tra
 	if err != nil {
 		log.Info().Msg(err.Error())
 		if hError, ok := err.(*horizonclient.Error); ok {
-			if ok {
-				log.Err(err).Msgf("error while submitting transaction %+v", hError.Problem.Extras)
+			log.Err(err).Msgf("error while submitting transaction %+v", hError.Problem.Extras)
+			if codes, rcErr := hError.ResultCodes(); rcErr == nil {
+				// A target-side failure (e.g. the destination removed its trustline)
+				// can never succeed on retry. Surface it as a typed error so the
+				// caller can quarantine the transaction instead of retrying forever.
+				// The account sequence is irrelevant here, so don't reset it.
+				if isTerminalSubmitError(codes) {
+					return errors.Wrapf(pkg.ErrStellarTransactionUndeliverable, "operation result codes %v", codes.OperationCodes)
+				}
+				// The bridge account is out of funds. This is recoverable (the
+				// transaction will be retried) but needs operator attention to refill
+				// the bridge wallet, so raise an alert rather than only postponing.
+				if isInsufficientFundsError(codes) {
+					log.Warn().
+						Str("trace_id", fmt.Sprint(ctx.Value(TraceIdKey{}))).
+						Str("event_action", "bridge_account_underfunded").
+						Str("event_kind", "alert").
+						Str("category", "vault").
+						Msg("the bridge account has insufficient funds to submit the transaction; it will be retried but the bridge wallet must be refilled")
+				}
 			}
 		}
 		errSequence := w.resetAccountSequence()
@@ -296,7 +368,7 @@ func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Tra
 		return errors.Wrap(err, "an error occurred while submitting the transaction")
 	}
 	log.Info().
-		Str("trace_id", fmt.Sprint(ctx.Value("trace_id"))).
+		Str("trace_id", fmt.Sprint(ctx.Value(TraceIdKey{}))).
 		Str("event_action", "stellar_transaction_submitted").
 		Str("event_kind", "event").
 		Str("category", "vault").
@@ -440,7 +512,11 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 		}
 
 		creditedEffect := effect.(horizoneffects.AccountCredited)
-		if creditedEffect.Asset.Code != asset[0] && creditedEffect.Asset.Issuer != asset[1] {
+		// Skip the effect unless BOTH the asset code and issuer match the
+		// bridge's TFT asset. Using && here meant a credit was only skipped
+		// when both differed, so a credit with the right code but a wrong
+		// issuer (or vice-versa) slipped through and could be minted.
+		if creditedEffect.Code != asset[0] || creditedEffect.Issuer != asset[1] {
 			continue
 		}
 
@@ -451,12 +527,34 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 
 		senders := make(map[string]*big.Int)
 		for _, op := range ops.Embedded.Records {
+			// Skip non-payment operations individually. Previously this
+			// returned from the whole function on the first non-payment op,
+			// silently dropping any legitimate payment ops in the same
+			// transaction (lost deposits / missing mints).
 			if op.GetType() != "payment" {
-				return nil, nil
+				continue
 			}
 
 			PaymentOperation := op.(operations.Payment)
-			if PaymentOperation.To != w.config.StellarBridgeAccount {
+			if PaymentOperation.To != w.config.StellarBridgeAccount || PaymentOperation.From == w.config.StellarBridgeAccount {
+				continue
+			}
+
+			// Validate the payment asset at the operation level too. The
+			// account_credited effect check above gates entry into this loop,
+			// but the per-payment amount must itself be TFT — otherwise a
+			// non-TFT payment to the bridge in the same transaction would be
+			// summed and minted as TFT.
+			if PaymentOperation.Code != asset[0] || PaymentOperation.Issuer != asset[1] {
+				logger.Warn().
+					Str("event_action", "non_tft_payment_rejected").
+					Str("event_kind", "alert").
+					Str("from", PaymentOperation.From).
+					Str("asset_code", PaymentOperation.Code).
+					Str("asset_issuer", PaymentOperation.Issuer).
+					Str("amount", PaymentOperation.Amount).
+					Str("tx_hash", PaymentOperation.TransactionHash).
+					Msg("non-TFT payment to bridge detected — skipping")
 				continue
 			}
 
@@ -531,18 +629,46 @@ func (w *StellarWallet) getOperationEffect(txHash string) (ops operations.Operat
 
 // getHorizonClient gets the horizon client based on the wallet's network
 func (w *StellarWallet) getHorizonClient() (*horizonclient.Client, error) {
+	var client *horizonclient.Client
+
 	if w.config.StellarHorizonUrl != "" {
-		return &horizonclient.Client{HorizonURL: w.config.StellarHorizonUrl}, nil
+		client = &horizonclient.Client{HorizonURL: w.config.StellarHorizonUrl}
 	}
 
 	switch w.config.StellarNetwork {
 	case "testnet":
-		return horizonclient.DefaultTestNetClient, nil
+		client = horizonclient.DefaultTestNetClient
 	case "production":
-		return horizonclient.DefaultPublicNetClient, nil
+		client = horizonclient.DefaultPublicNetClient
 	default:
 		return nil, errors.New("network is not supported")
 	}
+
+	// custom HTTP client with retry logic
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 3
+	retryClient.RetryWaitMin = 2 * time.Second
+	retryClient.RetryWaitMax = 5 * time.Second
+
+	retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+
+		if err != nil {
+			return true, nil
+		}
+
+		if resp.StatusCode == 429 || (resp.StatusCode >= 500 && resp.StatusCode <= 599) {
+			return true, nil
+		}
+
+		return false, nil
+	}
+
+	client.HTTP = retryClient.StandardClient()
+
+	return client, nil
 }
 
 // getNetworkPassPhrase gets the Stellar network passphrase based on the wallet's network
@@ -577,7 +703,10 @@ func (w *StellarWallet) StatBridgeAccount() (string, error) {
 	asset := w.getAssetCodeAndIssuer()
 
 	for _, balance := range acc.Balances {
-		if balance.Code == asset[0] || balance.Issuer == asset[1] {
+		// Match the TFT balance on BOTH code and issuer. Using || could
+		// return an unrelated asset's balance that happened to share either
+		// the code or the issuer.
+		if balance.Code == asset[0] && balance.Issuer == asset[1] {
 			return balance.Balance, nil
 		}
 	}

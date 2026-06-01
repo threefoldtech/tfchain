@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg"
+	_logger "github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/logger"
 	subpkg "github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/substrate"
 	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
 )
@@ -41,6 +42,7 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 
 	// check if it can hold tft : TODO check trust line TFT limit if it can receive the amount
 	if err := bridge.wallet.CheckAccount(withdraw.Target); err != nil {
+		ctx = _logger.WithRefundReason(ctx, err.Error())
 		return bridge.handleBadWithdraw(ctx, withdraw)
 	}
 
@@ -149,7 +151,12 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 	}
 
 	if len(burnTx.Signatures) == 0 {
-		return pkg.ErrNoSignatures
+		logger.Info().
+			Str("event_action", "withdraw_postponed").
+			Str("event_kind", "event").
+			Str("category", "withdraw").
+			Msg("the withdraw has been postponed due to the transaction signatures being removed on the TFChain side while the bridge was processing the transaction")
+		return nil
 	}
 
 	// todo add memo hash
@@ -184,6 +191,20 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 
 func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.WithdrawCreatedEvent) error {
 	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdraw.ID)).Logger()
+
+	if withdraw.Amount <= uint64(bridge.depositFee) {
+		logger.Warn().
+			Str("event_action", "transfer_failed").
+			Str("event_kind", "alert").
+			Str("category", "transfer").
+			Dict("metadata", zerolog.Dict().
+				Str("reason", _logger.GetRefundReason(ctx))).
+			Str("type", "burn").
+			Msg("a withdraw failed with no remainder to refund (insufficient amount to cover deposit fee)!")
+
+		return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdraw.ID)
+	}
+
 	mintID := fmt.Sprintf("refund-%d", withdraw.ID)
 
 	minted, err := bridge.subClient.IsMintedAlready(mintID)

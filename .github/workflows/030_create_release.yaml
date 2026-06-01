@@ -37,13 +37,13 @@ jobs:
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
 
       - name: Upload tfchain srtool json
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfchain-srtool-digest-json
           path: tfchain-srtool-digest.json
 
       - name: Upload runtime
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfchain-runtime
           path: substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
@@ -59,7 +59,7 @@ jobs:
 
       - name: Download artifacts
         id: download
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tfchain-runtime
           path: tfchain-runtime

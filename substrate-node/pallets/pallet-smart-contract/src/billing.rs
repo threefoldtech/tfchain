@@ -111,8 +111,10 @@ impl<T: Config> Pallet<T> {
                 let bill_nu = ContractBillingInformationByID::<T>::get(contract.contract_id)
                     .amount_unbilled
                     > 0;
+                let has_overdraft = ContractPaymentState::<T>::get(contract.contract_id)
+                    .map_or(false, |state| state.has_overdraft());
 
-                return bill_ip || bill_cu_su || bill_nu;
+                return bill_ip || bill_cu_su || bill_nu || has_overdraft;
             }
             _ => true,
         }
@@ -196,7 +198,7 @@ impl<T: Config> Pallet<T> {
         let seconds_elapsed =
             now.defensive_saturating_sub(contract_payment_state.last_updated_seconds);
 
-        let should_waive_payment = match &contract.contract_type {
+        let should_waive_standby_rent = match &contract.contract_type {
             types::ContractData::RentContract(rc) => {
                 let node_power = pallet_tfgrid::NodePower::<T>::get(rc.node_id);
                 node_power.is_standby()
@@ -204,7 +206,24 @@ impl<T: Config> Pallet<T> {
             _ => false,
         };
 
-        if should_waive_payment {
+        let should_waive_migration_billing = match &contract.contract_type {
+            types::ContractData::NodeContract(nc) => {
+                pallet_tfgrid::NodeV3BillingOptOut::<T>::contains_key(nc.node_id)
+            }
+            types::ContractData::RentContract(rc) => {
+                pallet_tfgrid::NodeV3BillingOptOut::<T>::contains_key(rc.node_id)
+            }
+            _ => false,
+        };
+
+        // For Created contracts on opted-out nodes: early return (mirrors should_waive_standby_rent).
+        // early return is cleaner and consistent with the should_waive_standby_rent pattern.
+        // GracePeriod and Deleted fall through: zero new cost + manage_contract_state runs naturally.
+        if should_waive_migration_billing && matches!(contract.state, types::ContractState::Created) {
+            return Ok(().into());
+        }
+
+        if should_waive_standby_rent {
             log::info!("Waiving rent for contract_id: {:?}", contract.contract_id);
             Self::deposit_event(Event::RentWaived {
                 contract_id: contract.contract_id,
@@ -217,7 +236,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // Calculate the due amount
-        let (standard_amount_due, discount_received) = if should_waive_payment {
+        let (standard_amount_due, discount_received) = if should_waive_standby_rent || should_waive_migration_billing {
             (BalanceOf::<T>::zero(), types::DiscountLevel::None)
         } else {
             contract
@@ -234,7 +253,7 @@ impl<T: Config> Pallet<T> {
 
         let additional_amount_due =
             if let types::ContractData::RentContract(rc) = &contract.contract_type {
-                if should_waive_payment {
+                if should_waive_standby_rent || should_waive_migration_billing {
                     BalanceOf::<T>::zero()
                 } else {
                     contract.calculate_extra_fee_cost_tft(rc.node_id, seconds_elapsed)
@@ -254,7 +273,9 @@ impl<T: Config> Pallet<T> {
         );
 
         // If the amount due is zero and the contract is not in deleted state, don't bill the contract (mostly node contract on a rented node)
-        if total_amount_due.is_zero() && !matches!(contract.state, types::ContractState::Deleted(_))
+        if total_amount_due.is_zero() &&
+            !contract_payment_state.has_overdraft() &&
+            !matches!(contract.state, types::ContractState::Deleted(_))
         {
             log::info!(
                 "Amount to be billed is 0 and contract state is {:?}, nothing to do with contract_id: {:?}",

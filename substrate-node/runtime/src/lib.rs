@@ -154,7 +154,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 153,
+    spec_version: 157,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -359,6 +359,7 @@ parameter_types! {
     pub const MaxInterfaceIpsLength: u32 = 10;
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
+    pub const MaxTwinAdmins: u32 = 100;
     pub const TimestampHintDrift: u64 = 60;
 }
 
@@ -372,6 +373,7 @@ impl pallet_tfgrid::Config for Runtime {
     type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
+    type MaxTwinAdmins = MaxTwinAdmins;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = pallet_tfgrid::interface::InterfaceName<Runtime>;
@@ -383,6 +385,7 @@ impl pallet_tfgrid::Config for Runtime {
     type Location = pallet_tfgrid::node::Location<Runtime>;
     type SerialNumber = pallet_tfgrid::node::SerialNumber<Runtime>;
     type TimestampHintDrift = TimestampHintDrift;
+    type Currency = Balances;
 }
 
 parameter_types! {

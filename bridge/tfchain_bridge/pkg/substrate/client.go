@@ -63,7 +63,7 @@ func NewSubstrateClient(urls []string, seed string) (*SubstrateClient, error) {
 func (s *SubstrateClient) RetrySetWithdrawExecuted(ctx context.Context, tixd uint64) error {
 	err := s.SetBurnTransactionExecuted(s.identity, tixd)
 	for err != nil {
-		log.Err(err).Msg("error while setting refund transaction as executed")
+		log.Err(err).Msg("error while setting burn transaction as executed")
 
 		select {
 		case <-ctx.Done():
