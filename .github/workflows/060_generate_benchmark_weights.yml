@@ -69,7 +69,7 @@ jobs:
           
       - name: Git config
         run: |
-          git config --global --add safe.directory /__w/tfchain/tfchain
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git status
 
       - name: Commit & Push changes
