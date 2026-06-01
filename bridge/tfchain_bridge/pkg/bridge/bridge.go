@@ -146,7 +146,7 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 		select {
 		case data := <-tfchainSub:
 			if data.Err != nil {
-				return errors.Wrap(err, "failed to get tfchain events")
+				return errors.Wrap(data.Err, "failed to get tfchain events")
 			}
 			for _, withdrawCreatedEvent := range data.Events.WithdrawCreatedEvents {
 				err := bridge.handleWithdrawCreated(ctx, withdrawCreatedEvent)
@@ -190,7 +190,7 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 			}
 		case data := <-stellarSub:
 			if data.Err != nil {
-				return errors.Wrap(err, "failed to get stellar payments")
+				return errors.Wrap(data.Err, "failed to get stellar payments")
 			}
 
 			for _, mEvent := range data.Events {

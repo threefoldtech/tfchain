@@ -368,7 +368,7 @@ func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Tra
 		return errors.Wrap(err, "an error occurred while submitting the transaction")
 	}
 	log.Info().
-		Str("trace_id", fmt.Sprint(ctx.Value("trace_id"))).
+		Str("trace_id", fmt.Sprint(ctx.Value(TraceIdKey{}))).
 		Str("event_action", "stellar_transaction_submitted").
 		Str("event_kind", "event").
 		Str("category", "vault").
