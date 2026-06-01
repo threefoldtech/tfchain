@@ -512,7 +512,11 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 		}
 
 		creditedEffect := effect.(horizoneffects.AccountCredited)
-		if creditedEffect.Code != asset[0] && creditedEffect.Issuer != asset[1] {
+		// Skip the effect unless BOTH the asset code and issuer match the
+		// bridge's TFT asset. Using && here meant a credit was only skipped
+		// when both differed, so a credit with the right code but a wrong
+		// issuer (or vice-versa) slipped through and could be minted.
+		if creditedEffect.Code != asset[0] || creditedEffect.Issuer != asset[1] {
 			continue
 		}
 
@@ -523,12 +527,34 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 
 		senders := make(map[string]*big.Int)
 		for _, op := range ops.Embedded.Records {
+			// Skip non-payment operations individually. Previously this
+			// returned from the whole function on the first non-payment op,
+			// silently dropping any legitimate payment ops in the same
+			// transaction (lost deposits / missing mints).
 			if op.GetType() != "payment" {
-				return nil, nil
+				continue
 			}
 
 			PaymentOperation := op.(operations.Payment)
 			if PaymentOperation.To != w.config.StellarBridgeAccount || PaymentOperation.From == w.config.StellarBridgeAccount {
+				continue
+			}
+
+			// Validate the payment asset at the operation level too. The
+			// account_credited effect check above gates entry into this loop,
+			// but the per-payment amount must itself be TFT — otherwise a
+			// non-TFT payment to the bridge in the same transaction would be
+			// summed and minted as TFT.
+			if PaymentOperation.Code != asset[0] || PaymentOperation.Issuer != asset[1] {
+				logger.Warn().
+					Str("event_action", "non_tft_payment_rejected").
+					Str("event_kind", "alert").
+					Str("from", PaymentOperation.From).
+					Str("asset_code", PaymentOperation.Code).
+					Str("asset_issuer", PaymentOperation.Issuer).
+					Str("amount", PaymentOperation.Amount).
+					Str("tx_hash", PaymentOperation.TransactionHash).
+					Msg("non-TFT payment to bridge detected — skipping")
 				continue
 			}
 
@@ -677,7 +703,10 @@ func (w *StellarWallet) StatBridgeAccount() (string, error) {
 	asset := w.getAssetCodeAndIssuer()
 
 	for _, balance := range acc.Balances {
-		if balance.Code == asset[0] || balance.Issuer == asset[1] {
+		// Match the TFT balance on BOTH code and issuer. Using || could
+		// return an unrelated asset's balance that happened to share either
+		// the code or the issuer.
+		if balance.Code == asset[0] && balance.Issuer == asset[1] {
 			return balance.Balance, nil
 		}
 	}
