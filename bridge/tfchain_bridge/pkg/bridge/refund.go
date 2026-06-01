@@ -70,12 +70,81 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 
 func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent subpkg.RefundTransactionReadyEvent) error {
 	logger := log.Logger.With().Str("trace_id", refundReadyEvent.Hash).Logger()
-	refunded, err := bridge.subClient.IsRefundedAlready(refundReadyEvent.Hash)
+	txHash := refundReadyEvent.Hash
+
+	// 1. Idempotency: if we've already fully processed this refund, skip it.
+	state, err := bridge.idempotency.GetRefundState(txHash)
+	if err != nil {
+		return err
+	}
+	if state == pkg.TxStateCompleted {
+		logger.Info().
+			Str("event_action", "refund_skipped").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Msg("idempotency: refund already completed, skipping")
+		return pkg.ErrTransactionAlreadyRefunded
+	}
+
+	// 2. If the refund is PROCESSING, the Stellar payment may already have been
+	// submitted before a crash. Check Horizon for an existing outgoing refund (by
+	// MemoReturn hash, falling back to sequence number for pre-memo submissions). If
+	// found, only the TFChain confirmation is outstanding — complete that instead of
+	// re-submitting (which would risk a double payment).
+	if state == pkg.TxStateProcessing {
+		logger.Warn().
+			Str("event_action", "refund_crash_recovery").
+			Str("event_kind", "event").
+			Str("category", "refund").
+			Msg("idempotency: refund in PROCESSING state, checking Stellar for an existing payment")
+
+		// Non-fatal on Horizon error: leave PROCESSING and retry on the next event.
+		outgoingPage, ferr := bridge.wallet.FetchOutgoingTransactionsPage(ctx)
+		if ferr != nil {
+			logger.Warn().Err(ferr).Str("tx_hash", txHash).
+				Msg("failed to fetch Horizon transactions for PROCESSING check; will retry on next event")
+			return nil
+		}
+
+		found := bridge.wallet.FindRefundByReturnHashInPage(outgoingPage, txHash) != nil
+		if !found {
+			refundForSeq, serr := bridge.subClient.GetRefundTransaction(txHash)
+			if serr != nil {
+				// Inconclusive recovery (chain read failed) must not fall through to a
+				// re-submit, so leave PROCESSING and retry on the next event.
+				logger.Warn().Err(serr).Str("tx_hash", txHash).
+					Msg("failed to get refund tx for sequence lookup during PROCESSING check; will retry on next event")
+				return nil
+			}
+			found = bridge.wallet.FindPaymentBySequenceInPage(outgoingPage, int64(refundForSeq.SequenceNumber)) != nil
+		}
+		if found {
+			logger.Info().
+				Str("event_action", "refund_recovered").
+				Str("event_kind", "event").
+				Str("category", "refund").
+				Msg("idempotency: found existing Stellar refund, completing TFChain confirmation")
+			if cerr := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, txHash); cerr != nil {
+				return cerr
+			}
+			if merr := bridge.idempotency.MarkRefundCompleted(txHash); merr != nil {
+				logger.Warn().Err(merr).Str("tx_hash", txHash).Msg("idempotency: failed to mark refund completed")
+			}
+			return nil
+		}
+		logger.Info().Msg("idempotency: no Stellar refund found by return hash or sequence, safe to retry")
+	}
+
+	// 3. Already refunded on chain?
+	refunded, err := bridge.subClient.IsRefundedAlready(txHash)
 	if err != nil {
 		return err
 	}
 
 	if refunded {
+		if merr := bridge.idempotency.MarkRefundCompleted(txHash); merr != nil {
+			logger.Warn().Err(merr).Str("tx_hash", txHash).Msg("idempotency: failed to mark refund completed")
+		}
 		logger.Info().
 			Str("event_action", "refund_skipped").
 			Str("event_kind", "event").
@@ -84,7 +153,7 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 		return pkg.ErrTransactionAlreadyRefunded
 	}
 
-	refund, err := bridge.subClient.GetRefundTransaction(refundReadyEvent.Hash)
+	refund, err := bridge.subClient.GetRefundTransaction(txHash)
 	if err != nil {
 		return err
 	}
@@ -96,6 +165,12 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 			Str("category", "refund").
 			Msg("the refund has been postponed due to the transaction signatures being removed on the TFChain side while the bridge was processing the transaction")
 		return nil
+	}
+
+	// 4. Mark PROCESSING before submitting to Stellar, so a crash between the submit
+	// and the TFChain confirmation is recoverable via the PROCESSING check above.
+	if err := bridge.idempotency.MarkRefundProcessing(txHash); err != nil {
+		return err
 	}
 
 	// Todo, retry here?
@@ -122,6 +197,11 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 			if execErr := bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, refund.TxHash); execErr != nil {
 				return execErr
 			}
+			// The quarantined refund is terminally handled (executed on chain,
+			// funds forfeited); mark it COMPLETED so it is never re-processed.
+			if merr := bridge.idempotency.MarkRefundCompleted(txHash); merr != nil {
+				logger.Warn().Err(merr).Str("tx_hash", txHash).Msg("idempotency: failed to mark refund completed")
+			}
 			return nil
 		}
 
@@ -142,6 +222,9 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 	err = bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, refund.TxHash)
 	if err != nil {
 		return err
+	}
+	if merr := bridge.idempotency.MarkRefundCompleted(txHash); merr != nil {
+		logger.Warn().Err(merr).Str("tx_hash", txHash).Msg("idempotency: failed to mark refund completed")
 	}
 	logger.Info().
 		Str("event_action", "refund_completed").

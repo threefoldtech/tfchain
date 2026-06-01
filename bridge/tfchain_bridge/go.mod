@@ -15,7 +15,7 @@ require (
 	github.com/rs/zerolog v1.26.0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/stellar/go v0.0.0-20210922122349-e6f322c047c5
-	github.com/stretchr/objx v0.3.0 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/vedhavyas/go-subkey v1.0.3
 )
 
@@ -23,6 +23,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/threefoldtech/tfchain/clients/tfchain-client-go v0.0.0-20230607082553-5605bca61c79
+	go.etcd.io/bbolt v1.3.9
 )
 
 require (
@@ -50,7 +51,7 @@ require (
 	github.com/rs/cors v1.8.2 // indirect
 	github.com/segmentio/go-loggly v0.5.1-0.20171222203950-eb91657e62b2 // indirect
 	github.com/stellar/go-xdr v0.0.0-20201028102745-f80a23dac78a // indirect
-	github.com/stretchr/testify v1.7.2 // indirect
+	github.com/stretchr/testify v1.8.1 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
