@@ -502,6 +502,13 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 	asset := w.getAssetCodeAndIssuer()
 
 	var mintEvents []MintEvent
+	// A transaction's operations are identical no matter how many times the bridge
+	// account is credited within it, so fetch them at most once and reuse the result
+	// across all matching account_credited effects. Previously this Horizon call was
+	// made once per matching effect, refetching the same data when a single
+	// transaction credited the bridge more than once (#1051).
+	var ops operations.OperationsPage
+	opsFetched := false
 	for _, effect := range effects.Embedded.Records {
 		if effect.GetAccount() != w.config.StellarBridgeAccount {
 			continue
@@ -520,9 +527,12 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 			continue
 		}
 
-		ops, err := w.getOperationEffect(tx.Hash)
-		if err != nil {
-			continue
+		if !opsFetched {
+			ops, err = w.getOperationEffect(tx.Hash)
+			if err != nil {
+				continue
+			}
+			opsFetched = true
 		}
 
 		senders := make(map[string]*big.Int)
