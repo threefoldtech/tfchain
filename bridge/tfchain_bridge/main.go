@@ -39,7 +39,7 @@ func main() {
 	}
 
 	missingParams := []string{}
-	if bridgeCfg.TfchainURL == "" {
+	if len(bridgeCfg.TfchainURLs) == 0 {
 		missingParams = append(missingParams, "tfchainurl")
 	}
 	if bridgeCfg.TfchainSeed == "" {
