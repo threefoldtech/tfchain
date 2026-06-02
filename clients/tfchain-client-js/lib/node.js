@@ -63,7 +63,9 @@ async function getNode (self, id) {
   const node = await self.api.query.tfgridModule.nodes(id)
 
   const res = node.toJSON()
-  if (res.id !== id) {
+  // A non-existent node decodes to null; guard before reading fields so we throw
+  // a clean "No such node" instead of a TypeError on null.
+  if (!res || res.id !== id) {
     throw Error('No such node')
   }
 

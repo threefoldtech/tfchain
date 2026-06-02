@@ -50,7 +50,8 @@ async function getTwin (self, id) {
   // The Twin struct no longer has an `ip` field (migrated to `relay`/`pk` long
   // ago). Return the metadata-decoded object as-is; decoding a non-existent
   // field threw `Cannot read properties of undefined` on the current runtime (#1090).
-  if (res.id !== id) {
+  // A non-existent twin decodes to null — guard before reading `id`.
+  if (!res || res.id !== id) {
     throw Error('No such twin')
   }
   return res
