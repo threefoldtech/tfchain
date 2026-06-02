@@ -1,5 +1,3 @@
-const { hex2a } = require('./util')
-
 // createTwin creates an entity with given name
 async function createTwin (self, relay, pk, callback) {
   const create = self.api.tx.tfgridModule.createTwin(relay, pk)
@@ -49,8 +47,11 @@ async function getTwin (self, id) {
   const twin = await self.api.query.tfgridModule.twins(id)
 
   const res = twin.toJSON()
-  res.ip = hex2a(res.ip)
-  if (res.id !== id) {
+  // The Twin struct no longer has an `ip` field (migrated to `relay`/`pk` long
+  // ago). Return the metadata-decoded object as-is; decoding a non-existent
+  // field threw `Cannot read properties of undefined` on the current runtime (#1090).
+  // A non-existent twin decodes to null — guard before reading `id`.
+  if (!res || res.id !== id) {
     throw Error('No such twin')
   }
   return res
@@ -69,10 +70,8 @@ async function listTwins (self) {
   const twins = await self.api.query.tfgridModule.twins.entries()
 
   const parsedTwins = twins.map(twin => {
-    const parsedTwin = twin[1].toJSON()
-    parsedTwin.ip = hex2a(parsedTwin.ip)
-
-    return parsedTwin
+    // See getTwin: no `ip` field on the current runtime — return as-is (#1090).
+    return twin[1].toJSON()
   })
 
   return parsedTwins

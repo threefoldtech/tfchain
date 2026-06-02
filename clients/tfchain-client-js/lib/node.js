@@ -63,31 +63,41 @@ async function getNode (self, id) {
   const node = await self.api.query.tfgridModule.nodes(id)
 
   const res = node.toJSON()
-  if (res.id !== id) {
+  // A non-existent node decodes to null; guard before reading fields so we throw
+  // a clean "No such node" instead of a TypeError on null.
+  if (!res || res.id !== id) {
     throw Error('No such node')
   }
 
-  // Decode location
+  // Decode location. On the current runtime city/country/latitude/longitude are
+  // all nested under `location` and byte-encoded. The previous code decoded only
+  // lat/long and read `res.country`/`res.city` at the top level — where they do
+  // not exist — so city/country were left hex-encoded.
   const { location } = res
-  const { longitude = '', latitude = '' } = location
-  location.longitude = hex2a(longitude)
-  location.latitude = hex2a(latitude)
-
-  if (res.country) {
-    res.country = hex2a(res.country)
+  if (location) {
+    location.longitude = hex2a(location.longitude)
+    location.latitude = hex2a(location.latitude)
+    location.city = hex2a(location.city)
+    location.country = hex2a(location.country)
   }
 
-  if (res.city) {
-    res.city = hex2a(res.city)
-  }
-
-  const { public_config: publicConfig } = res
+  // On the current runtime the field decodes as `publicConfig` (camelCase) with a
+  // nested shape: { ip4: { ip, gw }, ip6: { ip, gw }, domain }. The previous code
+  // read `public_config` (snake) with a flat { ipv4, ipv6, gw4, gw6 } shape, so it
+  // matched nothing and left everything hex-encoded.
+  const { publicConfig } = res
   if (publicConfig) {
-    const { ipv4, ipv6, gw4, gw6 } = publicConfig
-    publicConfig.ipv4 = hex2a(ipv4)
-    publicConfig.ipv6 = hex2a(ipv6)
-    publicConfig.gw4 = hex2a(gw4)
-    publicConfig.gw6 = hex2a(gw6)
+    if (publicConfig.ip4) {
+      publicConfig.ip4.ip = hex2a(publicConfig.ip4.ip)
+      publicConfig.ip4.gw = hex2a(publicConfig.ip4.gw)
+    }
+    if (publicConfig.ip6) {
+      publicConfig.ip6.ip = hex2a(publicConfig.ip6.ip)
+      publicConfig.ip6.gw = hex2a(publicConfig.ip6.gw)
+    }
+    if (publicConfig.domain) {
+      publicConfig.domain = hex2a(publicConfig.domain)
+    }
   }
 
   if (res.serialNumber) {

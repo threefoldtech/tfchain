@@ -30,7 +30,9 @@ async function getEntity (self, id) {
   const entity = await self.api.query.tfgridModule.entities(id)
 
   const res = entity.toJSON()
-  if (res.id !== id) {
+  // A non-existent entity decodes to null; guard before reading fields so we
+  // throw a clean "No such entity" instead of a TypeError on null.
+  if (!res || res.id !== id) {
     throw Error('No such entity')
   }
 
@@ -39,15 +41,20 @@ async function getEntity (self, id) {
 }
 
 async function getEntityIDByName (self, name) {
-  const entity = await self.api.query.tfgridModule.entitiesByNameID(name)
+  // Storage was renamed on the current runtime: entitiesByNameID -> entityIdByName.
+  const entity = await self.api.query.tfgridModule.entityIdByName(name)
 
-  return entity.toJSON()
+  // Normalize not-found to 0 (the storage may decode to null), preserving the
+  // "0 means absent" contract that callers (e.g. activation-service) rely on.
+  return entity.toJSON() || 0
 }
 
 async function getEntityIDByPubkey (self, pubkey) {
-  const entity = await self.api.query.tfgridModule.entitiesByPubkeyID(pubkey)
+  // Storage was renamed on the current runtime: entitiesByPubkeyID -> entityIdByAccountID.
+  const entity = await self.api.query.tfgridModule.entityIdByAccountID(pubkey)
 
-  return entity.toJSON()
+  // Normalize not-found to 0 (decodes to null), preserving the "0 means absent" contract.
+  return entity.toJSON() || 0
 }
 
 async function listEntities (self) {

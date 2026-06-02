@@ -1,7 +1,5 @@
 const { client } = require('../lib/substrate')
 const httpError = require('http-errors')
-const { first } = require('lodash')
-const SUBSTRATE_ERRORS = require('../lib/errors')
 // const whitelist = require('../whitelist.json')
 // const { KYC_PUBLIC_KEY } = process.env
 
@@ -34,63 +32,6 @@ async function activate (body) {
   }
 }
 
-async function createEntity (body, res, next) {
-  const { target, name, signature, countryID, cityID } = body
-
-  let keyring
-  try {
-    keyring = client.keyring.addFromAddress(target)
-  } catch (error) {
-    res.write(error.toString())
-    return res.end()
-  }
-
-  const entityByName = await client.getEntityIDByName(name)
-  if (entityByName !== 0) {
-    res.write('conflict')
-    return res.end()
-    // throw httpError(409)
-  }
-
-  const entityByPubkey = await client.getEntityIDByPubkey(keyring.address)
-  if (entityByPubkey !== 0) {
-    res.write('conflict')
-    return res.end()
-    // throw httpError(409)
-  }
-
-  try {
-    await client.createEntity(keyring.address, name, countryID, cityID, signature, result => {
-      if (result instanceof Error) {
-        console.log(result)
-        return
-      }
-      const { events = [], status } = result
-      console.log(`Current status is ${status.type}`)
-      res.write(status.type)
-      if (status.type === 'Invalid') {
-        res.end()
-      }
-      if (status.isFinalized) {
-        events.forEach(({ phase, event: { data, method, section } }) => {
-          if (section === 'system' && method === 'ExtrinsicFailed') {
-            console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
-            const module = first(data).asModule
-            const errIndex = first(module.error.words)
-            res.write(SUBSTRATE_ERRORS[errIndex])
-            res.end()
-          } else if (section === 'system' && method === 'ExtrinsicSuccess') {
-            res.write('Success')
-            res.end()
-          }
-        })
-      }
-    })
-  } catch (error) {
-    throw httpError(error.toString())
-  }
-}
-
 // async function validateActivation (body) {
 //   const { kycSignature, data, substrateAccountID } = body
 
@@ -119,6 +60,5 @@ async function createEntity (body, res, next) {
 // }
 
 module.exports = {
-  activate,
-  createEntity
+  activate
 }
