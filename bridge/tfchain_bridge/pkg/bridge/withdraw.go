@@ -130,13 +130,87 @@ func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired
 
 func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady subpkg.WithdrawReadyEvent) error {
 	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdrawReady.ID)).Logger()
-	// ctx_with_trace_id := context.WithValue(ctx, "trace_id", fmt.Sprint(withdrawReady.ID))
-	burned, err := bridge.subClient.IsBurnedAlready(types.U64(withdrawReady.ID))
+	txID := withdrawReady.ID
+	txKey := fmt.Sprint(txID)
+
+	// 1. Idempotency: if we've already fully processed this withdraw, skip it.
+	state, err := bridge.idempotency.GetWithdrawState(txID)
 	if err != nil {
 		return err
 	}
+	if state == pkg.TxStateCompleted {
+		logger.Info().
+			Str("event_action", "withdraw_skipped").
+			Str("event_kind", "event").
+			Str("category", "withdraw").
+			Msg("idempotency: withdraw already completed, skipping")
+		return pkg.ErrTransactionAlreadyBurned
+	}
 
+	// 2. If the withdraw is PROCESSING, the Stellar payment may already have been
+	// submitted before a crash. Look for an existing outgoing payment by its text memo
+	// (the burn tx id), falling back to the account sequence number for payments
+	// submitted by a pre-memo bridge version. If found, the funds already left the
+	// bridge, so only the TFChain confirmation is outstanding — complete that instead
+	// of re-submitting (which would risk a double payment).
+	if state == pkg.TxStateProcessing {
+		logger.Warn().
+			Str("event_action", "withdraw_crash_recovery").
+			Str("event_kind", "event").
+			Str("category", "withdraw").
+			Msg("idempotency: withdraw in PROCESSING state, checking Stellar for an existing payment")
+
+		// Non-fatal on Horizon error: leave the tx PROCESSING and retry on the next
+		// event. Returning an error here would crash the bridge during a Horizon
+		// outage, which is worse than gracefully deferring.
+		outgoingPage, ferr := bridge.wallet.FetchOutgoingTransactionsPage(ctx)
+		if ferr != nil {
+			logger.Warn().Err(ferr).Uint64("tx_id", txID).
+				Msg("failed to fetch Horizon transactions for PROCESSING check; will retry on next event")
+			return nil
+		}
+
+		found := bridge.wallet.FindPaymentByMemoInPage(outgoingPage, txKey) != nil
+		if !found {
+			// Inconclusive recovery (chain read failed) must not fall through to a
+			// re-submit, so on error leave PROCESSING and retry on the next event.
+			burnTxForSeq, serr := bridge.subClient.GetBurnTransaction(types.U64(txID))
+			if serr != nil {
+				logger.Warn().Err(serr).Uint64("tx_id", txID).
+					Msg("failed to get burn tx for sequence lookup during PROCESSING check; will retry on next event")
+				return nil
+			}
+			found = bridge.wallet.FindPaymentBySequenceInPage(outgoingPage, int64(burnTxForSeq.SequenceNumber)) != nil
+		}
+		if found {
+			logger.Info().
+				Str("event_action", "withdraw_recovered").
+				Str("event_kind", "event").
+				Str("category", "withdraw").
+				Msg("idempotency: found existing Stellar payment, completing TFChain confirmation")
+			if cerr := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); cerr != nil {
+				return cerr
+			}
+			if merr := bridge.idempotency.MarkWithdrawCompleted(txID); merr != nil {
+				logger.Warn().Err(merr).Uint64("tx_id", txID).Msg("idempotency: failed to mark withdraw completed")
+			}
+			return nil
+		}
+		// Not found. If the payment had been submitted and then scrolled out of the
+		// 200-record window, a re-submit reuses the same (already-consumed) sequence
+		// and Stellar rejects it with tx_bad_seq, so no double payment can occur.
+		logger.Info().Msg("idempotency: no Stellar payment found by memo or sequence, safe to retry")
+	}
+
+	// 3. Already burned on chain?
+	burned, err := bridge.subClient.IsBurnedAlready(types.U64(txID))
+	if err != nil {
+		return err
+	}
 	if burned {
+		if merr := bridge.idempotency.MarkWithdrawCompleted(txID); merr != nil {
+			logger.Warn().Err(merr).Uint64("tx_id", txID).Msg("idempotency: failed to mark withdraw completed")
+		}
 		logger.Info().
 			Str("event_action", "withdraw_skipped").
 			Str("event_kind", "event").
@@ -145,7 +219,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 		return pkg.ErrTransactionAlreadyBurned
 	}
 
-	burnTx, err := bridge.subClient.GetBurnTransaction(types.U64(withdrawReady.ID))
+	burnTx, err := bridge.subClient.GetBurnTransaction(types.U64(txID))
 	if err != nil {
 		return err
 	}
@@ -159,11 +233,19 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 		return nil
 	}
 
-	// todo add memo hash
-	err = bridge.wallet.CreatePaymentWithSignaturesAndSubmit(ctx, burnTx.Target, uint64(burnTx.Amount), fmt.Sprint(withdrawReady.ID), burnTx.Signatures, int64(burnTx.SequenceNumber))
+	// 4. Mark PROCESSING before submitting to Stellar, so a crash between the submit
+	// and the TFChain confirmation is recoverable via the PROCESSING check above.
+	if err := bridge.idempotency.MarkWithdrawProcessing(txID); err != nil {
+		return err
+	}
+
+	// txKey (the burn tx id) is set as the payment's text memo for traceability and
+	// crash recovery; see CreatePaymentWithSignaturesAndSubmit.
+	err = bridge.wallet.CreatePaymentWithSignaturesAndSubmit(ctx, burnTx.Target, uint64(burnTx.Amount), txKey, burnTx.Signatures, int64(burnTx.SequenceNumber))
 	if err != nil {
 		// we can log and skip here as we could depend on tfcahin retry mechanism
-		// to notify us again about related burn tx
+		// to notify us again about related burn tx. The tx stays PROCESSING and is
+		// reconciled on the next attempt.
 		logger.Info().
 			Str("event_action", "withdraw_postponed").
 			Str("event_kind", "event").
@@ -173,6 +255,15 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 			Msgf("the withdraw has been postponed due to a problem in sending this transaction to the stellar network. error was %s", err.Error())
 		return nil
 	}
+
+	// 5. Stellar payment submitted — confirm on TFChain, then mark COMPLETED.
+	if err := bridge.subClient.RetrySetWithdrawExecuted(ctx, txID); err != nil {
+		return err
+	}
+	if err := bridge.idempotency.MarkWithdrawCompleted(txID); err != nil {
+		logger.Warn().Err(err).Uint64("tx_id", txID).Msg("idempotency: failed to mark withdraw completed")
+	}
+
 	logger.Info().
 		Str("event_action", "withdraw_completed").
 		Str("event_kind", "event").
@@ -186,7 +277,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 			Str("outcome", "bridged")).
 		Msg("the transfer has completed")
 
-	return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdrawReady.ID)
+	return nil
 }
 
 func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.WithdrawCreatedEvent) error {
