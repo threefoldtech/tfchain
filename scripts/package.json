@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@polkadot/api": "^10.7.2",
+    "@stellar/stellar-sdk": "^12.3.0",
     "axios": "^0.25.0",
     "bip39": "^3.0.3",
     "blake": "^1.0.1",

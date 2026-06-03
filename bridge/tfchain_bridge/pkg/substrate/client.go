@@ -187,3 +187,168 @@ func (s *SubstrateClient) RetryProposeMintOrVote(ctx context.Context, txID strin
 
 	return nil
 }
+
+// BurnProposal holds the parameters for a single propose_burn_transaction_or_add_sig call.
+type BurnProposal struct {
+	TxID           uint64
+	Target         string
+	Amount         *big.Int
+	Signature      string
+	StellarAddress string
+	SequenceNumber uint64
+}
+
+// RefundProposal holds the parameters for a single create_refund_transaction_or_add_sig call.
+type RefundProposal struct {
+	TxHash         string
+	Target         string
+	Amount         int64
+	Signature      string
+	StellarAddress string
+	SequenceNumber uint64
+}
+
+// BatchProposeAll submits all burn and refund proposal calls as a single
+// Utility.force_batch extrinsic. Burns are submitted first, then refunds.
+// Individual call failures do not abort the batch.
+func (s *SubstrateClient) BatchProposeAll(ctx context.Context, burnProposals []BurnProposal, refundProposals []RefundProposal) (*substrate.BatchResult, error) {
+	total := len(burnProposals) + len(refundProposals)
+	if total == 0 {
+		return &substrate.BatchResult{}, nil
+	}
+
+	_, meta, err := s.GetClient()
+	if err != nil {
+		return nil, err
+	}
+
+	calls := make([]types.Call, 0, total)
+	for _, p := range burnProposals {
+		c, err := types.NewCall(meta, "TFTBridgeModule.propose_burn_transaction_or_add_sig",
+			p.TxID, p.Target, types.U64(p.Amount.Uint64()), p.Signature, p.StellarAddress, p.SequenceNumber,
+		)
+		if err != nil {
+			return nil, err
+		}
+		calls = append(calls, c)
+	}
+	for _, p := range refundProposals {
+		c, err := types.NewCall(meta, "TFTBridgeModule.create_refund_transaction_or_add_sig",
+			p.TxHash, p.Target, types.U64(uint64(p.Amount)), p.Signature, p.StellarAddress, p.SequenceNumber,
+		)
+		if err != nil {
+			return nil, err
+		}
+		calls = append(calls, c)
+	}
+
+	return s.BatchCalls(s.identity, calls)
+}
+
+// BatchSetWithdrawExecuted batches multiple set_burn_transaction_executed calls
+// into a single Utility.force_batch extrinsic. Falls back to individual
+// RetrySetWithdrawExecuted calls if the batch submission fails.
+//
+// Safety: set_burn_transaction_executed is idempotent (first-writer-wins).
+// ItemFailed events in the batch are expected when another validator already
+// executed the burn — force_batch continues through all calls regardless.
+func (s *SubstrateClient) BatchSetWithdrawExecuted(ctx context.Context, txIDs []uint64) error {
+	if len(txIDs) == 0 {
+		return nil
+	}
+	// Single item — use existing retry path (more robust error handling
+	// with IsBurnedAlready polling for multi-validator races)
+	if len(txIDs) == 1 {
+		return s.RetrySetWithdrawExecuted(ctx, txIDs[0])
+	}
+
+	_, meta, err := s.GetClient()
+	if err != nil {
+		log.Warn().Err(err).Msg("batch SetWithdrawExecuted: client error, falling back to individual")
+		return s.fallbackRetryWithdraws(ctx, txIDs)
+	}
+
+	calls := make([]types.Call, 0, len(txIDs))
+	for _, txID := range txIDs {
+		call, err := types.NewCall(meta, "TFTBridgeModule.set_burn_transaction_executed", types.U64(txID))
+		if err != nil {
+			return err
+		}
+		calls = append(calls, call)
+	}
+
+	result, err := s.BatchCalls(s.identity, calls)
+	if err != nil {
+		log.Warn().Err(err).Int("count", len(txIDs)).
+			Msg("batch SetWithdrawExecuted failed, falling back to individual retries")
+		return s.fallbackRetryWithdraws(ctx, txIDs)
+	}
+
+	log.Info().
+		Int("success", result.SuccessCount).
+		Int("failed", result.FailedCount).
+		Int("total", len(txIDs)).
+		Msg("batch SetWithdrawExecuted completed")
+
+	return nil
+}
+
+func (s *SubstrateClient) fallbackRetryWithdraws(ctx context.Context, txIDs []uint64) error {
+	for _, txID := range txIDs {
+		if err := s.RetrySetWithdrawExecuted(ctx, txID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// BatchSetRefundTransactionExecuted batches multiple set_refund_transaction_executed
+// calls into a single Utility.force_batch extrinsic. Falls back to individual
+// RetrySetRefundTransactionExecutedTx calls if the batch submission fails.
+func (s *SubstrateClient) BatchSetRefundTransactionExecuted(ctx context.Context, txHashes []string) error {
+	if len(txHashes) == 0 {
+		return nil
+	}
+	if len(txHashes) == 1 {
+		return s.RetrySetRefundTransactionExecutedTx(ctx, txHashes[0])
+	}
+
+	_, meta, err := s.GetClient()
+	if err != nil {
+		log.Warn().Err(err).Msg("batch SetRefundExecuted: client error, falling back to individual")
+		return s.fallbackRetryRefunds(ctx, txHashes)
+	}
+
+	calls := make([]types.Call, 0, len(txHashes))
+	for _, txHash := range txHashes {
+		call, err := types.NewCall(meta, "TFTBridgeModule.set_refund_transaction_executed", txHash)
+		if err != nil {
+			return err
+		}
+		calls = append(calls, call)
+	}
+
+	result, err := s.BatchCalls(s.identity, calls)
+	if err != nil {
+		log.Warn().Err(err).Int("count", len(txHashes)).
+			Msg("batch SetRefundExecuted failed, falling back to individual retries")
+		return s.fallbackRetryRefunds(ctx, txHashes)
+	}
+
+	log.Info().
+		Int("success", result.SuccessCount).
+		Int("failed", result.FailedCount).
+		Int("total", len(txHashes)).
+		Msg("batch SetRefundTransactionExecuted completed")
+
+	return nil
+}
+
+func (s *SubstrateClient) fallbackRetryRefunds(ctx context.Context, txHashes []string) error {
+	for _, txHash := range txHashes {
+		if err := s.RetrySetRefundTransactionExecutedTx(ctx, txHash); err != nil {
+			return err
+		}
+	}
+	return nil
+}
