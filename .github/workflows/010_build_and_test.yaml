@@ -3,7 +3,26 @@ on:
   push:
     branches:
       - development
+    paths:
+      - 'substrate-node/**'
+      - '.github/workflows/010_build_and_test.yaml'
   pull_request:
+    # Every step of this job works inside substrate-node: cargo build, cargo test,
+    # and the robot suite in substrate-node/tests. It used to run on every pull
+    # request regardless, so a JS-only change queued a full Rust build.
+    paths:
+      - 'substrate-node/**'
+      - '.github/workflows/010_build_and_test.yaml'
+
+# One self-hosted runner serves this workflow, and the build starts with a
+# `cargo clean`, so runs are long and strictly serial. Without this, pushing three
+# times to a branch queued three full builds and only the last one's result
+# mattered. Superseding an in-progress build for the same ref is safe: the newest
+# commit is what the pull request is judged on.
+concurrency:
+  group: build-and-test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: [self-hosted, tfchainrunner01]
