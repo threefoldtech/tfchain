@@ -8,7 +8,9 @@ const { Client } = require('@threefold/tfchain_client')
 const MNEMONIC = 'bottom drive obey lake curtain smoke basket hold race lonely fit walk'
 
 describe('connecting to an unreachable chain', () => {
-  it('rejects promptly instead of retrying forever', async () => {
+  // The timeout is the point of the test: without it a regression here would hang
+  // the run rather than fail it, which is exactly how the old client behaved.
+  it('rejects promptly instead of retrying forever', { timeout: 30000 }, async () => {
     // This is the regression the migration exists to fix. bin/www awaits init()
     // before server.listen(), and the previous client's ApiPromise.create() never
     // rejected — the service hung before listening, logged nothing, and never became

@@ -8,8 +8,8 @@
     "start-prod": "node ./bin/www",
     "debug": "node --nolazy --inspect-brk=9229 ./bin/www",
     "lint": "standard",
-    "test": "standard && node --test test/*.test.js",
-    "test:integration": "node --test test/integration/*.test.js"
+    "test": "standard && node --test --test-force-exit test/*.test.js",
+    "test:integration": "node --test --test-force-exit test/integration/*.test.js"
   },
   "repository": {
     "type": "git",
