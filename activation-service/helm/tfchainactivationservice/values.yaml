@@ -49,7 +49,6 @@ ingress:
 
 url: wss://tfchain.dev.threefold.io
 mnemonic:
-kyc_public_key: "somekey"
 # Amount to fund a new account with, in whole TFT. Decimals are allowed down to
 # 1e-7 TFT. Amounts below the chain's existential deposit are rejected at startup,
 # because such a transfer cannot create an account.
