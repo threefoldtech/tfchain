@@ -44,10 +44,9 @@ function toHttpError (error) {
 
   const status = ERROR_STATUS[error.constructor.name] || 500
 
-  // Logged rather than relied on in the response: when NODE_ENV is set the error
-  // middleware sends omit(err, ['stack']), which drops the (non-enumerable) message,
-  // so the decoded chain error would otherwise be lost. 4xx here means the caller
-  // sent something unusable, which is not an error on our side.
+  // The decoded chain error is logged rather than left to the response, which
+  // should not be the only record of it. A 4xx here means the caller sent
+  // something unusable, which is not a fault on our side, so it is not an error.
   if (status >= 500) {
     log.error({ err: error }, 'chain call failed')
   } else {
