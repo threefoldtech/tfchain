@@ -11,7 +11,6 @@ create `.env` file with following content:
 ```
 URL=wss://substrate01.threefold.io
 MNEMONIC=substrate ed25519 private words
-KYC_PUBLIC_KEY=kyc service 25119 public key
 ACTIVATION_AMOUNT=1
 ```
 
@@ -38,7 +37,11 @@ yarn start
 
 `/activation/activate`
 
-Activates a Substrate account and puts 500 tokens on it.
+Funds a Substrate account with `ACTIVATION_AMOUNT` if it is empty, or tops it back
+up to the minimum extrinsic cost if its balance has fallen below that.
+
+Returns 400 for an account id that is not a valid 32 byte public key, and 5xx if
+the transfer fails on chain — including when the funding account is itself empty.
 
 Example: Post to `localhost:3000/activation/activate`
 
@@ -49,22 +52,15 @@ curl --header "Content-Type: application/json" \
   http://localhost:3000/activation/activate
 ```
 
-### Create Entity
-
-`/activation/create-entity`
-
-Creates an entity object in the griddb.
-
 ## KYC
 
-The KYC signature is currently not validated 
-
+The KYC signature is not validated. The verification code has been commented out
+for years, and `POST /activation/create-entity` — its only caller — was removed in
+#1103, having been an unauthenticated route that signed a fee-paying extrinsic from
+the service wallet. `KYC_PUBLIC_KEY` is no longer read or required; re-add it if
+the checks come back.
 
 ## Deployment
 
-Build the docker image and configure following environment variables:
-
-```
-MNEMONIC=mnemonic words for account that activates
-URL=substrate websocket url
-```
+Build the docker image and configure the environment variables listed above.
+`ACTIVATION_AMOUNT` is required, so set it explicitly even though it has a default.

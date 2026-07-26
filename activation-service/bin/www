@@ -8,10 +8,13 @@ const { init } = require('../lib/substrate')
 
 const log = require('../lib/logger')
 
+// KYC_PUBLIC_KEY used to be required here, but nothing has read it since the
+// signature-verification code was commented out. Its last referent went away with
+// the /create-entity route in #1103. Requiring an unused variable only makes the
+// service refuse to start for no reason; re-add it here if KYC checks come back.
 const REQUIRED_ENV_VARIABLES = [
   'MNEMONIC',
   'URL',
-  'KYC_PUBLIC_KEY',
   'ACTIVATION_AMOUNT'
 ]
 

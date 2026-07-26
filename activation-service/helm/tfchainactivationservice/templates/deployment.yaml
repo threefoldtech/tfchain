@@ -34,8 +34,6 @@ spec:
             value: {{ .Values.url }}
           - name: MNEMONIC
             value: {{ .Values.mnemonic }}
-          - name: KYC_PUBLIC_KEY
-            value: {{ .Values.kyc_public_key }}
           - name: ACTIVATION_AMOUNT
             value: {{ .Values.activation_amount | quote }}
           ports:
