@@ -10,7 +10,8 @@ module.exports = {
       },
       required: ['name', 'email']
     },
-    substrateAccountID: { type: ['string'] }
+    // Shape only — the value is validated as an account id in controllers/substrate.js.
+    substrateAccountID: { type: ['string'], minLength: 1 }
   },
   required: ['substrateAccountID'],
   additionalProperties: false

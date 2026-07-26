@@ -1,0 +1,108 @@
+name: Test activation service
+
+on:
+  workflow_dispatch:
+  # Only on the default branch: a branch that is pushed and then opened as a PR
+  # would otherwise run this twice, and the integration job is not safe to run
+  # concurrently (see the concurrency group below).
+  push:
+    branches:
+      - development
+    paths:
+      - 'activation-service/**'
+      - '.github/workflows/100_test_activation_service.yaml'
+  pull_request:
+    paths:
+      - 'activation-service/**'
+      - '.github/workflows/100_test_activation_service.yaml'
+
+jobs:
+  lint-and-unit:
+    runs-on: ubuntu-22.04
+    # Set per job rather than workflow-wide: check-funder below reads a secret and
+    # never checks the repo out, so a workflow-level working-directory would point
+    # it at a path that does not exist.
+    defaults:
+      run:
+        working-directory: activation-service
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # @polkadot/api 15.x requires node >= 18; keep this in step with the Dockerfile.
+          node-version: 22
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint and run unit tests
+        run: yarn test
+
+  # Secrets are not readable from a job-level `if`, so the availability of the funder
+  # mnemonic is resolved in a step and passed on as an output. Fork pull requests get
+  # no secrets, so the integration job is skipped there rather than failing.
+  check-funder:
+    runs-on: ubuntu-22.04
+    outputs:
+      available: ${{ steps.check.outputs.available }}
+    steps:
+      - name: Check whether the funder mnemonic is configured
+        id: check
+        env:
+          FUNDER_MNEMONIC: ${{ secrets.ACTIVATION_SERVICE_CI_MNEMONIC }}
+        run: |
+          if [ -n "$FUNDER_MNEMONIC" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::ACTIVATION_SERVICE_CI_MNEMONIC is not set; skipping the devnet integration test"
+          fi
+
+  integration:
+    needs: [lint-and-unit, check-funder]
+    if: needs.check-funder.outputs.available == 'true'
+    runs-on: ubuntu-22.04
+    # This job funds and sweeps a fixed pool of accounts derived from one shared
+    # mnemonic, so two runs overlapping would fight over the same balances: one
+    # run's start-of-job sweep empties an account the other has just funded, and
+    # the "should start empty" assertion then fails for no good reason.
+    #
+    # The group deliberately has no ref in it, because the pool is shared across
+    # every branch. It is scoped to this job rather than the workflow so that lint
+    # and unit results still land on every PR — a workflow-wide group meant a push
+    # to any other branch touching activation-service cancelled a pending run,
+    # leaving that PR with no result at all.
+    concurrency:
+      group: activation-service-devnet-pool
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: activation-service
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # The test derives its activation targets from the funder mnemonic (//as-ci//1..5)
+      # and sweeps them back both before and after the run, so a run that dies mid-way
+      # is reclaimed by the next one instead of stranding funds.
+      - name: Run integration tests against devnet
+        env:
+          URL: wss://tfchain.dev.grid.tf/ws
+          MNEMONIC: ${{ secrets.ACTIVATION_SERVICE_CI_MNEMONIC }}
+          KYC_PUBLIC_KEY: unused-but-required-by-bin-www
+          # Whole TFT, matching the chart default. Each run moves this out to a pool
+          # account and sweeps it straight back, so the funder only pays ~0.002 TFT
+          # in fees per run.
+          ACTIVATION_AMOUNT: '0.1'
+        run: yarn test:integration

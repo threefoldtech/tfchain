@@ -50,7 +50,16 @@ ingress:
 url: wss://tfchain.dev.threefold.io
 mnemonic:
 kyc_public_key: "somekey"
-activation_amount: 1
+# Amount to fund a new account with, in whole TFT. Decimals are allowed down to
+# 1e-7 TFT. Amounts below the chain's existential deposit are rejected at startup,
+# because such a transfer cannot create an account.
+#
+# 0.1 TFT is roughly 98 extrinsics at current fees (~0.001 TFT each), and is the
+# amount the service actually funded from 2022 onwards: the variable was required
+# but ignored, and the amount hardcoded. It is honoured again now, so this default
+# is deliberately the previous effective amount rather than the 1 that sat here
+# while being unread — deploying this release should not change what is paid out.
+activation_amount: 0.1
 
 resources:
   {}
