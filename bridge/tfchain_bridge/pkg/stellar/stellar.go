@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -86,6 +88,14 @@ func (w *StellarWallet) CreatePaymentAndReturnSignature(ctx context.Context, tar
 		return "", 0, err
 	}
 
+	// Tag the withdraw payment with the burn tx id (text memo) for traceability on
+	// Stellar and to make the payment recoverable by memo after a crash. This memo is
+	// part of the signed transaction, so it MUST be identical to the one set in
+	// CreatePaymentWithSignaturesAndSubmit; otherwise the collected signatures will
+	// not authorize the submitted transaction. (Changing this is a breaking change:
+	// all validators must run the same version, or signature sets become inconsistent.)
+	txnBuild.Memo = txnbuild.MemoText(fmt.Sprint(txID))
+
 	txn, err := w.createTransaction(ctx, txnBuild, true)
 	if err != nil {
 		return "", 0, err
@@ -103,6 +113,11 @@ func (w *StellarWallet) CreatePaymentWithSignaturesAndSubmit(ctx context.Context
 	if err != nil {
 		return err
 	}
+
+	// Must match the memo set in CreatePaymentAndReturnSignature (the burn tx id),
+	// otherwise the collected signatures will not authorize this transaction. Here
+	// txHash is the decimal burn tx id string (fmt.Sprint(withdrawReady.ID)).
+	txnBuild.Memo = txnbuild.MemoText(txHash)
 
 	txn, err := w.createTransaction(ctx, txnBuild, false)
 	if err != nil {
@@ -721,4 +736,105 @@ func (w *StellarWallet) StatBridgeAccount() (string, error) {
 		}
 	}
 	return "", errors.New("source account does not have trustline")
+}
+
+// fetchOutgoingTransactions fetches the most recent outgoing transactions from the
+// bridge account directly from Horizon, ordered newest-first.
+func (w *StellarWallet) fetchOutgoingTransactions(ctx context.Context, limit uint) (hProtocol.TransactionsPage, error) {
+	client, err := w.getHorizonClient()
+	if err != nil {
+		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to get horizon client")
+	}
+
+	reqURL := fmt.Sprintf("%stransactions?source_account=%s&order=desc&limit=%d",
+		strings.TrimRight(client.HorizonURL, "/")+"/",
+		w.config.StellarBridgeAccount,
+		limit,
+	)
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to build horizon request")
+	}
+
+	// Reuse the Horizon client's HTTP transport which has timeouts configured
+	httpResp, err := client.HTTP.Do(httpReq)
+	if err != nil {
+		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to execute horizon request")
+	}
+	defer httpResp.Body.Close()
+
+	// Validate status before decoding — a non-200 response would decode as an empty
+	// TransactionsPage and cause crash recovery to falsely conclude "no tx found"
+	if httpResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(httpResp.Body, 1024))
+		return hProtocol.TransactionsPage{}, fmt.Errorf("horizon returned HTTP %d: %s", httpResp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	// Limit body size to protect against unexpectedly large responses
+	var page hProtocol.TransactionsPage
+	if err := json.NewDecoder(io.LimitReader(httpResp.Body, 4*1024*1024)).Decode(&page); err != nil {
+		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to decode horizon response")
+	}
+
+	return page, nil
+}
+
+// FetchOutgoingTransactionsPage fetches the 200 most recent outgoing transactions
+// from the bridge account in a single Horizon request. Callers that need multiple
+// lookups (memo + sequence) should fetch once and use the page-based helpers below
+// to avoid redundant HTTP round-trips.
+func (w *StellarWallet) FetchOutgoingTransactionsPage(ctx context.Context) (hProtocol.TransactionsPage, error) {
+	page, err := w.fetchOutgoingTransactions(ctx, 200)
+	if err != nil {
+		return hProtocol.TransactionsPage{}, errors.Wrap(err, "failed to fetch outgoing transactions from Horizon")
+	}
+	return page, nil
+}
+
+// FindPaymentByMemoInPage scans a pre-fetched transactions page for a text memo match.
+// Withdraw payments are tagged with the burn tx id as a text memo, so this finds an
+// already-submitted withdraw during crash recovery. Use this when you already have a
+// page from FetchOutgoingTransactionsPage to avoid redundant Horizon API calls.
+func (w *StellarWallet) FindPaymentByMemoInPage(page hProtocol.TransactionsPage, memo string) *hProtocol.Transaction {
+	for _, tx := range page.Embedded.Records {
+		if tx.MemoType == "text" && tx.Memo == memo {
+			txCopy := tx
+			return &txCopy
+		}
+	}
+	return nil
+}
+
+// FindRefundByReturnHashInPage scans a pre-fetched transactions page for a MemoReturn hash match.
+// Horizon encodes MemoReturn as base64 in its JSON API, while txHash from TFChain is hex-encoded.
+// This function decodes the hex hash to raw bytes and re-encodes as base64 before comparing.
+func (w *StellarWallet) FindRefundByReturnHashInPage(page hProtocol.TransactionsPage, txHash string) *hProtocol.Transaction {
+	hashBytes, err := hex.DecodeString(txHash)
+	if err != nil {
+		log.Warn().Err(err).Str("tx_hash", txHash).Msg("failed to hex-decode refund tx hash for memo comparison")
+		return nil
+	}
+	hashBase64 := base64.StdEncoding.EncodeToString(hashBytes)
+
+	for _, tx := range page.Embedded.Records {
+		if tx.MemoType == "return" && tx.Memo == hashBase64 {
+			txCopy := tx
+			return &txCopy
+		}
+	}
+	return nil
+}
+
+// FindPaymentBySequenceInPage scans a pre-fetched transactions page for a source account
+// sequence number match. Used as a fallback for pre-upgrade txs submitted without a memo.
+func (w *StellarWallet) FindPaymentBySequenceInPage(page hProtocol.TransactionsPage, sequenceNumber int64) *hProtocol.Transaction {
+	seqStr := strconv.FormatInt(sequenceNumber, 10)
+	for _, tx := range page.Embedded.Records {
+		if tx.AccountSequence == seqStr {
+			txCopy := tx
+			return &txCopy
+		}
+	}
+	return nil
 }

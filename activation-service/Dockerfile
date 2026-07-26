@@ -1,4 +1,6 @@
-FROM node:16
+# @polkadot/api 15.x and @polkadot/util-crypto, pulled in by
+# @threefold/tfchain_client, both declare engines node >= 18.
+FROM node:22
 
 # Create app directory
 WORKDIR /usr/src/app

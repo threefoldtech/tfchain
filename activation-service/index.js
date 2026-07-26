@@ -1,14 +1,11 @@
+const { STATUS_CODES } = require('node:http')
+
 const express = require('express')
 const cors = require('cors')
 const httpError = require('http-errors')
-const { omit } = require('lodash')
 
 // attach env variables to process.env
 require('dotenv').config()
-
-const {
-  NODE_ENV = 'development'
-} = process.env
 
 const log = require('./lib/logger')
 
@@ -29,17 +26,26 @@ app.use('/activation', require('./routes'))
 app.use((req, res, next) => next(httpError.NotFound()))
 
 app.use(function (err, req, res, next) {
-  if (httpError.isHttpError(err)) {
-    // use warning since we threw the error
-    log.warn(err)
-    res.status(err.status)
-    if (NODE_ENV !== 'development') return res.send(omit(err, ['stack']))
-    return res.send(err)
+  const status = err.status || err.statusCode || 500
+
+  if (status >= 500) {
+    log.error({ err }, 'error happened handling the request')
+  } else {
+    // The caller sent something unusable; that is not a fault on our side.
+    log.warn({ err }, 'rejected the request')
   }
 
-  // default error handler
-  log.error(err, 'error happened handling the request')
-  res.status(err.status || 500).send(err.message)
+  // http-errors sets `expose` true for 4xx and false for 5xx: a client caused a
+  // 4xx and needs to know why, whereas a 5xx message describes our internals.
+  //
+  // That flag used to be computed and then ignored. Both branches of the old
+  // NODE_ENV check sent the message regardless — lodash's omit copies `message`
+  // through, so the "production" path returned things like the decoded chain
+  // error alongside `expose: false`, and the development path (the default,
+  // since NODE_ENV is set nowhere) added the stack trace.
+  res.status(status).json({
+    message: err.expose ? err.message : STATUS_CODES[status]
+  })
 })
 
 module.exports = app

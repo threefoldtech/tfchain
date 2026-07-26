@@ -8,10 +8,13 @@ const { init } = require('../lib/substrate')
 
 const log = require('../lib/logger')
 
+// KYC_PUBLIC_KEY used to be required here, but nothing has read it since the
+// signature-verification code was commented out. Its last referent went away with
+// the /create-entity route in #1103. Requiring an unused variable only makes the
+// service refuse to start for no reason; re-add it here if KYC checks come back.
 const REQUIRED_ENV_VARIABLES = [
   'MNEMONIC',
   'URL',
-  'KYC_PUBLIC_KEY',
   'ACTIVATION_AMOUNT'
 ]
 
@@ -41,8 +44,9 @@ function checkEnvVariables () {
  * Run certain logic before starting the server
  */
 async function startup () {
-  process.on('SIGTERM', stopGraceful)
-  process.on('SIGINT', stopGraceful)
+  // Wrapped so the signal name is not passed through as an exit code.
+  process.on('SIGTERM', () => stopGraceful())
+  process.on('SIGINT', () => stopGraceful())
 
   checkEnvVariables()
 
@@ -68,14 +72,17 @@ startup()
   })
   .catch(err => {
     log.error(err, 'failed to run startup actions, closing service')
-    stopGraceful()
-    process.exit(1)
+    // stopGraceful exits, so the failure code has to be handed to it. Previously it
+    // exited 0 here and the process.exit(1) below it was unreachable, reporting a
+    // failed startup as success. That was latent until now: with the old client a
+    // failed init() never rejected, so this path was never taken.
+    stopGraceful(1)
   })
 
-function stopGraceful () {
+function stopGraceful (code = 0) {
   log.info('running shutdown actions')
   if (server) server.close()
-  process.exit(0)
+  process.exit(code)
 }
 
 /**

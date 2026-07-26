@@ -4,7 +4,7 @@
   "description": "API client for the TF Grid",
   "main": "index.js",
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test test/*.test.js"
   },
   "author": "",
   "license": "ISC",
