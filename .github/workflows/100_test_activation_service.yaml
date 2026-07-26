@@ -25,13 +25,15 @@ concurrency:
   group: activation-service-integration
   cancel-in-progress: false
 
-defaults:
-  run:
-    working-directory: activation-service
-
 jobs:
   lint-and-unit:
     runs-on: ubuntu-22.04
+    # Set per job rather than workflow-wide: check-funder below reads a secret and
+    # never checks the repo out, so a workflow-level working-directory would point
+    # it at a path that does not exist.
+    defaults:
+      run:
+        working-directory: activation-service
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v4
@@ -72,6 +74,9 @@ jobs:
     needs: [lint-and-unit, check-funder]
     if: needs.check-funder.outputs.available == 'true'
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: activation-service
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v4
