@@ -16,15 +16,6 @@ on:
       - 'activation-service/**'
       - '.github/workflows/100_test_activation_service.yaml'
 
-# The integration job funds and sweeps a fixed pool of accounts derived from one
-# shared mnemonic, so two runs overlapping would fight over the same balances:
-# one run's sweep would empty an account the other had just funded. A single
-# global group serialises every run of this workflow, and queues rather than
-# cancels so a run already talking to the chain is left to finish and clean up.
-concurrency:
-  group: activation-service-integration
-  cancel-in-progress: false
-
 jobs:
   lint-and-unit:
     runs-on: ubuntu-22.04
@@ -74,6 +65,19 @@ jobs:
     needs: [lint-and-unit, check-funder]
     if: needs.check-funder.outputs.available == 'true'
     runs-on: ubuntu-22.04
+    # This job funds and sweeps a fixed pool of accounts derived from one shared
+    # mnemonic, so two runs overlapping would fight over the same balances: one
+    # run's start-of-job sweep empties an account the other has just funded, and
+    # the "should start empty" assertion then fails for no good reason.
+    #
+    # The group deliberately has no ref in it, because the pool is shared across
+    # every branch. It is scoped to this job rather than the workflow so that lint
+    # and unit results still land on every PR — a workflow-wide group meant a push
+    # to any other branch touching activation-service cancelled a pending run,
+    # leaving that PR with no result at all.
+    concurrency:
+      group: activation-service-devnet-pool
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: activation-service
