@@ -2,7 +2,12 @@ name: Test activation service
 
 on:
   workflow_dispatch:
+  # Only on the default branch: a branch that is pushed and then opened as a PR
+  # would otherwise run this twice, and the integration job is not safe to run
+  # concurrently (see the concurrency group below).
   push:
+    branches:
+      - development
     paths:
       - 'activation-service/**'
       - '.github/workflows/100_test_activation_service.yaml'
@@ -10,6 +15,15 @@ on:
     paths:
       - 'activation-service/**'
       - '.github/workflows/100_test_activation_service.yaml'
+
+# The integration job funds and sweeps a fixed pool of accounts derived from one
+# shared mnemonic, so two runs overlapping would fight over the same balances:
+# one run's sweep would empty an account the other had just funded. A single
+# global group serialises every run of this workflow, and queues rather than
+# cancels so a run already talking to the chain is left to finish and clean up.
+concurrency:
+  group: activation-service-integration
+  cancel-in-progress: false
 
 defaults:
   run:
