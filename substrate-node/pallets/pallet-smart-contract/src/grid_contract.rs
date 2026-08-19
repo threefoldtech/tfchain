@@ -439,6 +439,14 @@ impl<T: Config> Pallet<T> {
         destination_contracts.push(contract_id);
         ActiveNodeContracts::<T>::insert(&node_id, &destination_contracts);
 
+        // NodeContractResources is deliberately left alone. It is contract-keyed, so it
+        // survives the move, and that is what keeps billing continuous. Clearing it
+        // looks tidy and is a trap: calculate_resources_cost_units_usd (cost.rs) derives
+        // the whole node-contract cost from this entry, so zeroing it sends every
+        // caller of bill_contract -- including a manual bill_contract_for_block --
+        // down the zero-amount early return. No overdraft means no grace period, which
+        // means no 14-day auto-delete: a free, immortal contract pinning the
+        // destination against node_has_no_active_contracts forever.
         node_contract.node_id = node_id;
         node_contract.deployment_hash = target_hash;
         contract.contract_type = types::ContractData::NodeContract(node_contract);
