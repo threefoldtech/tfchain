@@ -16,8 +16,8 @@ path for the tenant to return under the same identity.
 
 That blocks hardware consolidation. On mainnet at spec 157, emptying ten machines
 in Freefarm means relocating 74 contracts across 29 twins, none of them the
-operator; retiring the 2012 generation means 122. Asking those twins to
-recreate contracts by hand is not available to a hosting provider.
+operator. Asking those twins to recreate contracts by hand is not available to a
+hosting provider.
 
 Two alternatives were rejected. **Cancel and recreate** is the problem, not the
 fix. **Off-chain coordination** offload the responsibility to the tenant, which
@@ -117,19 +117,13 @@ Then the contract moves between the two `ActiveNodeContracts` vectors, and
 `bill_contract` skips this on its zero-amount early return, and the
 `deployment_hash` parameter can change what the destination deploys.
 
-**`NodeContractResources` is deliberately NOT cleared,** and the tenant is not
-over-billed by the move. The entry is contract-keyed, so it survives the migration
-and billing continues at the same quantity on the same schedule — the inline
-`bill_contract` settles the source period and stamps the clock (`billing.rs:199,369`),
-so the next cycle bills from that instant forward. No overlap, no gap, no double
-charge; the loop index is `contract_id % billing_frequency`, which the move does not
-change. The one real deviation is the certification multiplier, covered below.
-
-Clearing the entry is what would break this. `calculate_resources_cost_units_usd`
-(`cost.rs:71-89`) derives the whole node-contract cost from it, so zeroing it sends
-`bill_contract` down its zero-amount early return (`billing.rs:276-286`) — no
-overdraft, so no grace, so no 14-day auto-delete, leaving a free immortal contract
-pinning the destination against `node_has_no_active_contracts`.
+**Do not clear `NodeContractResources` on migration.** It is contract-keyed and
+survives the move, which is what keeps billing unchanged.
+`calculate_resources_cost_units_usd` (`cost.rs:71-89`) derives the whole
+node-contract cost from it, so zeroing it sends `bill_contract` down its
+zero-amount early return (`billing.rs:276-286`): no overdraft, so no grace, so no
+14-day auto-delete, leaving a free immortal contract pinning the destination
+against `node_has_no_active_contracts`.
 
 ### Ordering is forced by ZOS: migrate first, then deploy
 
