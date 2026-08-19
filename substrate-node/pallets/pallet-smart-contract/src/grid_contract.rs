@@ -299,6 +299,167 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    /// Number of contracts the weight of a migration should be charged against:
+    /// the migration read-modify-writes BOTH the source and destination
+    /// `ActiveNodeContracts` vectors, which are unbounded. Uses the max of the
+    /// two lengths -- never the destination alone, which would systematically
+    /// under-count migrating off a crowded node.
+    pub fn migrate_weight_contracts(contract_id: u64, node_id: u32) -> u32 {
+        let source_len = Contracts::<T>::get(contract_id)
+            .map(|c| ActiveNodeContracts::<T>::get(c.get_node_id()).len())
+            .unwrap_or(0);
+        let destination_len = ActiveNodeContracts::<T>::get(node_id).len();
+        source_len.max(destination_len).try_into().unwrap_or(u32::MAX)
+    }
+
+    /// Move a node contract to another node in the same farm without cancelling it.
+    ///
+    /// Origin is checked by the caller (`RestrictedOrigin`); this fn performs no
+    /// authorization of its own.
+    pub fn _migrate_node_contract(
+        contract_id: u64,
+        node_id: u32,
+        deployment_hash: Option<types::HexHash>,
+    ) -> DispatchResultWithPostInfo {
+        // --- validation (reads only) ---
+        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+        let node_contract = Self::get_node_contract(&contract)?;
+        // Named for the invariant, not for grace: this also rejects Deleted.
+        ensure!(
+            matches!(contract.state, types::ContractState::Created),
+            Error::<T>::ContractNotInCreatedState
+        );
+
+        let source_node_id = node_contract.node_id;
+        ensure!(
+            source_node_id != node_id,
+            Error::<T>::ContractAlreadyOnNode
+        );
+
+        let source_node =
+            pallet_tfgrid::Nodes::<T>::get(source_node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let farm = pallet_tfgrid::Farms::<T>::get(source_node.farm_id)
+            .ok_or(Error::<T>::FarmNotExists)?;
+
+        let destination_node =
+            pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        ensure!(
+            destination_node.farm_id == source_node.farm_id,
+            Error::<T>::NodeNotInSameFarm
+        );
+
+        // Excluded on BOTH sides: opting out waives billing, and a rent contract
+        // flips the cost basis. Either would make the move reprice the tenant.
+        ensure!(
+            !pallet_tfgrid::NodeV3BillingOptOut::<T>::contains_key(source_node_id)
+                && !pallet_tfgrid::NodeV3BillingOptOut::<T>::contains_key(node_id),
+            Error::<T>::NodeIsOptedOutOfV3Billing
+        );
+        ensure!(
+            !ActiveRentContractForNode::<T>::contains_key(source_node_id)
+                && !ActiveRentContractForNode::<T>::contains_key(node_id),
+            Error::<T>::NodeNotAvailableToDeploy
+        );
+
+        // Destination must be able to accept a deployment. The SOURCE node's power
+        // state is deliberately not checked: migrating off a node that is about to
+        // be shut down is the point of this extrinsic.
+        let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
+        ensure!(
+            !node_power.is_standby_phase(),
+            Error::<T>::NodeNotAvailableToDeploy
+        );
+        ensure!(
+            DedicatedNodesExtraFee::<T>::get(node_id) == 0 && !farm.dedicated_farm,
+            Error::<T>::NodeNotAvailableToDeploy
+        );
+
+        let target_hash = deployment_hash.unwrap_or(node_contract.deployment_hash);
+        // Stricter than _create_node_contract, which allows overwriting a Deleted
+        // entry: there is no restore semantic here, and that contract's eventual
+        // remove_contract would unconditionally delete the key we just claimed.
+        ensure!(
+            !ContractIDByNodeIDAndHash::<T>::contains_key(node_id, &target_hash),
+            Error::<T>::ContractIsNotUnique
+        );
+
+        // --- settle at the SOURCE node's cost basis before anything moves ---
+        Self::bill_contract(contract_id)?;
+
+        // Billing may have mutated or removed the contract, so re-read it.
+        // NOTE: the two branches below deliberately answer differently.
+        // Two outcomes of the inline bill_contract, and they get opposite answers.
+        // Both are right; do not "fix" one to match the other.
+        //
+        // Grace => Err (LIVE path, covered by
+        // test_migrate_node_contract_fails_when_inline_billing_pushes_to_grace_period):
+        // an underfunded twin sends manage_contract_state Created -> GracePeriod
+        // inside this very call. Nothing was removed from the source yet, the
+        // contract still pins the node, and Ok would be a silent no-op that a batch
+        // caller cannot tell from success -- no ContractUpdated is emitted either
+        // way. The rolled-back cycle is redone by the offchain worker within the hour.
+        //
+        // Gone => Ok (currently UNREACHABLE, kept as a guard): bill_contract only
+        // deletes a contract once an EXISTING grace period has elapsed, and step 3
+        // above already refused anything not in Created. A Created contract can at
+        // worst enter grace here, never leave it. The arm stays because it is the
+        // correct answer if that ever changes -- remove_contract would already have
+        // cleared the source's ActiveNodeContracts entry, so the node is drained and
+        // the goal is met, while Err would roll back a terminal settlement and its
+        // reward distribution for no gain.
+        let Some(mut contract) = Contracts::<T>::get(contract_id) else {
+            return Ok(().into());
+        };
+        ensure!(
+            matches!(contract.state, types::ContractState::Created),
+            Error::<T>::ContractNotInCreatedState
+        );
+        let mut node_contract = Self::get_node_contract(&contract)?;
+
+        // --- mutation ---
+        // Guarded: _update_node_contract never enforced hash uniqueness, so this key
+        // may already point at a DIFFERENT live contract. An unguarded remove would
+        // destroy that contract's index entry.
+        if ContractIDByNodeIDAndHash::<T>::get(source_node_id, &node_contract.deployment_hash)
+            == contract_id
+        {
+            ContractIDByNodeIDAndHash::<T>::remove(
+                source_node_id,
+                &node_contract.deployment_hash,
+            );
+        }
+        ContractIDByNodeIDAndHash::<T>::insert(node_id, &target_hash, contract_id);
+
+        Self::remove_active_node_contract(source_node_id, contract_id);
+
+        // Push open-coded, the way _create_node_contract does it: validation
+        // already refused source == destination, and the remove above just cleared
+        // the source, so the destination cannot already hold this id.
+        let mut destination_contracts = ActiveNodeContracts::<T>::get(&node_id);
+        destination_contracts.push(contract_id);
+        ActiveNodeContracts::<T>::insert(&node_id, &destination_contracts);
+
+        node_contract.node_id = node_id;
+        node_contract.deployment_hash = target_hash;
+        contract.contract_type = types::ContractData::NodeContract(node_contract);
+        Contracts::<T>::insert(contract_id, &contract);
+
+        // bill_contract skips this stamp on its zero-amount early return, leaving a
+        // stale clock. Harmless today (a zero-cost contract stays zero-cost), but the
+        // deployment_hash parameter above can change what the destination deploys,
+        // so stamp unconditionally. Nothing is forgiven: the window's cost was zero.
+        let mut contract_payment_state = ContractPaymentState::<T>::get(contract_id)
+            .ok_or(Error::<T>::ContractPaymentStateNotExists)?;
+        contract_payment_state.last_updated_seconds = Self::get_current_timestamp_in_secs();
+        ContractPaymentState::<T>::insert(contract_id, &contract_payment_state);
+
+        // No dedicated migration event: ContractUpdated carries the new node id and
+        // deployment hash, which is exactly what the indexer writes.
+        Self::deposit_event(Event::ContractUpdated(contract));
+
+        Ok(().into())
+    }
+
     pub fn _cancel_contract(
         account_id: T::AccountId,
         contract_id: u64,
@@ -621,11 +782,31 @@ impl<T: Config> Pallet<T> {
             // we know contract exists, fetch it
             // if the node is trying to send garbage data we can throw an error here
             if let Some(contract) = Contracts::<T>::get(contract_resource.contract_id) {
-                let node_contract = Self::get_node_contract(&contract)?;
-                ensure!(
-                    node_contract.node_id == node_id,
-                    Error::<T>::NodeNotAuthorizedToComputeReport
-                );
+                // Consistency, not a new policy: the branch above already skips a
+                // report naming a contract that does not exist -- silently, and for
+                // free, since this returns Ok(Pays::No). A report naming a contract
+                // that exists but sits on another node is the same class of mistake,
+                // so it gets the same treatment. Aborting the whole batch and
+                // charging for it was the odd case out.
+                // It also stops being unreachable with migrate_node_contract, which
+                // leaves a LIVE contract on another node until this one reconciles.
+                let Ok(node_contract) = Self::get_node_contract(&contract) else {
+                    log::warn!(
+                        "node {:?} reported resources for non-node contract {:?}, skipping",
+                        node_id,
+                        contract_resource.contract_id
+                    );
+                    continue;
+                };
+                if node_contract.node_id != node_id {
+                    log::warn!(
+                        "node {:?} reported resources for contract {:?} which now lives on node {:?}, skipping",
+                        node_id,
+                        contract_resource.contract_id,
+                        node_contract.node_id
+                    );
+                    continue;
+                }
 
                 // Do insert
                 NodeContractResources::<T>::insert(contract.contract_id, &contract_resource);
@@ -666,11 +847,31 @@ impl<T: Config> Pallet<T> {
             // if the node is trying to send garbage data we can throw an error here
             let contract =
                 Contracts::<T>::get(report.contract_id).ok_or(Error::<T>::ContractNotExists)?;
-            let node_contract = Self::get_node_contract(&contract)?;
-            ensure!(
-                node_contract.node_id == node_id,
-                Error::<T>::NodeNotAuthorizedToComputeReport
-            );
+            // Consistency, not a new policy: the two contains_key guards above
+            // already skip a report naming a contract that does not exist --
+            // silently, and for free, since this returns Ok(Pays::No). A report
+            // naming a contract that exists but sits on another node is the same
+            // class of mistake, so it gets the same treatment. Aborting the whole
+            // batch and charging for it was the odd case out.
+            // It also stops being unreachable with migrate_node_contract, which
+            // leaves a LIVE contract on another node until this one reconciles.
+            let Ok(node_contract) = Self::get_node_contract(&contract) else {
+                log::warn!(
+                    "node {:?} reported NRU for non-node contract {:?}, skipping",
+                    node_id,
+                    report.contract_id
+                );
+                continue;
+            };
+            if node_contract.node_id != node_id {
+                log::warn!(
+                    "node {:?} reported NRU for contract {:?} which now lives on node {:?}, skipping",
+                    node_id,
+                    report.contract_id,
+                    node_contract.node_id
+                );
+                continue;
+            }
 
             report.calculate_report_cost_units_usd::<T>(&pricing_policy);
 

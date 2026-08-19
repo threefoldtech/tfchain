@@ -309,6 +309,48 @@ Test Create Update Cancel Node Contract: Success
 
     Tear Down Multi Node Network
 
+Test Migrate Node Contract: Success
+    [Documentation]    Move a node contract to a second node in the same farm without cancelling it
+    Setup Multi Node Network    log_name=test_migrate_node_contract    amt=${2}
+
+    Setup Predefined Account    who=Alice
+    Setup Predefined Account    who=Bob
+    Setup Predefined Account    who=Charlie
+
+    Create Farm    name=alice_farm
+
+    ${interface_ips} =     Create List    10.2.3.3
+    ${interface_1} =     Create Interface    name=zos    mac=00:00:5e:00:53:af    ips=${interface_ips}
+    ${interfaces} =    Create List    ${interface_1}
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}   longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent    interfaces=${interfaces}
+
+    # a second node on the SAME farm needs its own twin
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}   longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent    interfaces=${interfaces}    who=Charlie
+
+    # Bob owns the contract; the migration is a council action
+    Create Node Contract    node_id=${1}    who=Bob    port=9945
+
+    ${contract} =     Get Contract    ${1}
+    Should Be Equal    ${contract}[contract_type][NodeContract][node_id]    ${1}    msg=The contract should start on node 1
+
+    Migrate Node Contract    contract_id=${1}    node_id=${2}    who=Council
+
+    ${contract} =     Get Contract    ${1}
+    Should Be Equal    ${contract}[contract_type][NodeContract][node_id]    ${2}    msg=The contract should have moved to node 2
+
+    ${on_node_1} =     Get Active Node Contracts    ${1}
+    Should Be Empty    ${on_node_1}    msg=Node 1 should have no active contracts left
+    ${on_node_2} =     Get Active Node Contracts    ${2}
+    Should Contain    ${on_node_2}    ${1}    msg=Node 2 should now hold the contract
+
+    # the point of the whole feature: the drained node can now be powered down,
+    # which fails with NodeHasActiveContracts while it still holds a contract
+    Change Power Target    node_id=${1}    power_target=Down    who=Alice
+
+    Cancel Node Contract    contract_id=${1}    who=Bob    port=${9945}
+
+    Tear Down Multi Node Network
+
 Test Create Node Contract: Failure Not Enough Public Ips
     [Documentation]    Testing creating a node contract and requesting too much pub ips
     Setup Multi Node Network    log_name=test_create_node_contract_failure_notenoughpubips

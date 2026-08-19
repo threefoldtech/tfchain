@@ -53,3 +53,5 @@ Dispatchable functions of this pallet.
 *   `change_billing_frequency`: Change the billing frequency of all contracts, the origin for this call is a configurable origin.
 *   `attach_solution_provider_id`: Attach a solution provider id to a contract
 *   `set_dedicated_node_extra_fee`: Set an extra fee for a dedicated node
+*   `cancel_contract_collective`: Cancel a contract, the origin for this call is a configurable origin
+*   `migrate_node_contract`: Move a node contract to another node in the same farm without cancelling it. This moves the booking, not the workload; the owner must redeploy on the destination. The origin for this call is a configurable origin

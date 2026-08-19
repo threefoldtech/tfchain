@@ -362,6 +362,659 @@ fn test_cancel_contract_collective_by_dao_approval_works() {
     });
 }
 
+// ---------------------------------------------------------------------------
+// migrate_node_contract
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_migrate_node_contract_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let hash = prepare_two_nodes_and_node_contract();
+        let contract_id = 1;
+
+        assert_ok!(SmartContractModule::migrate_node_contract(
+            RawOrigin::Root.into(),
+            contract_id,
+            2,
+            None
+        ));
+
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        assert_eq!(contract.get_node_id(), 2);
+        assert_eq!(contract.state, types::ContractState::Created);
+
+        // source drained, destination holds it
+        assert!(SmartContractModule::active_node_contracts(1).is_empty());
+        assert_eq!(
+            SmartContractModule::active_node_contracts(2),
+            vec![contract_id]
+        );
+
+        // hash index re-keyed, source entry gone
+        assert_eq!(SmartContractModule::node_contract_by_hash(2, hash), contract_id);
+        assert_eq!(SmartContractModule::node_contract_by_hash(1, hash), 0);
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_by_council_approval_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let _ = prepare_two_nodes_and_node_contract();
+
+        assert_ok!(SmartContractModule::migrate_node_contract(
+            pallet_collective::RawOrigin::Members(3, 5).into(),
+            1,
+            2,
+            None
+        ));
+
+        assert_eq!(SmartContractModule::contracts(1).unwrap().get_node_id(), 2);
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_with_new_deployment_hash_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let old_hash = prepare_two_nodes_and_node_contract();
+        let contract_id = 1;
+        let new_hash: types::HexHash = [9u8; 32];
+
+        assert_ok!(SmartContractModule::migrate_node_contract(
+            RawOrigin::Root.into(),
+            contract_id,
+            2,
+            Some(new_hash)
+        ));
+
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        let node_contract = SmartContractModule::get_node_contract(&contract).unwrap();
+        assert_eq!(node_contract.deployment_hash, new_hash);
+
+        assert_eq!(
+            SmartContractModule::node_contract_by_hash(2, new_hash),
+            contract_id
+        );
+        assert_eq!(SmartContractModule::node_contract_by_hash(2, old_hash), 0);
+        assert_eq!(SmartContractModule::node_contract_by_hash(1, old_hash), 0);
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_stamps_clock_when_nothing_billed_works() {
+    // Regression guard: bill_contract takes its zero-amount early return for a
+    // contract with no resources and no IPs, and that path does NOT stamp the
+    // clock. The extrinsic must stamp it anyway.
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let _ = prepare_two_nodes_and_node_contract();
+        let contract_id = 1;
+
+        let before = SmartContractModule::contract_payment_state(contract_id)
+            .unwrap()
+            .last_updated_seconds;
+
+        run_to_block(100, None);
+
+        assert_ok!(SmartContractModule::migrate_node_contract(
+            RawOrigin::Root.into(),
+            contract_id,
+            2,
+            None
+        ));
+
+        let after = SmartContractModule::contract_payment_state(contract_id)
+            .unwrap()
+            .last_updated_seconds;
+        assert!(
+            after > before,
+            "billing clock must advance even when nothing was billed"
+        );
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_off_standby_source_node_works() {
+    // The SOURCE node's power state is deliberately not checked -- migrating off a
+    // node you are about to shut down is the point of the extrinsic.
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let _ = prepare_two_nodes_and_node_contract();
+
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(alice()),
+            tfchain_support::types::Power::Down
+        ));
+
+        assert_ok!(SmartContractModule::migrate_node_contract(
+            RawOrigin::Root.into(),
+            1,
+            2,
+            None
+        ));
+
+        assert_eq!(SmartContractModule::contracts(1).unwrap().get_node_id(), 2);
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_preserves_other_contracts_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_two_nodes();
+
+        for who in [bob(), charlie(), dave()] {
+            assert_ok!(SmartContractModule::create_node_contract(
+                RuntimeOrigin::signed(who),
+                1,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                0,
+                None
+            ));
+        }
+        // three contracts on node 1; move the middle one
+        assert_eq!(SmartContractModule::active_node_contracts(1).len(), 3);
+
+        assert_ok!(SmartContractModule::migrate_node_contract(
+            RawOrigin::Root.into(),
+            2,
+            2,
+            None
+        ));
+
+        assert_eq!(SmartContractModule::active_node_contracts(1), vec![1, 3]);
+        assert_eq!(SmartContractModule::active_node_contracts(2), vec![2]);
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_then_cancel_cleans_up_destination_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let hash = prepare_two_nodes_and_node_contract();
+        let contract_id = 1;
+
+        assert_ok!(SmartContractModule::migrate_node_contract(
+            RawOrigin::Root.into(),
+            contract_id,
+            2,
+            None
+        ));
+        assert_ok!(SmartContractModule::cancel_contract(
+            RuntimeOrigin::signed(bob()),
+            contract_id
+        ));
+
+        assert_eq!(SmartContractModule::contracts(contract_id), None);
+        assert!(SmartContractModule::active_node_contracts(2).is_empty());
+        assert_eq!(SmartContractModule::node_contract_by_hash(2, hash), 0);
+        assert_eq!(SmartContractModule::contract_payment_state(contract_id), None);
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_not_exists_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_two_nodes();
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(RawOrigin::Root.into(), 1, 2, None),
+            Error::<TestRuntime>::ContractNotExists
+        );
+    });
+}
+
+#[test]
+fn test_migrate_name_contract_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_two_nodes();
+        assert_ok!(SmartContractModule::create_name_contract(
+            RuntimeOrigin::signed(bob()),
+            b"foobar".to_vec()
+        ));
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(RawOrigin::Root.into(), 1, 2, None),
+            Error::<TestRuntime>::InvalidContractType
+        );
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_to_same_node_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let _ = prepare_two_nodes_and_node_contract();
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(RawOrigin::Root.into(), 1, 1, None),
+            Error::<TestRuntime>::ContractAlreadyOnNode
+        );
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_to_unknown_node_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let _ = prepare_two_nodes_and_node_contract();
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(RawOrigin::Root.into(), 1, 99, None),
+            Error::<TestRuntime>::NodeNotExists
+        );
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_to_standby_node_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let _ = prepare_two_nodes_and_node_contract();
+
+        // charlie owns node 2
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(charlie()),
+            tfchain_support::types::Power::Down
+        ));
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(RawOrigin::Root.into(), 1, 2, None),
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
+        );
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_from_opted_out_node_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let _ = prepare_two_nodes_and_node_contract();
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            1,
+        ));
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(RawOrigin::Root.into(), 1, 2, None),
+            Error::<TestRuntime>::NodeIsOptedOutOfV3Billing
+        );
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_to_opted_out_node_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let _ = prepare_two_nodes_and_node_contract();
+
+        assert_ok!(TfgridModule::opt_out_of_v3_billing(
+            RuntimeOrigin::signed(alice()),
+            2,
+        ));
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(RawOrigin::Root.into(), 1, 2, None),
+            Error::<TestRuntime>::NodeIsOptedOutOfV3Billing
+        );
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_to_dedicated_node_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let _ = prepare_two_nodes_and_node_contract();
+
+        assert_ok!(SmartContractModule::set_dedicated_node_extra_fee(
+            RuntimeOrigin::signed(alice()),
+            2,
+            1000
+        ));
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(RawOrigin::Root.into(), 1, 2, None),
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
+        );
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_with_duplicate_hash_on_destination_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let hash = prepare_two_nodes_and_node_contract();
+
+        // same deployment hash already live on node 2
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(dave()),
+            2,
+            hash,
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(RawOrigin::Root.into(), 1, 2, None),
+            Error::<TestRuntime>::ContractIsNotUnique
+        );
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_from_signed_origin_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let _ = prepare_two_nodes_and_node_contract();
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(
+                RuntimeOrigin::signed(alice()),
+                1,
+                2,
+                None
+            ),
+            sp_runtime::traits::BadOrigin
+        );
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_does_not_destroy_another_contracts_hash_index() {
+    // update_node_contract has no hash-uniqueness check (unlike create), so a second
+    // contract can claim a hash already indexed to a first one, orphaning the first.
+    // Migrating the orphaned contract must NOT remove the index entry that now
+    // belongs to the live second contract.
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let hash_a = prepare_two_nodes_and_node_contract(); // contract 1, bob, node 1
+
+        // contract 2 on the same node, owned by charlie
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(charlie()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        // charlie points contract 2 at contract 1's hash; the index now maps
+        // (node 1, hash_a) -> 2, and contract 1 is orphaned in the index
+        assert_ok!(SmartContractModule::update_node_contract(
+            RuntimeOrigin::signed(charlie()),
+            2,
+            hash_a,
+            get_deployment_data()
+        ));
+        assert_eq!(SmartContractModule::node_contract_by_hash(1, hash_a), 2);
+
+        // migrating the orphaned contract 1 must leave contract 2's entry alone
+        assert_ok!(SmartContractModule::migrate_node_contract(
+            RawOrigin::Root.into(),
+            1,
+            2,
+            None
+        ));
+
+        assert_eq!(
+            SmartContractModule::node_contract_by_hash(1, hash_a),
+            2,
+            "the live contract's index entry must survive the migration"
+        );
+        assert_eq!(SmartContractModule::contracts(1).unwrap().get_node_id(), 2);
+    });
+}
+
+#[test]
+fn test_migrate_node_contract_leaves_storage_untouched_on_rejection() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        let hash = prepare_two_nodes_and_node_contract();
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(RawOrigin::Root.into(), 1, 1, None),
+            Error::<TestRuntime>::ContractAlreadyOnNode
+        );
+
+        assert_eq!(SmartContractModule::active_node_contracts(1), vec![1]);
+        assert!(SmartContractModule::active_node_contracts(2).is_empty());
+        assert_eq!(SmartContractModule::node_contract_by_hash(1, hash), 1);
+        assert_eq!(SmartContractModule::contracts(1).unwrap().get_node_id(), 1);
+    });
+}
+
+/// F6 -- the report handlers must skip a stale entry, not abort the batch.
+///
+/// Before migration existed this mismatch was unreachable: cancelling removes the
+/// contract, and both loops already skip missing ones. `migrate_node_contract` is
+/// the first construct that leaves a LIVE contract pointing at a different node, so
+/// until the source node reconciles it keeps submitting batches naming a contract
+/// that has moved. Aborting on those would freeze reporting for every OTHER contract
+/// still on that node.
+#[test]
+fn test_report_contract_resources_skips_migrated_contract_and_keeps_the_rest() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_two_nodes();
+
+        // two contracts on node 1
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+        let migrated = 1;
+        let stayed = 2;
+
+        assert_ok!(SmartContractModule::migrate_node_contract(
+            RawOrigin::Root.into(),
+            migrated,
+            2,
+            None
+        ));
+
+        // node 1 (alice) reports for BOTH -- it has not reconciled yet
+        let reports = vec![
+            types::ContractResources {
+                contract_id: migrated,
+                used: Resources {
+                    cru: 2,
+                    hru: 0,
+                    mru: 2 * GIGABYTE,
+                    sru: 60 * GIGABYTE,
+                },
+            },
+            types::ContractResources {
+                contract_id: stayed,
+                used: Resources {
+                    cru: 4,
+                    hru: 0,
+                    mru: 4 * GIGABYTE,
+                    sru: 80 * GIGABYTE,
+                },
+            },
+        ];
+
+        // the batch succeeds rather than reverting
+        assert_ok!(SmartContractModule::report_contract_resources(
+            RuntimeOrigin::signed(alice()),
+            reports
+        ));
+
+        // the stale entry was dropped ...
+        assert_eq!(
+            SmartContractModule::node_contract_resources(migrated).used,
+            Resources::empty()
+        );
+        // ... and the contract still on node 1 was NOT collateral damage
+        assert_eq!(
+            SmartContractModule::node_contract_resources(stayed).used.cru,
+            4
+        );
+    });
+}
+
+/// F6 -- same guarantee for the NRU batch (`add_nru_reports` -> `_compute_reports`).
+/// This is the periodic report, so an abort here would freeze `amount_unbilled` for
+/// every other contract on the node on every submission.
+#[test]
+fn test_add_nru_reports_skips_migrated_contract_and_keeps_the_rest() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_two_nodes();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+        let migrated = 1;
+        let stayed = 2;
+
+        assert_ok!(SmartContractModule::migrate_node_contract(
+            RawOrigin::Root.into(),
+            migrated,
+            2,
+            None
+        ));
+
+        let gigabyte = 1000 * 1000 * 1000;
+        let reports = vec![
+            super::types::NruConsumption {
+                contract_id: migrated,
+                nru: 3 * gigabyte,
+                timestamp: get_timestamp_in_seconds_for_block(1),
+                window: 6,
+            },
+            super::types::NruConsumption {
+                contract_id: stayed,
+                nru: 3 * gigabyte,
+                timestamp: get_timestamp_in_seconds_for_block(1),
+                window: 6,
+            },
+        ];
+
+        assert_ok!(SmartContractModule::add_nru_reports(
+            RuntimeOrigin::signed(alice()),
+            reports
+        ));
+
+        // stale entry contributed nothing
+        assert_eq!(
+            SmartContractModule::contract_billing_information_by_id(migrated).amount_unbilled,
+            0
+        );
+        // the other contract on the node was still billed for its traffic
+        assert!(
+            SmartContractModule::contract_billing_information_by_id(stayed).amount_unbilled > 0
+        );
+    });
+}
+
+/// F5 -- the post-billing state re-check is reachable, and this is the branch.
+///
+/// `migrate_node_contract` bills inline, between validation and mutation. If that
+/// billing finds the twin short of funds, `manage_contract_state` drops the contract
+/// to `GracePeriod` and the re-read then fails the `Created` check. Returning Err is
+/// deliberate: nothing was removed from the source yet, the contract still pins the
+/// node, and Ok would be a silent no-op a batch caller could not distinguish from
+/// success. The rolled-back billing cycle is redone by the offchain worker.
+#[test]
+fn test_migrate_node_contract_fails_when_inline_billing_pushes_to_grace_period() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_two_nodes();
+
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
+
+        // charlie is the underfunded twin the grace-period suite uses: it can afford
+        // one billing cycle, not two
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(charlie()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+        let contract_id = 1;
+
+        // Report the whole node as used, so a single short cycle already costs more
+        // than charlie's 150_000. The standard fixture footprint is affordable for
+        // about one cycle, which is not enough to force the transition below.
+        assert_ok!(SmartContractModule::report_contract_resources(
+            RuntimeOrigin::signed(alice()),
+            vec![types::ContractResources {
+                contract_id,
+                used: Resources {
+                    cru: 8,
+                    hru: 1024 * GIGABYTE,
+                    mru: 16 * GIGABYTE,
+                    sru: 512 * GIGABYTE,
+                },
+            }]
+        ));
+
+        // Stop short of block 11. Contract 1 is billed on blocks where
+        // `block % BillingFrequency == 1`, and crossing one would make the offchain
+        // worker sign -- which panics without a keystore, and would also settle the
+        // contract before the extrinsic gets to it. Staying below 11 leaves the cost
+        // accrued but unbilled and the contract in `Created`, so validation step 3
+        // passes and the state change happens inside the extrinsic's own
+        // bill_contract, which is the branch under test.
+        run_to_block(10, None);
+        assert_eq!(
+            SmartContractModule::contracts(contract_id).unwrap().state,
+            types::ContractState::Created
+        );
+
+        assert_noop!(
+            SmartContractModule::migrate_node_contract(
+                RawOrigin::Root.into(),
+                contract_id,
+                2,
+                None
+            ),
+            Error::<TestRuntime>::ContractNotInCreatedState
+        );
+
+        // assert_noop already proves storage is untouched; assert the intent too --
+        // the contract still pins the SOURCE node, which is what makes Err correct
+        assert_eq!(SmartContractModule::active_node_contracts(1), vec![contract_id]);
+        assert!(SmartContractModule::active_node_contracts(2).is_empty());
+    });
+}
+
 #[test]
 fn test_cancel_contract_collective_by_council_approval_works() {
     new_test_ext().execute_with(|| {
@@ -5157,6 +5810,58 @@ pub fn prepare_farm_and_node() {
         None,
     )
     .unwrap();
+}
+
+/// farm 1 with node 1 (alice's twin) AND node 2 (charlie's twin), same farm.
+/// A separate helper on purpose: adding a node to `prepare_farm_and_node` would
+/// emit an extra NodeStored event and break the exact event-count assertions that
+/// most of this suite relies on.
+pub fn prepare_farm_and_two_nodes() {
+    prepare_farm_and_node();
+
+    let resources = ResourcesInput {
+        hru: 1024 * GIGABYTE,
+        sru: 512 * GIGABYTE,
+        cru: 8,
+        mru: 16 * GIGABYTE,
+    };
+
+    let location = LocationInput {
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
+    };
+
+    // pallet-tfgrid enforces one node per twin, so node 2 needs its own twin.
+    TfgridModule::create_node(
+        RuntimeOrigin::signed(charlie()),
+        1,
+        resources,
+        location,
+        bounded_vec![],
+        false,
+        false,
+        None,
+    )
+    .unwrap();
+}
+
+/// farm 1, two nodes, and a node contract owned by bob on node 1.
+/// Distinct from `prepare_farm_node_and_node_contract`, where alice is farmer,
+/// node owner AND contract owner.
+pub fn prepare_two_nodes_and_node_contract() -> types::HexHash {
+    prepare_farm_and_two_nodes();
+    let hash = generate_deployment_hash();
+    assert_ok!(SmartContractModule::create_node_contract(
+        RuntimeOrigin::signed(bob()),
+        1,
+        hash,
+        get_deployment_data(),
+        0,
+        None
+    ));
+    hash
 }
 
 pub fn prepare_farm_node_and_node_contract() {

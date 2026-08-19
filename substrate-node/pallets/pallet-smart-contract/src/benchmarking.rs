@@ -503,6 +503,84 @@ benchmarks! {
          }.into());
     }
 
+    // migrate_node_contract()
+    // Setup mirrors bill_contract_for_block: the extrinsic calls bill_contract
+    // inline, and with a fresh contract seconds_elapsed == 0 so billing would take
+    // its zero-amount early return and the benchmark would miss the real cost.
+    migrate_node_contract {
+        // n = length of the SOURCE node's ActiveNodeContracts vector, which the
+        // extrinsic read-modify-writes. The weight closure passes max(source, dest)
+        // and the source is the crowded side by construction -- migrating OFF a full
+        // node is the point of the feature. Ranges here are inclusive on BOTH ends
+        // (frame/benchmarking v1), so this covers 1..=100.
+        let n in 1 .. 100;
+
+        let farmer: T::AccountId = account("Alice", 0, 0);
+        _prepare_farm_with_node::<T>(farmer.clone());          // farm 1, node 1
+
+        // A second node on the SAME farm needs its own twin: pallet-tfgrid enforces
+        // one node per twin (NodeIdByTwinID -> NodeWithTwinIdExists). _create_node
+        // only requires the farm to exist, not that the caller owns it.
+        let node_owner: T::AccountId = account("Charlie", 0, 2);
+        _create_twin::<T>(node_owner.clone());
+        _create_node::<T>(node_owner);                         // node 2, farm 1
+
+        let user: T::AccountId = account("Bob", 0, 1);
+        let user_lookup = T::Lookup::unlookup(user.clone());
+        let balance_init_amount = <T as pallet_balances::Config>::Balance::saturated_from(100000000 as u128);
+        Balances::<T>::force_set_balance(RawOrigin::Root.into(), user_lookup, balance_init_amount).unwrap();
+        _create_twin::<T>(user.clone());
+        _create_node_contract::<T>(user.clone());              // contract 1 on node 1
+        let contract_id = 1;                                   // created FIRST, so id is stable
+        let destination_node_id = 2;
+
+        // n - 1 siblings pinned to the source node, so the vector the extrinsic
+        // retains over is n long. Each needs its own deployment hash: the pair
+        // (node_id, hash) is unique in ContractIDByNodeIDAndHash, so reusing
+        // _create_node_contract's fixed hash would fail with ContractIsNotUnique
+        // on the second iteration.
+        for i in 1..n {
+            let mut sibling_hash = get_deployment_hash_input(b"00000000000000000000000000000000");
+            sibling_hash[0] = (i % 256) as u8;
+            sibling_hash[1] = (i / 256) as u8;
+            assert_ok!(SmartContractModule::<T>::create_node_contract(
+                RawOrigin::Signed(user.clone()).into(),
+                1,
+                sibling_hash,
+                get_deployment_data_input::<T>(b"some_data123"),
+                0,
+                None,
+            ));
+        }
+
+        // advance time and report usage so bill_contract does real work
+        let now = SmartContractModule::<T>::get_current_timestamp_in_secs();
+        let elapsed_seconds = 5;
+        let then: u64 = now + elapsed_seconds;
+        pallet_timestamp::Pallet::<T>::set_timestamp((then * 1000).try_into().unwrap());
+
+        _push_contract_used_resources_report::<T>(farmer.clone());
+        _push_contract_nru_consumption_report::<T>(farmer.clone(), then, elapsed_seconds);
+
+        let new_deployment_hash = get_deployment_hash_input(b"858f8fb2184b15ecb8c0be8b95398c82");
+    }: _(RawOrigin::Root, contract_id, destination_node_id, Some(new_deployment_hash))
+    verify {
+        let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
+        assert_eq!(contract.get_node_id(), destination_node_id);
+        // the source keeps its n - 1 siblings; only the migrated contract leaves
+        let source_remaining = SmartContractModule::<T>::active_node_contracts(1);
+        assert!(!source_remaining.contains(&contract_id));
+        assert_eq!(source_remaining.len(), (n - 1) as usize);
+        assert_eq!(SmartContractModule::<T>::active_node_contracts(destination_node_id), vec![contract_id]);
+        assert_eq!(
+            SmartContractModule::<T>::node_contract_by_hash(destination_node_id, new_deployment_hash),
+            contract_id
+        );
+        let old_hash = get_deployment_hash_input(b"858f8fb2184b15ecb8c0be8b95398c81");
+        assert_eq!(SmartContractModule::<T>::node_contract_by_hash(1, old_hash), 0);
+        assert_last_event::<T>(Event::ContractUpdated(contract).into());
+    }
+
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
     impl_benchmark_test_suite!(SmartContractModule, crate::mock::new_test_ext(), crate::mock::TestRuntime)

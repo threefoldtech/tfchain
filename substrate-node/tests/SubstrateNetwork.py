@@ -13,7 +13,10 @@ import time
 
 
 SUBSTRATE_NODE_DIR = dirname(os.getcwd())
-TMP_DIR = "\tmp"
+# NOTE: this was previously "\tmp", which Python reads as TAB + "mp" -- so every
+# local run created a directory named <TAB>mp inside tests/ instead of using the
+# system temp dir, leaving untracked chain data in the working tree.
+TMP_DIR = tempfile.gettempdir()
 TFCHAIN_EXE = join(SUBSTRATE_NODE_DIR, "target", "release", "tfchain")
 
 RE_NODE_STARTED = re.compile("Running JSON-RPC server")

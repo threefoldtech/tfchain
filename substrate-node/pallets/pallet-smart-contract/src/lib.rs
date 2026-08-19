@@ -1,4 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+// The benchmarks! macro expands one test per benchmark via impl_bench_name_tests;
+// the default limit of 128 is exceeded once the pallet has this many benchmarks.
+#![recursion_limit = "256"]
 
 pub mod billing;
 pub mod cost;
@@ -375,6 +378,11 @@ pub mod pallet {
         TwinNotAuthorizedToUpdateContract,
         TwinNotAuthorizedToCancelContract,
         NodeNotAuthorizedToDeployContract,
+        // RESERVED -- no longer constructed. The report handlers used to raise this
+        // and abort the whole batch; they now log::warn! and skip the item instead.
+        // Kept because indices are declaration order (see the note at the end of
+        // this enum): deleting it renumbers every variant below, so a client with a
+        // cached mapping would misname them. Do not reuse the slot either.
         NodeNotAuthorizedToComputeReport,
         PricingPolicyNotExists,
         ContractIsNotUnique,
@@ -419,6 +427,12 @@ pub mod pallet {
         RewardDistributionError,
         ContractPaymentStateNotExists,
         OnlyTwinAdminCanDeployOnThisNode,
+        // Appended for migrate_node_contract. Error variants have no explicit
+        // index and are SCALE-encoded by declaration order: append only, never insert.
+        NodeNotInSameFarm,
+        ContractAlreadyOnNode,
+        NodeIsOptedOutOfV3Billing,
+        ContractNotInCreatedState,
     }
 
     #[pallet::genesis_config]
@@ -702,6 +716,34 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
             Self::_cancel_contract_collective(contract_id, types::Cause::CanceledByCollective)
+        }
+
+        /// Move a node contract to another node within the same farm, keeping the
+        /// contract alive instead of cancelling it.
+        ///
+        /// This moves the booking, not the workload. The source node deprovisions its
+        /// copy once it sees the contract has left its list, deleting the disks; the
+        /// owner must redeploy on the destination. An emptied node is therefore NOT
+        /// safe to power off just because it now reports no active contracts.
+        ///
+        /// Council/root only for now; owner and farmer paths are deferred to a future
+        /// call index (never by widening this one's origin check).
+        ///
+        /// `deployment_hash` is `None` to keep the current hash. No dedicated event is
+        /// emitted: `ContractUpdated` already carries the new node id and hash, which is
+        /// what the indexer and grid proxy consume.
+        #[pallet::call_index(22)]
+        #[pallet::weight(<T as Config>::WeightInfo::migrate_node_contract(
+            Pallet::<T>::migrate_weight_contracts(*contract_id, *node_id)
+        ))]
+        pub fn migrate_node_contract(
+            origin: OriginFor<T>,
+            contract_id: u64,
+            node_id: u32,
+            deployment_hash: Option<HexHash>,
+        ) -> DispatchResultWithPostInfo {
+            <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_migrate_node_contract(contract_id, node_id, deployment_hash)
         }
     }
 
