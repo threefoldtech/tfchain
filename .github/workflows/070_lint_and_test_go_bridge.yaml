@@ -37,6 +37,12 @@ jobs:
         uses: dominikh/staticcheck-action@v1
         with:
           version: "latest"
+          # Without this the action installs its own Go, which GOTOOLCHAIN=auto
+          # resolves to the newest release -- go1.27.0 today. staticcheck v0.7.0
+          # cannot read that toolchain's export data, so the job fails on stdlib
+          # packages with no change to this repo. Reuse the Go set up above, as
+          # 020_lint_and_test_go_client.yaml already does.
+          install-go: false
           working-directory: bridge/tfchain_bridge
 
       - name: gofmt
