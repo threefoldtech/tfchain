@@ -428,6 +428,35 @@ class TfChainClient:
         q = substrate.query("TfgridModule", "Nodes", [id])
         return q.value
 
+    def change_power_target(self, node_id: int = 1, power_target: str = "Down", port: int = DEFAULT_PORT,
+                            who: str = DEFAULT_SIGNER):
+        """Ask a node to power up/down. Only the farm owner twin may call this, and
+        powering down is refused while the node still holds active contracts."""
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        call = substrate.compose_call("TfgridModule", "change_power_target", {
+            "node_id": node_id,
+            "power_target": power_target
+        })
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "PowerTargetChanged"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+
+    def get_contract(self, id: int = 1, port: int = DEFAULT_PORT):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        q = substrate.query("SmartContractModule", "Contracts", [id])
+        return q.value
+
+    def get_active_node_contracts(self, node_id: int = 1, port: int = DEFAULT_PORT):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        q = substrate.query("SmartContractModule", "ActiveNodeContracts", [node_id])
+        return q.value
+
     def create_node_contract(self, node_id: int = 1, deployment_data: bytes = randbytes(32),
                              deployment_hash: bytes = randbytes(32), public_ips: int = 0,
                              solution_provider_id: int | None = None, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
@@ -456,6 +485,29 @@ class TfChainClient:
         call = substrate.compose_call("SmartContractModule", "update_node_contract", {
             "contract_id": contract_id,
             "deployment_data": deployment_data,
+            "deployment_hash": deployment_hash
+        })
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "ContractUpdated"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+
+    def migrate_node_contract(self, contract_id: int = 1, node_id: int = 2, deployment_hash: bytes | None = None,
+                              port: int = DEFAULT_PORT, who: str = "Council"):
+        """Move a node contract to another node in the same farm.
+
+        Takes a configurable origin (root or council), so `who` defaults to
+        Council. `deployment_hash=None` keeps the contract's current hash.
+        No dedicated event is emitted: ContractUpdated already carries the new
+        node id and hash.
+        """
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        call = substrate.compose_call("SmartContractModule", "migrate_node_contract", {
+            "contract_id": contract_id,
+            "node_id": node_id,
             "deployment_hash": deployment_hash
         })
         expected_events = [{

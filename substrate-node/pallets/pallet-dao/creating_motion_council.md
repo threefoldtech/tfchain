@@ -76,6 +76,8 @@ Once the motion is closed it is removed from list and the `proposal` extrinsic i
 *   `cancelContract()` (cancels a contract)
 *   `approveSolutionProvider()` (approves a solution provider)
 *   `changeBillingFrequency()` (changes the billing frequency)
+*   `cancelContractCollective()` (cancels a contract)
+*   `migrateNodeContract()` (moves a node contract to another node in the same farm)
 
 ### tftBridgeModule
 

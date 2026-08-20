@@ -444,6 +444,42 @@ func (s *Substrate) CancelContract(identity Identity, contract uint64) error {
 	return nil
 }
 
+// MigrateNodeContract moves a node contract to another node in the same farm,
+// keeping the contract alive instead of cancelling it. It moves the booking, not
+// the workload: the source node deprovisions its copy once the contract leaves its
+// list, and the owner must redeploy on the destination. The extrinsic takes a
+// configurable origin (root or council), so this must be submitted through a
+// collective motion rather than signed by an ordinary twin.
+//
+// Pass an empty hash to keep the contract's current deployment hash.
+func (s *Substrate) MigrateNodeContract(identity Identity, contract uint64, nodeID uint32, hash string) error {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return err
+	}
+
+	var deploymentHash types.Option[HexHash]
+	if hash == "" {
+		deploymentHash = types.NewEmptyOption[HexHash]()
+	} else {
+		deploymentHash = types.NewOption[HexHash](NewHexHash(hash))
+	}
+
+	c, err := types.NewCall(meta, "SmartContractModule.migrate_node_contract",
+		contract, nodeID, deploymentHash,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to create call")
+	}
+
+	_, err = s.Call(cl, meta, identity, c)
+	if err != nil {
+		return errors.Wrap(err, "failed to migrate node contract")
+	}
+
+	return nil
+}
+
 // BatchCancelContract cancels a batch of contracts
 func (s *Substrate) BatchCancelContract(identity Identity, contracts []uint64) error {
 	cl, meta, err := s.GetClient()
