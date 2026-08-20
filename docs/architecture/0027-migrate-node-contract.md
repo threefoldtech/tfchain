@@ -176,7 +176,11 @@ its last construction site, and deleting it would renumber every variant below.
   destinations make the multiplier 1.0 and remove it. If the signed path is added,
   it needs a directional guard.
 - **A council motion has a weight ceiling.** `MaxProposalWeight` is 50% of max
-  block weight, bounding a motion at roughly 900–1,800 contracts.
+  block weight. Against the measured weight, that bounds a motion at about 2,000
+  contracts when the nodes involved are near-empty, falling to roughly **340** when
+  migrating off a node holding ~1,660 — the cost scales with the length of the
+  contract vectors being rewritten, so the busiest nodes are the ones that batch
+  worst. Size batches per tenant group and this ceiling is never near.
 
 ## Operational gate
 
